@@ -1,0 +1,611 @@
+/**
+ * Public model catalog: the read-only `/v1/models` surface an API key sees.
+ *
+ * Answers "which models may this key use, and what are they?" by intersecting
+ * the enabled catalog with the key's model allow/deny lists, then applying the
+ * key's `model_prefix`. Kept separate from the operator-facing
+ * `DrizzleProviderCatalogStore` because the two have different trust levels:
+ * this one is driven entirely by untrusted caller input plus one frozen
+ * authorization snapshot.
+ */
+import { and, eq, isNull, or } from "drizzle-orm";
+import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import { modelAliases, modelCombos, models, providerAccounts, providers } from "../../../persistence/schema";
+import { isModelAllowed, listIncludes, type ApiKeyAuthorizationSnapshot } from "../../../security/api-key-auth";
+import { providerSupportsWebSearch } from "../../../providers/provider-metadata";
+
+export interface AllowedModelEntry {
+  id: string;
+  object: "model";
+  created: number;
+  owned_by: string;
+  context_length?: number;
+  max_completion_tokens?: number;
+  capabilities?: unknown;
+  reasoning?: boolean;
+  tool_call?: boolean;
+  cost?: unknown;
+  /**
+   * Protocol shape of the model. Absent means `llm` (the canonical chat wire);
+   * a non-`llm` value (System One) tells a chat client that this id is served
+   * by a native route, not by `/v1/chat/completions` — so a picker can label it
+   * instead of offering a route that only answers `capability_unsupported`.
+   */
+  service_kind?: string;
+}
+
+/**
+ * The closed input/output modality vocabulary this surface publishes.
+ *
+ * The catalog stores provider-native spellings (`document`, `file`), and
+ * models.dev files a different set (`pdf`, `video`). A client parsing
+ * `/v1/models` needs one vocabulary, so the emitted `capabilities` is
+ * normalized to this set: synonyms are folded (`document`/`file` → `pdf`) and
+ * any token outside it is dropped rather than leaked verbatim.
+ */
+const MODALITY_SYNONYMS: Readonly<Record<string, string>> = {
+  document: "pdf",
+  file: "pdf",
+};
+const KNOWN_MODALITIES: ReadonlySet<string> = new Set(["text", "image", "audio", "video", "pdf"]);
+
+function normalizeModalityList(values: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const raw of values) {
+    if (typeof raw !== "string") continue;
+    const token = MODALITY_SYNONYMS[raw] ?? raw;
+    if (!KNOWN_MODALITIES.has(token) || out.includes(token)) continue;
+    out.push(token);
+  }
+  return out;
+}
+
+/**
+ * Projects a stored `modalities` jsonb value into the published vocabulary.
+ * `undefined` when nothing survives — an entry with no describable modality
+ * omits `capabilities` rather than advertising an empty one.
+ */
+function normalizeModalities(value: unknown): { input?: string[]; output?: string[] } | undefined {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as { input?: unknown; output?: unknown };
+  const pick = (candidate: unknown): string[] =>
+    Array.isArray(candidate) ? normalizeModalityList(candidate.filter((v): v is string => typeof v === "string")) : [];
+  const input = pick(record.input);
+  const output = pick(record.output);
+  if (input.length === 0 && output.length === 0) return undefined;
+  return {
+    ...(input.length > 0 ? { input } : {}),
+    ...(output.length > 0 ? { output } : {}),
+  };
+}
+
+/** A cost value's comparable rate signature; `undefined` when it states none. */
+function costSignature(cost: unknown): string | undefined {
+  if (cost === null || typeof cost !== "object" || Array.isArray(cost)) return undefined;
+  const c = cost as { input?: unknown; output?: unknown; cache_read?: unknown; cache_write?: unknown };
+  return [c.input, c.output, c.cache_read, c.cache_write]
+    .map((value) => (typeof value === "number" ? value : "x"))
+    .join("/");
+}
+
+/**
+ * The rate every member agrees on, or `undefined` when they differ.
+ *
+ * A pool may route to any member, so a single price is only honest when all of
+ * them bill the same; quoting one member's rate would misprice the rest.
+ */
+function commonCost(entries: readonly unknown[]): unknown {
+  const present = entries.filter((entry) => entry != null);
+  if (present.length === 0) return undefined;
+  const signature = costSignature(present[0]);
+  if (signature === undefined) return undefined;
+  return present.every((entry) => costSignature(entry) === signature) ? present[0] : undefined;
+}
+
+function matchesModelPrefix(
+  modelPrefix: string | undefined,
+  bareModelId: string,
+  qualifiedModelId?: string,
+): boolean {
+  const prefix = modelPrefix?.trim();
+  if (!prefix) return true;
+  return bareModelId.startsWith(prefix) || qualifiedModelId?.startsWith(prefix) === true;
+}
+
+/** Catalog metadata mirrored onto an alias or combo entry. */
+export interface ModelMetadata {
+  readonly contextLimit: number | null;
+  readonly outputLimit: number | null;
+  readonly modalities: unknown;
+  readonly reasoning: boolean;
+  readonly toolCall: boolean;
+  /** Provider-level: the provider's adapter drives a hosted web-search tool. */
+  readonly webSearch: boolean;
+  readonly cost: unknown;
+}
+
+/** Defaults advertised when a target has no catalog row to describe it. */
+const DEFAULT_CONTEXT_LIMIT = 200_000;
+const DEFAULT_OUTPUT_LIMIT = 64_192;
+
+/** Bound on the alias/combo walk; matches the engine's `resolveAlias` depth. */
+const MAX_TARGET_DEPTH = 16;
+
+/**
+ * Resolves a routing name to the catalog ids it can actually reach.
+ *
+ * An alias may target a combo rather than a model (`muse-spark-1.3` →
+ * `muse-pool`), and a combo member may itself be an alias or combo, exactly as
+ * dispatch resolves them. Reading only the immediate target would miss the
+ * catalog rows that describe the route and fall back to invented limits. A
+ * name that resolves to nothing concrete is returned as-is so the lookup can
+ * still match a bare catalog id.
+ */
+export function resolveTargetIds(
+  name: string,
+  aliasTargets: ReadonlyMap<string, string>,
+  comboMembers: ReadonlyMap<string, readonly string[]>,
+  seen: ReadonlySet<string> = new Set(),
+): string[] {
+  if (seen.has(name) || seen.size >= MAX_TARGET_DEPTH) return [];
+  const next = new Set(seen).add(name);
+  const members = comboMembers.get(name);
+  if (members) return members.flatMap((m) => resolveTargetIds(m, aliasTargets, comboMembers, next));
+  const target = aliasTargets.get(name);
+  if (target !== undefined) return resolveTargetIds(target, aliasTargets, comboMembers, next);
+  return [name];
+}
+
+/**
+ * The metadata a routing name advertises, given the ids it can reach.
+ *
+ * A pool may route to any member, so the conservative claim is the minimum
+ * across them and only the modalities every member shares. `null` limits mean
+ * "no catalog row described this id"; the caller substitutes the defaults.
+ */
+export function advertisedMetadata(
+  ids: readonly string[],
+  meta: ReadonlyMap<string, ModelMetadata>,
+): ModelMetadata {
+  const found = ids
+    .map((id) => meta.get(id))
+    .filter((entry): entry is ModelMetadata => entry !== undefined);
+  if (found.length === 0) {
+    return {
+      contextLimit: null,
+      outputLimit: null,
+      modalities: undefined,
+      reasoning: false,
+      toolCall: false,
+      webSearch: false,
+      cost: undefined,
+    };
+  }
+  return {
+    contextLimit: Math.min(...found.map((m) => m.contextLimit ?? DEFAULT_CONTEXT_LIMIT)),
+    outputLimit: Math.min(...found.map((m) => m.outputLimit ?? DEFAULT_OUTPUT_LIMIT)),
+    modalities: intersectModalities(found.map((m) => m.modalities).filter((m) => m != null)),
+    // A pool may route to any member, so a capability is claimed only when
+    // every member has it; a single member's rate is quoted only when all
+    // members bill alike.
+    reasoning: found.every((m) => m.reasoning),
+    toolCall: found.every((m) => m.toolCall),
+    webSearch: found.every((m) => m.webSearch),
+    cost: commonCost(found.map((m) => m.cost)),
+  };
+}
+
+/** Input/output modalities every member shares; `undefined` when none do. */
+function intersectModalities(entries: readonly unknown[]): unknown {
+  if (entries.length === 0) return undefined;
+  const normalize = (entry: unknown): { input?: readonly string[]; output?: readonly string[] } =>
+    entry !== null && typeof entry === "object" && !Array.isArray(entry)
+      ? (entry as { input?: readonly string[]; output?: readonly string[] })
+      : {};
+  const first = normalize(entries[0]);
+  const input = new Set(first.input ?? []);
+  const output = new Set(first.output ?? []);
+  for (const entry of entries.slice(1)) {
+    const next = normalize(entry);
+    for (const value of [...input]) {
+      if (!(next.input ?? []).includes(value)) input.delete(value);
+    }
+    for (const value of [...output]) {
+      if (!(next.output ?? []).includes(value)) output.delete(value);
+    }
+  }
+  if (input.size === 0 && output.size === 0) return undefined;
+  return {
+    ...(input.size > 0 ? { input: [...input] } : {}),
+    ...(output.size > 0 ? { output: [...output] } : {}),
+  };
+}
+
+/** Last `/`-separated segment of a model id: the bare name a client types. */
+function lastSegment(id: string): string {
+  const slash = id.lastIndexOf("/");
+  return slash < 0 ? id : id.slice(slash + 1);
+}
+
+/**
+ * True when a catalog row should stay hidden because its visibility comes only
+ * from a bare allowlist entry that is really an alias or combo name.
+ *
+ * `isModelAllowed` deliberately matches a bare entry against every qualified
+ * form, so `glm-5.3-flash` in the allowlist also clears
+ * `cline/z-ai/glm-5.3-flash` and `workbuddy/glm-5.3-flash`. That is correct
+ * for dispatch (the operator's intent is "this model, any provider") but wrong
+ * for discovery: the operator published *one* name — the alias — and every
+ * qualified form of it is the same route wearing a different label. So when an
+ * alias is allowlisted, its bare name is the single public entry and every
+ * qualified form is hidden. An explicitly qualified allowlist entry
+ * (`workbuddy/glm-5.3-flash`) is an unambiguous grant of that exact row and is
+ * never shadowed. The alias carries the target's real capabilities, so nothing
+ * is lost.
+ *
+ * Both the row and the alias target are judged by their bare name as well as
+ * their full id. A catalog row may nest its own path (`cline-free/gpt-5`), so
+ * comparing only `row.modelId` let a nested retired free-tier model survive
+ * beside the allowlisted `deepseek-v4.1-flash` alias and reappear on whichever
+ * provider happened to nest it — the exact leak this filter exists to stop.
+ */
+export function shadowsAliasOrCombo(
+  row: { readonly providerId: string; readonly modelId: string },
+  aliasTargets: ReadonlyMap<string, string>,
+  comboNames: ReadonlySet<string>,
+  snapshot: ApiKeyAuthorizationSnapshot,
+): boolean {
+  // Shadowing exists only to collapse a bare whitelist entry that is really an
+  // alias/combo into a single public row. A blacklist grants nothing, so every
+  // catalog row stays visible unless it is explicitly denied — nothing to hide.
+  if (snapshot.model_access_mode !== "whitelist") return false;
+  const qualified = `${row.providerId}/${row.modelId}`;
+  // An explicit qualified entry is an unambiguous grant — never shadow it.
+  if (listIncludes(snapshot.model_list, qualified)) return false;
+  const bare = lastSegment(row.modelId);
+  for (const [alias, target] of aliasTargets) {
+    if (!listIncludes(snapshot.model_list, alias)) continue;
+    // Hide every qualified form the alias covers: the alias itself already
+    // represents the route, with the target's real limits and capabilities.
+    if (target === qualified || target === row.modelId) return true;
+    const bareTarget = lastSegment(target);
+    if (row.modelId === alias || row.modelId === bareTarget) return true;
+    if (bare === alias || bare === bareTarget) return true;
+  }
+  for (const name of comboNames) {
+    if (!listIncludes(snapshot.model_list, name)) continue;
+    if (row.modelId === name || bare === name) return true;
+  }
+  return false;
+}
+
+export class PublicModelCatalogStore {
+  constructor(private readonly db: CartethyiaDatabase) {}
+
+  async metadataForNames(
+    tenantId: string,
+    names: readonly string[],
+  ): Promise<Map<string, ModelMetadata>> {
+    const [aliasRows, comboRows] = await Promise.all([
+      this.db.select().from(modelAliases).where(eq(modelAliases.tenantId, tenantId)),
+      this.db.select().from(modelCombos).where(eq(modelCombos.tenantId, tenantId)),
+    ]);
+    const aliases = new Map(aliasRows.map((row) => [row.alias, row.targetModel]));
+    const combos = new Map(
+      comboRows.map((row) => [
+        row.name,
+        Array.isArray(row.members) ? row.members.filter((member): member is string => typeof member === "string") : [],
+      ]),
+    );
+    const targetIds = names.flatMap((name) => resolveTargetIds(name, aliases, combos));
+    const targetMeta = await this.modelMetadataById(tenantId, targetIds);
+    const result = new Map<string, ModelMetadata>();
+    for (const name of names) {
+      result.set(name, advertisedMetadata(resolveTargetIds(name, aliases, combos), targetMeta));
+    }
+    return result;
+  }
+
+  async listPublicModels(
+    tenantId: string | null,
+    snapshot: ApiKeyAuthorizationSnapshot,
+    modelPrefix?: string,
+  ): Promise<AllowedModelEntry[]> {
+    const providerScope =
+      tenantId === null
+        ? isNull(providers.tenantId)
+        : or(isNull(providers.tenantId), eq(providers.tenantId, tenantId));
+    const rows = await this.db
+      .select({
+        providerId: models.providerId,
+        contextLimit: models.contextLimit,
+        modelId: models.modelId,
+        serviceKind: models.serviceKind,
+        outputLimit: models.outputLimit,
+        modalities: models.modalities,
+        reasoning: models.reasoning,
+        toolCall: models.toolCall,
+        cost: models.cost,
+        providerRequiresAccount: providers.requiresAccount,
+      })
+      .from(models)
+      .innerJoin(providers, eq(models.providerId, providers.id))
+      .where(and(eq(models.enabled, true), eq(providers.enabled, true), providerScope));
+
+    // Only expose models whose provider is either No-auth (requiresAccount=false,
+    // e.g. opencodefree) or has at least one active account for this tenant.
+    // This mirrors 21 beta's "No auth dan yang disetel apikey/oauth aja".
+    const activeProviderIds = new Set<string>();
+    if (tenantId !== null) {
+      const activeAccounts = await this.db
+        .select({ providerId: providerAccounts.providerId })
+        .from(providerAccounts)
+        .where(and(eq(providerAccounts.tenantId, tenantId), eq(providerAccounts.status, "active")));
+      for (const row of activeAccounts) activeProviderIds.add(row.providerId);
+    }
+
+    // Alias and combo rows are loaded up front because they change what a bare
+    // allowlist entry is allowed to expose (see the shadow filter below).
+    const aliasRows = tenantId === null
+      ? []
+      : await this.db.select().from(modelAliases).where(eq(modelAliases.tenantId, tenantId));
+    const comboRows = tenantId === null
+      ? []
+      : await this.db.select().from(modelCombos).where(eq(modelCombos.tenantId, tenantId));
+
+    /**
+     * Alias name -> the qualified id it resolves to.
+     *
+     * A bare allowlist entry matches *every* provider whose model id shares
+     * that bare name, which would silently expose siblings the operator never
+     * named: allowing the alias `glm-5.3-flash` would also surface
+     * `workbuddy/glm-5.3-flash` and `cbcn/glm-5.3-flash` alongside the alias's
+     * real target. When the allowlisted name is an alias, only its own target
+     * stays visible; a sibling needs an explicit qualified entry.
+     */
+    const aliasTargets = new Map<string, string>();
+    for (const alias of aliasRows) {
+      if (typeof alias.alias === "string" && typeof alias.targetModel === "string") {
+        aliasTargets.set(alias.alias, alias.targetModel);
+      }
+    }
+    const comboNames = new Set<string>();
+    for (const combo of comboRows) {
+      if (typeof combo.name === "string") comboNames.add(combo.name);
+    }
+
+    const modelEntries: AllowedModelEntry[] = rows
+      .filter((row) => {
+        if (row.providerRequiresAccount === false) return true;
+        if (tenantId === null) return false;
+        return activeProviderIds.has(row.providerId);
+      })
+      .filter((row) =>
+        matchesModelPrefix(modelPrefix, row.modelId, `${row.providerId}/${row.modelId}`) ||
+        isModelAllowed(snapshot, row.modelId, row.providerId),
+      )
+      .filter((m) => isModelAllowed(snapshot, m.modelId, m.providerId))
+      .filter((m) => !shadowsAliasOrCombo(m, aliasTargets, comboNames, snapshot))
+      .map((m) => {
+        const capabilities = normalizeModalities(m.modalities);
+        return {
+          id: `${m.providerId}/${m.modelId}`,
+          object: "model" as const,
+          created: Math.floor(Date.now() / 1000),
+          owned_by: m.providerId,
+          ...(m.contextLimit != null ? { context_length: m.contextLimit } : {}),
+          ...(m.outputLimit != null ? { max_completion_tokens: m.outputLimit } : {}),
+          ...(capabilities ? { capabilities } : {}),
+          ...(m.reasoning ? { reasoning: true } : {}),
+          ...(m.toolCall ? { tool_call: true } : {}),
+          ...(m.cost != null ? { cost: m.cost } : {}),
+          // Only a non-`llm` row is labelled: absence already means "chat wire".
+          ...(m.serviceKind && m.serviceKind !== "llm"
+            ? { service_kind: m.serviceKind }
+            : {}),
+        };
+      });
+
+    // Expose tenant model aliases and combos as first-class public models.
+    // `aliasRows`/`comboRows` were loaded above for the shadow filter.
+    if (tenantId !== null) {
+
+      // Capability mirroring reads the *catalog*, not the key-filtered list
+      // above: an alias/combo should describe what its target can do even
+      // when the key's allowlist names only the alias. Authorization is still
+      // enforced per-request by admission, never widened here.
+      const comboMembers = new Map<string, readonly string[]>();
+      for (const combo of comboRows) {
+        if (typeof combo.name === "string" && Array.isArray(combo.members)) {
+          comboMembers.set(combo.name, combo.members.filter((m): m is string => typeof m === "string"));
+        }
+      }
+      // Walk alias → combo → member so a target that is a pool name resolves
+      // to the catalog rows that describe it; otherwise its limits would be
+      // invented defaults rather than what the route can actually serve.
+      const targetIds = [
+        ...aliasRows.map((a) => resolveTargetIds(a.targetModel, aliasTargets, comboMembers)),
+        ...comboRows.flatMap((c) => resolveTargetIds(c.name, aliasTargets, comboMembers)),
+      ].flat();
+      const targetMeta = await this.modelMetadataById(tenantId, targetIds);
+
+      const now = Math.floor(Date.now() / 1000);
+      for (const a of aliasRows) {
+        if (!matchesModelPrefix(modelPrefix, a.alias) && !isModelAllowed(snapshot, a.alias)) continue;
+        if (!isModelAllowed(snapshot, a.alias)) continue;
+        const target = advertisedMetadata(resolveTargetIds(a.targetModel, aliasTargets, comboMembers), targetMeta);
+        const capabilities = normalizeModalities(target.modalities);
+        modelEntries.push({
+          id: a.alias,
+          object: "model" as const,
+          created: now,
+          owned_by: "cartethyia",
+          context_length: target.contextLimit ?? DEFAULT_CONTEXT_LIMIT,
+          max_completion_tokens: target.outputLimit ?? DEFAULT_OUTPUT_LIMIT,
+          ...(capabilities ? { capabilities } : {}),
+          ...(target.reasoning ? { reasoning: true } : {}),
+          ...(target.toolCall ? { tool_call: true } : {}),
+          ...(target.cost != null ? { cost: target.cost } : {}),
+        });
+      }
+
+      for (const c of comboRows) {
+        if (!matchesModelPrefix(modelPrefix, c.name) && !isModelAllowed(snapshot, c.name)) continue;
+        if (!isModelAllowed(snapshot, c.name)) continue;
+        const target = advertisedMetadata(resolveTargetIds(c.name, aliasTargets, comboMembers), targetMeta);
+        const capabilities = normalizeModalities(target.modalities);
+        modelEntries.push({
+          id: c.name,
+          object: "model" as const,
+          created: now,
+          owned_by: "cartethyia",
+          context_length: target.contextLimit ?? DEFAULT_CONTEXT_LIMIT,
+          max_completion_tokens: target.outputLimit ?? DEFAULT_OUTPUT_LIMIT,
+          ...(capabilities ? { capabilities } : {}),
+          ...(target.reasoning ? { reasoning: true } : {}),
+          ...(target.toolCall ? { tool_call: true } : {}),
+          ...(target.cost != null ? { cost: target.cost } : {}),
+        });
+      }
+    }
+    return modelEntries.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  /**
+   * Catalog metadata for qualified (`provider/model`) ids, independent of
+   * the key's allowlist so capabilities mirror even when only the alias is
+   * allowed.
+   */
+  async modelMetadataById(
+    tenantId: string,
+    ids: readonly string[],
+  ): Promise<Map<string, ModelMetadata>> {
+    const qualified = new Set<string>();
+    const bare = new Set<string>();
+    for (const id of ids) {
+      const normalized = id.trim();
+      const slash = normalized.indexOf("/");
+      if (slash > 0) qualified.add(normalized);
+      else if (normalized.length > 0) bare.add(normalized);
+    }
+    const out = new Map<string, ModelMetadata>();
+    if (qualified.size === 0 && bare.size === 0) return out;
+    const providerScope = or(isNull(providers.tenantId), eq(providers.tenantId, tenantId));
+    const rows = await this.db
+      .select({
+        providerId: models.providerId,
+        modelId: models.modelId,
+        contextLimit: models.contextLimit,
+        outputLimit: models.outputLimit,
+        modalities: models.modalities,
+        reasoning: models.reasoning,
+        toolCall: models.toolCall,
+        cost: models.cost,
+      })
+      .from(models)
+      .innerJoin(providers, eq(models.providerId, providers.id))
+      .where(
+        and(
+          eq(models.enabled, true),
+          eq(providers.enabled, true),
+          providerScope,
+          or(
+            ...(qualified.size > 0
+              ? [...qualified].map((id) => {
+                  const slash = id.indexOf("/");
+                  return and(eq(models.providerId, id.slice(0, slash)), eq(models.modelId, id.slice(slash + 1)));
+                })
+              : []),
+            ...(bare.size > 0 ? [...bare].map((id) => eq(models.modelId, id)) : []),
+          ),
+        ),
+      );
+    for (const row of rows) {
+      const metadata = {
+        contextLimit: row.contextLimit,
+        outputLimit: row.outputLimit,
+        modalities: row.modalities,
+        reasoning: row.reasoning,
+        toolCall: row.toolCall,
+        webSearch: providerSupportsWebSearch(row.providerId),
+        cost: row.cost,
+      } satisfies ModelMetadata;
+      out.set(`${row.providerId}/${row.modelId}`, metadata);
+    }
+    for (const id of bare) {
+      const matches = rows.filter((row) => row.modelId === id).map((row) => out.get(`${row.providerId}/${row.modelId}`));
+      if (matches.length > 0 && matches.every((entry) => entry !== undefined)) {
+        const found = matches.filter((entry): entry is ModelMetadata => entry !== undefined);
+        out.set(id, {
+          contextLimit: Math.min(...found.map((entry) => entry.contextLimit ?? DEFAULT_CONTEXT_LIMIT)),
+          outputLimit: Math.min(...found.map((entry) => entry.outputLimit ?? DEFAULT_OUTPUT_LIMIT)),
+          modalities: intersectModalities(found.map((entry) => entry.modalities).filter((value) => value != null)),
+          reasoning: found.every((entry) => entry.reasoning),
+          toolCall: found.every((entry) => entry.toolCall),
+          webSearch: found.every((entry) => entry.webSearch),
+          cost: commonCost(found.map((entry) => entry.cost)),
+        });
+      }
+    }
+    return out;
+  }
+
+  async getPublicModelDetail(
+    targetId: string,
+    tenantId: string | null,
+    snapshot: ApiKeyAuthorizationSnapshot,
+    modelPrefix?: string,
+  ): Promise<AllowedModelEntry | undefined> {
+    if (targetId.includes("/")) {
+      const slashIndex = targetId.indexOf("/");
+      const targetProvider = targetId.slice(0, slashIndex);
+      const targetModel = targetId.slice(slashIndex + 1);
+      const rows = await this.db
+        .select({
+          providerId: models.providerId,
+          modelId: models.modelId,
+          contextLimit: models.contextLimit,
+          outputLimit: models.outputLimit,
+          modalities: models.modalities,
+          reasoning: models.reasoning,
+          toolCall: models.toolCall,
+          cost: models.cost,
+        })
+        .from(models)
+        .innerJoin(providers, eq(models.providerId, providers.id))
+        .where(
+          and(
+            eq(models.enabled, true),
+            eq(providers.enabled, true),
+            eq(models.providerId, targetProvider),
+            eq(models.modelId, targetModel),
+          ),
+        )
+        .limit(1);
+      const row = rows[0];
+      if (
+        row &&
+        (matchesModelPrefix(modelPrefix, row.modelId, `${row.providerId}/${row.modelId}`) ||
+          isModelAllowed(snapshot, row.modelId, row.providerId)) &&
+        isModelAllowed(snapshot, row.modelId, row.providerId)
+      ) {
+        const capabilities = normalizeModalities(row.modalities);
+        return {
+          id: `${row.providerId}/${row.modelId}`,
+          object: "model" as const,
+          created: Math.floor(Date.now() / 1000),
+          owned_by: row.providerId,
+          ...(row.contextLimit != null ? { context_length: row.contextLimit } : {}),
+          ...(row.outputLimit != null ? { max_completion_tokens: row.outputLimit } : {}),
+          ...(capabilities ? { capabilities } : {}),
+          ...(row.reasoning ? { reasoning: true } : {}),
+          ...(row.toolCall ? { tool_call: true } : {}),
+          ...(row.cost != null ? { cost: row.cost } : {}),
+        };
+      }
+      return undefined;
+    }
+    const data = await this.listPublicModels(tenantId, snapshot, modelPrefix);
+    return data.find((m) => m.id === targetId);
+  }
+}
