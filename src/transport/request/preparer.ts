@@ -1,0 +1,803 @@
+import { GatewayError } from "../gateway-error";
+import type { CanonicalRequest, ContentPart, ServiceKind } from "../canonical-model";
+import type { ApiKeyAdmissionService } from "../../security/admission/service";
+import type { RouteCandidate as RouteCandidate, InMemoryRouteSnapshotService, RoutePlan } from "../routing/route-model";
+import { resolveAliasTarget, type RoutingEngine } from "../routing/router";
+import {
+  deriveRequiredCapabilities,
+  isWebSearchTool,
+  projectForRoute,
+  routeCapabilitiesFor,
+} from "../translation/capabilities";
+import type { RequiredCapability } from "../translation/capabilities";
+import { isModelAllowed, type ResolvedApiKey } from "../../security/api-key-auth";
+import { allowsCliToolMappings } from "../../security/cli-client-fingerprint";
+import { dropIncompleteToolRounds, repairRequestToolCalls } from "../translation/tool-repair";
+import { sanitizeRequestToolIds } from "../translation/tool-id";
+import { dropCorruptAttachments } from "../translation/attachment-integrity";
+import { parseThinkingSuffix, withThinkingSuffixIntent } from "../translation/thinking";
+import { nativeServicePathFor } from "../dispatch/native-services";
+import { log } from "../../observability/logger";
+import { BUDDY_PROVIDER_IDS } from "../../providers/provider-metadata";
+
+/** Returns true when a canonical request declares or invokes a web-search tool. */
+function requestUsesWebSearch(request: CanonicalRequest): boolean {
+  if (request.tools?.some(isWebSearchTool) === true) return true;
+  return request.messages.some((message) =>
+    message.content.some((part) => part.kind === "toolCall" && isWebSearchTool({ name: part.name })),
+  );
+}
+
+const DEFAULT_ESTIMATED_OUTPUT_TOKENS = 1024;
+
+// Degradation is often sustained — a client that always asks for tools against
+// a tools-less route degrades every single request. An unthrottled warn would
+// flood pino and push unrelated lines out of the bounded in-memory console
+// ring, so each (model, capability-set) pair logs at most once per minute.
+const DEGRADATION_WARN_INTERVAL_MS = 60_000;
+const DEGRADATION_WARN_MAX_KEYS = 256;
+const lastDegradationWarnAt = new Map<string, number>();
+
+function shouldWarnDegradation(key: string, now: number): boolean {
+  const previous = lastDegradationWarnAt.get(key);
+  if (previous !== undefined && now - previous < DEGRADATION_WARN_INTERVAL_MS) return false;
+  if (lastDegradationWarnAt.size >= DEGRADATION_WARN_MAX_KEYS) {
+    for (const [existingKey, at] of lastDegradationWarnAt)
+      if (now - at >= DEGRADATION_WARN_INTERVAL_MS) lastDegradationWarnAt.delete(existingKey);
+    // Still full after pruning: a burst of distinct keys, not sustained
+    // traffic. Reset rather than grow unbounded; the next warn re-establishes.
+    if (lastDegradationWarnAt.size >= DEGRADATION_WARN_MAX_KEYS) lastDegradationWarnAt.clear();
+  }
+  lastDegradationWarnAt.set(key, now);
+  return true;
+}
+
+/**
+ * A non-text part's rough token weight, in characters.
+ *
+ * Tool results, documents, images and audio carry no `text` field, so a
+ * text-only walk priced them at zero and a request whose weight was mostly a
+ * pasted document or a large tool result could be admitted while its true
+ * usage was far above the reserved estimate. Binary payloads have no honest
+ * character count, so they get a flat per-part reserve instead — enough that
+ * an image- or audio-heavy turn is not free.
+ */
+const NON_TEXT_PART_CHARS: Record<string, number> = {
+  image: 1_500,
+  audio: 1_500,
+};
+
+function partChars(part: ContentPart): number {
+  switch (part.kind) {
+    case "text":
+      return part.text.length;
+    case "refusal":
+      return part.text.length;
+    case "reasoning":
+      return part.summary?.length ?? 0;
+    case "toolCall": {
+      // The call name and its arguments both go upstream as text.
+      let length = part.name.length;
+      try {
+        length += JSON.stringify(part.arguments ?? "").length;
+      } catch {
+        // A circular or unserializable argument is priced by its name alone.
+      }
+      return length;
+    }
+    case "toolResult": {
+      if (typeof part.content === "string") return part.content.length;
+      return part.content.reduce((sum, nested) => sum + partChars(nested), 0);
+    }
+    case "file": {
+      // The payload is inlined base64 or a URL reference; neither has a token
+      // count derivable from its length, so price a flat reserve like an image
+      // plus any human-readable label.
+      return (
+        (NON_TEXT_PART_CHARS[part.kind] ?? 1_500) +
+        (part.filename?.length ?? 0) +
+        (part.url?.length ?? 0)
+      );
+    }
+    case "document": {
+      return (
+        (NON_TEXT_PART_CHARS[part.kind] ?? 1_500) +
+        (part.title?.length ?? 0) +
+        (part.url?.length ?? 0)
+      );
+    }
+    case "extension":
+      return 0;
+    default:
+      return NON_TEXT_PART_CHARS[part.kind] ?? 0;
+  }
+}
+
+function estimateInputTokens(request: CanonicalRequest): number {
+  let chars = 0;
+  for (const part of request.system ?? []) chars += partChars(part);
+  for (const part of request.instructions ?? []) chars += partChars(part);
+  for (const message of request.messages)
+    for (const part of message.content) chars += partChars(part);
+  return Math.max(1, Math.ceil(chars / 4));
+}
+
+/**
+ * Ordered by blast radius: cheapest to degrade first, most semantic (tools/image)
+ * last. Generation controls and extensions are stripped before prompt caching,
+ * structured output, reasoning, and finally tools/images. This keeps the happy
+ * path lossless while guaranteeing a text-only degraded fallback always exists
+ * (unless the model itself is unknown).
+ */
+function degradeRequestForCapability(
+  request: CanonicalRequest,
+  capability: RequiredCapability,
+): CanonicalRequest | null {
+  if (capability.startsWith("generation_control:"))
+    return degradeGenerationControl(request, capability);
+  if (capability.startsWith("extension:")) return degradeExtensionPart(request, capability);
+  switch (capability) {
+    case "prompt_caching":
+      return degradePromptCaching(request);
+    case "response_format.json_object":
+    case "response_format.json_schema":
+      return degradeResponseFormat(request);
+    case "reasoning.encrypted_content":
+      return degradeEncryptedReasoning(request);
+    case "reasoning":
+      return degradeReasoning(request);
+    case "parallel_tool_calls":
+      return degradeParallelToolCalls(request);
+    case "tools":
+      return degradeTools(request);
+    case "image":
+    case "document":
+    case "audio":
+      return degradeMediaPart(request, capability);
+    default:
+      return null;
+  }
+}
+
+/** Drops one generation-control key. Passthrough hints, so nothing else moves. */
+function degradeGenerationControl(
+  request: CanonicalRequest,
+  capability: RequiredCapability,
+): CanonicalRequest | null {
+  const key = capability.slice(
+    "generation_control:".length,
+  ) as keyof typeof request.generation_controls;
+  if (!(key in request.generation_controls)) return null;
+  const next = { ...request.generation_controls };
+  delete next[key];
+  return { ...request, generation_controls: next };
+}
+
+/**
+ * Strips content parts carrying one named extension.
+ *
+ * Content-part extension: the `RequiredCapability` namespace. Generation-
+ * control keys on `GenerationControls` share the `extension:` prefix but are
+ * passthrough hints read by the wire codec; they are not degradable by name and
+ * are deliberately left untouched here.
+ */
+function degradeExtensionPart(
+  request: CanonicalRequest,
+  capability: RequiredCapability,
+): CanonicalRequest | null {
+  const name = capability.slice("extension:".length);
+  const stripExtensionParts = (parts: readonly ContentPart[]): readonly ContentPart[] =>
+    parts.filter((p) => !(p.kind === "extension" && p.name === name));
+  const nextMessages = request.messages.map((m) => ({
+    ...m,
+    content: stripExtensionParts(m.content),
+  }));
+  const nextSystem = request.system ? stripExtensionParts(request.system) : request.system;
+  const nextInstructions = request.instructions
+    ? stripExtensionParts(request.instructions)
+    : request.instructions;
+  const hasExtension = request.messages.some((m) =>
+    m.content.some((p) => p.kind === "extension" && p.name === name),
+  );
+  if (!hasExtension && !nextSystem?.length && !nextInstructions?.length) return null;
+  return {
+    ...request,
+    messages: nextMessages,
+    ...(nextSystem !== undefined ? { system: nextSystem } : {}),
+    ...(nextInstructions !== undefined ? { instructions: nextInstructions } : {}),
+  };
+}
+
+function degradePromptCaching(request: CanonicalRequest): CanonicalRequest | null {
+  if (!request.cache_hint) return null;
+  const { cache_hint: _ch, ...rest } = request;
+  return rest;
+}
+
+function degradeResponseFormat(request: CanonicalRequest): CanonicalRequest | null {
+  if (!request.response_format) return null;
+  const { response_format: _rf, ...rest } = request;
+  return rest;
+}
+
+/** Drops encrypted reasoning from the request and from every carried part. */
+function degradeEncryptedReasoning(request: CanonicalRequest): CanonicalRequest | null {
+  if (
+    !request.reasoning &&
+    !request.messages.some((m) =>
+      m.content.some(
+        (p) =>
+          p.kind === "reasoning" &&
+          (p as Extract<ContentPart, { kind: "reasoning" }>).encrypted_content,
+      ),
+    )
+  )
+    return null;
+  const nextMessages = request.messages.map((m) => ({
+    ...m,
+    content: m.content.map((p) => {
+      if (
+        p.kind === "reasoning" &&
+        (p as Extract<ContentPart, { kind: "reasoning" }>).encrypted_content
+      ) {
+        const { encrypted_content: _ec, ...rest } = p as Extract<
+          ContentPart,
+          { kind: "reasoning" }
+        >;
+        return rest as ContentPart;
+      }
+      return p;
+    }),
+  }));
+  return { ...request, messages: nextMessages };
+}
+
+function degradeReasoning(request: CanonicalRequest): CanonicalRequest | null {
+  if (!request.reasoning) return null;
+  const { reasoning: _r, ...rest } = request;
+  return rest;
+}
+
+function degradeParallelToolCalls(request: CanonicalRequest): CanonicalRequest | null {
+  if (!request.generation_controls.parallel_tool_calls) return null;
+  return {
+    ...request,
+    generation_controls: { ...request.generation_controls, parallel_tool_calls: false },
+  };
+}
+
+/**
+ * Drops the tool catalog and rewrites tool traffic in every message to a text
+ * placeholder, so the conversation still reads as a transcript of what
+ * happened rather than losing the turns entirely.
+ */
+function degradeTools(request: CanonicalRequest): CanonicalRequest | null {
+  if (!request.tools?.length) return null;
+  const nextMessages = request.messages.map((m) => {
+    const hasToolPart = m.content.some((p) => p.kind === "toolCall" || p.kind === "toolResult");
+    if (!hasToolPart) return m;
+    const textFallback = m.content
+      .filter((p) => p.kind === "toolCall")
+      .map((p) => `[tool:${(p as Extract<ContentPart, { kind: "toolCall" }>).name}]`)
+      .join("\n");
+    const remaining: ContentPart[] = m.content.filter((p) => p.kind === "text") as ContentPart[];
+    if (textFallback) remaining.push({ kind: "text", text: textFallback });
+    const content: readonly ContentPart[] = remaining.length
+      ? remaining
+      : [{ kind: "text", text: "[tools removed]" }];
+    return { ...m, content };
+  });
+  const { tools: _t, tool_choice: _tc, ...rest } = request;
+  return { ...rest, messages: nextMessages };
+}
+
+/**
+ * Replaces one attached-media kind with a text placeholder. `document` also
+ * covers the `file` part kind, which is the same attachment on a different
+ * wire family.
+ */
+function degradeMediaPart(
+  request: CanonicalRequest,
+  capability: RequiredCapability,
+): CanonicalRequest | null {
+  const placeholder =
+    capability === "image" ? "[image]" : capability === "document" ? "[document]" : "[audio]";
+  const matches = (part: ContentPart): boolean =>
+    capability === "document"
+      ? part.kind === "document" || part.kind === "file"
+      : part.kind === capability;
+  const strip = (parts: readonly ContentPart[]): readonly ContentPart[] =>
+    parts.flatMap((p): ContentPart[] => (matches(p) ? [{ kind: "text", text: placeholder }] : [p]));
+  const hasPart =
+    request.messages.some((m) => m.content.some(matches)) ||
+    (request.system?.some(matches) ?? false);
+  if (!hasPart) return null;
+  const nextMessages = request.messages.map((m) => ({ ...m, content: strip(m.content) }));
+  if (request.system) {
+    return { ...request, messages: nextMessages, system: strip(request.system) };
+  }
+  return { ...request, messages: nextMessages };
+}
+
+/**
+ * Ordered request variants for capability-aware routing: the original
+ * request first, then progressively degraded copies (same greedy
+ * least-impact-first order as before). The planner plans each variant in
+ * turn — the router filters candidates per variant, so the first variant
+ * with a non-empty plan wins without ever consulting a blind pool.
+ */
+/**
+ * Yields successively degraded request variants lazily. The common case —
+ * first variant plans successfully — never builds the remaining clones.
+ */
+function* degradedRequestVariants(
+  original: CanonicalRequest,
+): Generator<{
+  request: CanonicalRequest;
+  degraded: readonly RequiredCapability[];
+  required: readonly RequiredCapability[];
+}> {
+  const required = deriveRequiredCapabilities(original);
+  yield { request: original, degraded: [], required };
+  const priority: RequiredCapability[] = [
+    ...required.filter((c) => c.startsWith("generation_control:") || c.startsWith("extension:")),
+    "prompt_caching",
+    "response_format.json_object",
+    "response_format.json_schema",
+    "reasoning.encrypted_content",
+    "reasoning",
+    "parallel_tool_calls",
+    "tools",
+    "image",
+    "document",
+    "audio",
+  ] as RequiredCapability[];
+  const ordered = priority.filter((c) => required.includes(c));
+  let current: CanonicalRequest = original;
+  const degraded: RequiredCapability[] = [];
+  for (const cap of ordered) {
+    const next = degradeRequestForCapability(current, cap);
+    if (!next) continue;
+    degraded.push(cap);
+    current = next;
+    yield {
+      request: current,
+      degraded: [...degraded],
+      required: required.filter((c) => !degraded.includes(c)),
+    };
+  }
+}
+
+/** True when the request carries tools or message parts that need repair/sanitize. */
+function requestNeedsToolRepair(request: CanonicalRequest): boolean {
+  if (request.tools !== undefined && request.tools.length > 0) return true;
+  for (const message of request.messages) {
+    for (const part of message.content) {
+      if (part.kind === "toolCall" || part.kind === "toolResult") return true;
+    }
+  }
+  return false;
+}
+
+export interface PreparedProxyRequest {
+  readonly canonicalRequest: CanonicalRequest;
+  readonly authorization: ResolvedApiKey;
+  readonly candidate: RouteCandidate;
+  /** Ordered fallback candidates already filtered for capability support (includes primary). */
+  readonly eligibleRouteCandidates: readonly RouteCandidate[];
+  /** Capabilities stripped from the original request to achieve eligibility. */
+  readonly degradedCapabilities?: readonly RequiredCapability[];
+  /** Snapshot-consistent plan used to reserve each individual attempt. */
+  readonly plan: RoutePlan;
+  /** True when the caller asked for a web-search tool, enabling routed fallback. */
+  readonly webSearch?: boolean;
+  readonly estimatedInputTokens: number;
+  readonly estimatedOutputTokens: number;
+  readonly deadlineMs: number;
+  readonly routingEngine: RoutingEngine;
+  readonly admissionService: ApiKeyAdmissionService;
+}
+
+/** Routing and admission inputs for a native body that must not enter canonical translation. */
+export interface PreparedNativeRequest {
+  readonly authorization: ResolvedApiKey;
+  readonly candidates: readonly RouteCandidate[];
+  readonly plan: RoutePlan;
+  readonly estimatedInputTokens: number;
+  readonly estimatedOutputTokens: number;
+  readonly routingEngine: RoutingEngine;
+  readonly admissionService: ApiKeyAdmissionService;
+}
+
+export interface ProxyRequestPreparerDeps {
+  readonly snapshotService: InMemoryRouteSnapshotService;
+  readonly routingEngine: RoutingEngine;
+  readonly admissionService: ApiKeyAdmissionService;
+}
+
+export class ProxyRequestPreparer {
+  constructor(private readonly deps: ProxyRequestPreparerDeps) {}
+
+  async prepare(input: {
+    readonly canonicalRequest: CanonicalRequest;
+    readonly authorization: ResolvedApiKey;
+    readonly deadlineMs: number;
+    readonly signal?: AbortSignal;
+    /** Inbound `User-Agent`; gates remote CLI remaps so short slots stay tool-local. */
+    readonly clientUserAgent?: string;
+  }): Promise<PreparedProxyRequest> {
+    const { canonicalRequest: initialRequest, authorization, signal } = input;
+    if (signal?.aborted)
+      throw new GatewayError("transport_closed", 499, "request was cancelled");
+    if (!initialRequest.model || initialRequest.model.trim().length === 0) {
+      throw new GatewayError("invalid_request", 400, "Request requires a non-empty model identifier", {
+        field: "model",
+      });
+    }
+    // A thinking suffix (`model(high)`) is stripped here, before anything reads
+    // the model name. Alias resolution, the allowlist, the prefix check, and
+    // routing all match against registered ids, so a name carrying `(high)`
+    // would fail every one of them — and alias resolution swallows its own
+    // failure, so the symptom would be a silent miss rather than an error.
+    //
+    // Doing it on the canonical request (rather than in a provider adapter) is
+    // what makes the syntax global: at this point the target provider is not
+    // chosen yet, and the level is a statement about the request, not about any
+    // one upstream. Each model's own ladder is applied later, after routing.
+    const { model: bareModel, intent: thinkingIntent } = parseThinkingSuffix(initialRequest.model);
+    const request =
+      thinkingIntent === null
+        ? initialRequest
+        : withThinkingSuffixIntent({ ...initialRequest, model: bareModel }, thinkingIntent);
+    const snapshot = await this.deps.snapshotService.getSnapshot();
+    // Scope opts the key into the mapping table; the User-Agent decides whether
+    // *this* request may consume it. Without the UA gate, a Claude→DeepSeek
+    // remap would also rewrite a non-Claude caller that named `opus`.
+    const allowCliMappings = allowsCliToolMappings(authorization.scopes, {
+      ...(input.clientUserAgent === undefined ? {} : { userAgent: input.clientUserAgent }),
+    });
+    // CLI source→target mappings are an explicit API-key capability. Ordinary
+    // tenant aliases remain available to every key; only selected keys may
+    // consume the CLI mapping table.
+    const resolvedTarget = resolveAliasTarget(
+      snapshot,
+      authorization.tenantId,
+      request.model,
+      allowCliMappings,
+      authorization.cliMappingOwnerId ?? authorization.id,
+    );
+    // Pass `request.model` as the requested name so an allowlisted alias / a
+    // CLI remapping can authorize the resolved target (see modelRejectionReason).
+    const allowedForKey = isModelAllowed(
+      authorization.snapshot,
+      resolvedTarget,
+      undefined,
+      request.model,
+    );
+    if (
+      authorization.modelPrefix &&
+      !request.model.startsWith(authorization.modelPrefix) &&
+      !resolvedTarget.startsWith(authorization.modelPrefix) &&
+      !allowedForKey
+    )
+      throw new GatewayError(
+        "model_not_found",
+        404,
+        "model does not match the key's required prefix",
+        { model: request.model, required_prefix: authorization.modelPrefix },
+      );
+    if (!allowedForKey) {
+      throw new GatewayError("model_not_found", 404, "model is not allowed for this API key", {
+        model: request.model,
+      });
+    }
+    // An inline image that cannot survive the upstream is dropped here rather
+    // than dispatched: a provider rejects the whole request for one corrupt
+    // attachment, and the buddy family reports it with no field named, so the
+    // caller gets a 400 it cannot act on. Running this before capability
+    // derivation also means a request whose only image was defective no longer
+    // requires the `image` capability — it plans like the text request it has
+    // become, instead of being routed to a vision route for nothing.
+    const requestWithAttachments = dropCorruptAttachments(request).request;
+    // Capability-aware routing: derive requirements BEFORE planning so the
+    // router filters candidates against snapshot profiles. When nothing
+    // supports the full request, degrade (same greedy order) and re-plan
+    // each variant against the same snapshot; the first non-empty plan wins.
+    let plan: RoutePlan | undefined;
+    let variantRequest = requestWithAttachments;
+    let degraded: readonly RequiredCapability[] = [];
+    // Explicit caller opt-out wins over capability routing: dropping encrypted
+    // reasoning is a lossy request the caller asked for, so it applies before
+    // planning rather than as a fallback when no route supports the artifacts.
+    if (requestWithAttachments.generation_controls["extension:omit_encrypted_reasoning"] === true) {
+      const stripped = degradeEncryptedReasoning(requestWithAttachments);
+      if (stripped) {
+        variantRequest = stripped;
+        degraded = ["reasoning.encrypted_content"];
+      }
+    }
+    const searchRouting = requestUsesWebSearch(variantRequest);
+    for (const variant of degradedRequestVariants(variantRequest)) {
+      try {
+        plan = await this.deps.routingEngine.plan(
+          request.model,
+          snapshot,
+          authorization.tenantId,
+          variant.required,
+          allowCliMappings,
+          authorization.cliMappingOwnerId ?? authorization.id,
+          searchRouting,
+        );
+      } catch (error) {
+        if (error instanceof GatewayError && error.code === "capability_unsupported") continue;
+        throw error;
+      }
+      variantRequest = variant.request;
+      degraded = [...degraded, ...variant.degraded.filter((cap) => !degraded.includes(cap))];
+      break;
+    }
+    if (!plan)
+      throw new GatewayError(
+        "capability_unsupported",
+        400,
+        "no eligible route supports this request's capabilities",
+        { model: request.model },
+      );
+    const policyCandidates = plan.candidates.filter((candidate) =>
+      isModelAllowed(
+        authorization.snapshot,
+        candidate.model_id,
+        candidate.provider_id,
+        request.model,
+      ),
+    );
+    if (policyCandidates.length === 0)
+      throw new GatewayError("model_not_found", 404, "model is not allowed for this API key", {
+        model: request.model,
+      });
+    if (policyCandidates.length !== plan.candidates.length)
+      plan = { ...plan, candidates: policyCandidates };
+    // A canonical request is chat-shaped by definition, so only `llm` rows may
+    // serve it. A non-`llm` row (System One) is dispatched by its native route
+    // and its `wire_family` is an inert placeholder; without this filter the
+    // chat pipeline would route to it and send a chat body to a decision
+    // endpoint (upstream 400). The reverse direction is guarded by the native
+    // route's own kind filter.
+    const llmCandidates = plan.candidates.filter(
+      (candidate) =>
+        (candidate.service_kind ?? "llm") === "llm" ||
+        // A configured search fallback rides the same chat request to run the
+        // search tool on the caller's behalf; only the dispatcher uses it.
+        (candidate.service_kind === "websearch" &&
+          candidate.search_route === "fallback"),
+    );
+    if (llmCandidates.length === 0) {
+      // Name the actual kind so the message stays correct as more native
+      // services are added, and point at the route that can serve it.
+      const kind = plan.candidates[0]?.service_kind ?? "native";
+      const route = nativeServicePathFor(kind);
+      throw new GatewayError(
+        "capability_unsupported",
+        400,
+        `this model is not served on a chat wire — it is a '${kind}' service model${route === undefined ? "" : `; call it at POST ${route}`}`,
+        { model: request.model, service_kind: kind, ...(route === undefined ? {} : { route }) },
+      );
+    }
+    if (llmCandidates.length !== plan.candidates.length) {
+      plan = { ...plan, candidates: llmCandidates };
+    }
+    if (degraded.length > 0) {
+      // Degradation is a last resort, never silent: the client asked for
+      // semantics (tools/images/reasoning) the winning route cannot serve,
+      // so they were stripped to keep the request dispatchable at all.
+      // Surfacing it here puts it on the live console log next to the
+      // request it affected, throttled so sustained degradation cannot
+      // drown out everything else in the ring.
+      const degradedList = [...degraded];
+      const warnKey = `${request.model}|${degradedList.join(",")}`;
+      if (shouldWarnDegradation(warnKey, Date.now())) {
+        log.warn("[routing] degraded request capabilities", {
+          model: request.model,
+          degraded: degradedList,
+          tenantId: authorization.tenantId,
+        });
+      }
+    }
+    if (signal?.aborted)
+      throw new GatewayError("transport_closed", 499, "request was cancelled");
+    const eligible = plan.candidates;
+    // The buddy gateway rejects partial tool rounds outright (`11148`) where
+    // the generic synthesis policy would insert a placeholder result, so a
+    // request bound for CodeBuddy/WorkBuddy drops the incomplete round instead.
+    // The winner is the first candidate — the whole plan shares its provider —
+    // hence the repair is chosen from the winning provider.
+    //
+    // Order is load-bearing: `dropIncompleteToolRounds` MUST run before
+    // `repairRequestToolCalls`. The generic repair synthesizes a
+    // `<missing tool output>` result for every unanswered call, which makes
+    // every partial batch look complete — so running it first silently
+    // disabled the buddy policy and dispatched exactly the shape the upstream
+    // rejects (`assistant[c1 c2] + tool[c1]` became a "complete" round with a
+    // fabricated c2 result). Dropping first also removes the dangling results
+    // that would otherwise be re-emitted as unpaired `role:"tool"` turns.
+    // Fast path: chat/completions without tools skip the three full-message
+    // clones (repair → sanitize → project). Only run the heavy path when the
+    // request actually carries tools or tool-call/result parts.
+    let effectiveRequest = variantRequest;
+    if (requestNeedsToolRepair(variantRequest)) {
+      const winningProvider = eligible[0]?.provider_id;
+      const buddyFamily =
+        winningProvider !== undefined && BUDDY_PROVIDER_IDS.has(winningProvider);
+      // Order is load-bearing: dropIncompleteToolRounds MUST run before
+      // repairRequestToolCalls (see comment above).
+      effectiveRequest = buddyFamily
+        ? repairRequestToolCalls({
+            ...variantRequest,
+            messages: dropIncompleteToolRounds(variantRequest.messages),
+          })
+        : repairRequestToolCalls(variantRequest);
+      effectiveRequest = sanitizeRequestToolIds(effectiveRequest);
+    }
+    if (signal?.aborted)
+      throw new GatewayError("transport_closed", 499, "request was cancelled");
+    // Project against the chosen candidate, not the intersection of every
+    // candidate in the plan. Still required for generation-control stripping
+    // even on the no-tools path — keep it, but it is cheap vs message clones.
+    effectiveRequest = projectForRoute(effectiveRequest, routeCapabilitiesFor(eligible[0]!));
+    const estimatedInputTokens = estimateInputTokens(effectiveRequest);
+    const estimatedOutputTokens =
+      effectiveRequest.generation_controls.max_tokens ??
+      effectiveRequest.generation_controls.max_output_tokens ??
+      effectiveRequest.generation_controls.max_completion_tokens ??
+      DEFAULT_ESTIMATED_OUTPUT_TOKENS;
+    const chosen = eligible[0]!;
+    // plan() guarantees a non-empty candidate list (it throws otherwise).
+    return {
+      canonicalRequest: effectiveRequest,
+      authorization,
+      candidate: chosen,
+      eligibleRouteCandidates: eligible,
+      degradedCapabilities: degraded,
+      plan,
+      ...(searchRouting ? { webSearch: true } : {}),
+      estimatedInputTokens,
+      estimatedOutputTokens,
+      deadlineMs: input.deadlineMs,
+      routingEngine: this.deps.routingEngine,
+      admissionService: this.deps.admissionService,
+    };
+  }
+
+  /**
+   * Plans a native (non-canonical) body without parsing, projecting, or
+   * mutating it. Shared by every native route: it applies the key's model-prefix
+   * gate, plans the model, and keeps only the candidates the route's own
+   * `eligible` predicate admits. Estimates intentionally reserve a conservative
+   * fixed budget because native input is not canonicalized for token counting.
+   */
+  async #planNative(input: {
+    readonly model: string;
+    readonly authorization: ResolvedApiKey;
+    readonly signal?: AbortSignal;
+    /** Inbound `User-Agent`; gates remote CLI remaps to the matching tool. */
+    readonly clientUserAgent?: string;
+    readonly eligible: (candidate: RouteCandidate) => boolean;
+    readonly emptyMessage: string;
+  }): Promise<PreparedNativeRequest> {
+    if (input.signal?.aborted)
+      throw new GatewayError("transport_closed", 499, "request was cancelled");
+    const snapshot = await this.deps.snapshotService.getSnapshot();
+    const allowCliMappings = allowsCliToolMappings(input.authorization.scopes, {
+      ...(input.clientUserAgent === undefined ? {} : { userAgent: input.clientUserAgent }),
+    });
+    const resolvedTarget = resolveAliasTarget(
+      snapshot,
+      input.authorization.tenantId,
+      input.model,
+      allowCliMappings,
+      input.authorization.cliMappingOwnerId ?? input.authorization.id,
+    );
+    const allowedForKey = isModelAllowed(
+      input.authorization.snapshot,
+      resolvedTarget,
+      undefined,
+      input.model,
+    );
+    if (
+      input.authorization.modelPrefix &&
+      !input.model.startsWith(input.authorization.modelPrefix) &&
+      !resolvedTarget.startsWith(input.authorization.modelPrefix) &&
+      !allowedForKey
+    )
+      throw new GatewayError(
+        "model_not_found",
+        404,
+        "model does not match the key's required prefix",
+        { model: input.model, required_prefix: input.authorization.modelPrefix },
+      );
+    if (!allowedForKey)
+      throw new GatewayError("model_not_found", 404, "model is not allowed for this API key", {
+        model: input.model,
+      });
+    const plan = await this.deps.routingEngine.plan(
+      input.model,
+      snapshot,
+      input.authorization.tenantId,
+      undefined,
+      allowCliMappings,
+      input.authorization.cliMappingOwnerId ?? input.authorization.id,
+    );
+    if (input.signal?.aborted)
+      throw new GatewayError("transport_closed", 499, "request was cancelled");
+    const policyCandidates = plan.candidates.filter((candidate) =>
+      isModelAllowed(
+        input.authorization.snapshot,
+        candidate.model_id,
+        candidate.provider_id,
+        input.model,
+      ),
+    );
+    if (policyCandidates.length === 0)
+      throw new GatewayError("model_not_found", 404, "model is not allowed for this API key", {
+        model: input.model,
+      });
+    const candidates = policyCandidates.filter(input.eligible);
+    if (candidates.length === 0)
+      throw new GatewayError("capability_unsupported", 400, input.emptyMessage, {
+        model: input.model,
+      });
+    return {
+      authorization: input.authorization,
+      candidates,
+      plan,
+      estimatedInputTokens: DEFAULT_ESTIMATED_OUTPUT_TOKENS,
+      estimatedOutputTokens: DEFAULT_ESTIMATED_OUTPUT_TOKENS,
+      routingEngine: this.deps.routingEngine,
+      admissionService: this.deps.admissionService,
+    };
+  }
+
+  /**
+   * Plans native Responses compaction. Compact is a Codex-only operation, so
+   * the candidate set is filtered to the Codex provider.
+   */
+  async prepareNativeCompact(input: {
+    readonly model: string;
+    readonly authorization: ResolvedApiKey;
+    readonly signal?: AbortSignal;
+    readonly clientUserAgent?: string;
+  }): Promise<PreparedNativeRequest> {
+    return this.#planNative({
+      model: input.model,
+      authorization: input.authorization,
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
+      ...(input.clientUserAgent === undefined ? {} : { clientUserAgent: input.clientUserAgent }),
+      eligible: (candidate) => candidate.provider_id === "codex",
+      emptyMessage: "no eligible Codex route supports Responses compact",
+    });
+  }
+
+  /**
+   * Plans a native service request (System One). Candidates are the routes whose
+   * catalog classifies the model as this service kind — the model's own row is
+   * what makes a provider eligible, so a chat model named on the systemone route
+   * (or vice versa) finds no candidate and fails closed here rather than
+   * dispatching a decision body to a chat endpoint.
+   */
+  async prepareNativeService(input: {
+    readonly model: string;
+    readonly serviceKind: Exclude<ServiceKind, "llm">;
+    readonly authorization: ResolvedApiKey;
+    readonly signal?: AbortSignal;
+    readonly clientUserAgent?: string;
+  }): Promise<PreparedNativeRequest> {
+    return this.#planNative({
+      model: input.model,
+      authorization: input.authorization,
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
+      ...(input.clientUserAgent === undefined ? {} : { clientUserAgent: input.clientUserAgent }),
+      eligible: (candidate) => (candidate.service_kind ?? "llm") === input.serviceKind,
+      emptyMessage: `no eligible route serves the '${input.serviceKind}' service for this model`,
+    });
+  }
+}
