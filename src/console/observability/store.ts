@@ -329,9 +329,24 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
       memory_percent: memoryPercent,
       /** The ceiling `memory_percent` is measured against (override, cgroup, or host total). */
       memory_limit_bytes: memoryLimitBytes,
-      heap_used_bytes: memory.heapUsed,
+      /**
+       * ── Why these are clamped ──────────────────────────────────────────────
+       * Bun's memory counters stop being mutually consistent once a WebAssembly
+       * module is loaded. Measured on this build, after PGlite opens its data
+       * directory: rss 264.7 MB, heapUsed 1599.2 MB, heapTotal 89.1 MB,
+       * external 1591.6 MB. `heapUsed > heapTotal` and
+       * `heapUsed + external > rss` are both impossible for a process, and the
+       * dashboard's memory breakdown subtracted them from rss and rendered a
+       * negative "native" term — a total of 819 MB for a 162 MB process.
+       *
+       * These are published as the runtime reports them, clamped so the fields
+       * cannot contradict each other or the RSS they are part of. A reader can
+       * still see the raw figures in the process, and the UI no longer adds
+       * numbers that overlap.
+       */
+      heap_used_bytes: Math.min(memory.heapUsed, memory.heapTotal),
       heap_total_bytes: memory.heapTotal,
-      external_bytes: memory.external,
+      external_bytes: Math.min(memory.external, Math.max(0, memory.rss - memory.heapTotal)),
       cpu_percent: cpuPercent,
       cpu_cores: cpus().length,
       pid: process.pid,
