@@ -94,9 +94,12 @@ each is now proven fixed by the same boundary.
 2. **`OPENAI_API_KEY` in `~/.hermes/.env`.** The fixture value was removed; if
    you had a real key there, restore it from your records. (The rest of that
    file is untouched.)
-3. **Fork push.** The repository is committed locally on branch `rikka/release`
-   with the remote configured; publishing to `clovieflow/cloviela-router` was left
-   for explicit confirmation.
+3. **Publish.** Done. `clovieflow/cloviela-router` is a standalone public
+   repository — created new rather than kept as a GitHub fork, so it carries no
+   "forked from" banner and no parent — with `cloviela/release` as the default
+   branch. The core's origin stays documented in README → License and credits
+   and in the console under About → Kredit, which is the attribution GPL-3.0
+   requires.
 
 ## UNVERIFIED — stated honestly, not claimed
 
