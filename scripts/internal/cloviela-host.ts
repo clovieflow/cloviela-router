@@ -62,13 +62,29 @@ async function waitForReady(origin: string, budgetMs: number): Promise<boolean> 
 }
 
 /**
- * Resolves the bound port. Bun's `Server` exposes `port`; the harness reads it
- * from the live listener rather than a pre-bind constant so port 0 works.
+ * Resolves the bound port from the listener Elysia returns.
+ *
+ * Elysia's `listen()` hands back the app instance, not Bun's `Server`: the
+ * bound port lives on `app.server.port`, and `app.port` is `undefined`. Reading
+ * the wrong one is why every harness run aborted with "listener did not expose
+ * a bound port" — the gateway had started and was serving, but the harness
+ * could not learn the port and refused to continue. Both shapes are accepted
+ * so a future Elysia that forwards `port` keeps working.
+ *
+ * Reads are narrowed rather than cast: the listener shape differs between
+ * Elysia versions, so asserting one would be a silent lie on the other.
  */
-function boundPort(server: unknown): number | undefined {
-  if (typeof server !== "object" || server === null) return undefined;
-  const candidate = (server as { port?: unknown }).port;
-  return typeof candidate === "number" && Number.isInteger(candidate) ? candidate : undefined;
+function boundPort(listener: unknown): number | undefined {
+  if (typeof listener !== "object" || listener === null) return undefined;
+  if ("port" in listener) {
+    const direct = listener.port;
+    if (typeof direct === "number" && Number.isInteger(direct)) return direct;
+  }
+  if (!("server" in listener)) return undefined;
+  const server = listener.server;
+  if (typeof server !== "object" || server === null || !("port" in server)) return undefined;
+  const nested = server.port;
+  return typeof nested === "number" && Number.isInteger(nested) ? nested : undefined;
 }
 
 export async function runHost(): Promise<void> {

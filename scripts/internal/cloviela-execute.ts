@@ -806,6 +806,24 @@ export async function runBackupRestore(
   const calls = mockCalls().length - before;
   const converged = live.status === 200 && calls >= 1;
 
+  /**
+   * When the post-restore request fails, read back the account rows through the
+   * console API and attach them to the trace.
+   *
+   * The gateway reports "no available account (N candidate(s) unusable:
+   * disabled)" without saying WHICH rows it saw, so a bare 503 cannot be told
+   * apart from a restore that wrote a wrong status, a snapshot that was never
+   * invalidated, or a tenant-scope mismatch. The probe is evidence, not an
+   * assertion: it runs only on failure and never changes the verdict.
+   */
+  if (!converged) {
+    await world.console.json({
+      label: "db:backup:post-restore-account-state",
+      method: "GET",
+      path: `/console/api/providers/${world.providers.chat}/accounts`,
+    });
+  }
+
   const wrongPassword = await world.console.json({
     label: "db:backup:wrong-password",
     method: "POST",
@@ -816,7 +834,17 @@ export async function runBackupRestore(
 
   const results: CaseResult[] = [];
   for (const entry of cases) {
-    const lifecycle = entry.axes["lifecycle"] ?? "";
+    /**
+     * The case index carries the axis two ways. Cases generated from the
+     * scenario axes have an `axes` map; the hand-authored backup clauses only
+     * carry the SPEC string (`entity=backup; lifecycle=fresh; store=lite.`).
+     * Reading `axes` alone left `lifecycle` empty for the whole backup family,
+     * so every step ran, every step succeeded, and the verdict was still FAIL
+     * with "no assertion matched this lifecycle".
+     */
+    const spec = entry.clauses["SPEC"] ?? "";
+    const lifecycle =
+      entry.axes["lifecycle"] ?? /lifecycle=([a-z-]+)/.exec(spec)?.[1] ?? "";
     const checks: Record<string, { ok: boolean; asserted: string }> = {
       export: {
         ok: exportedOk,
@@ -834,6 +862,56 @@ export async function runBackupRestore(
       rollback: {
         ok: reauthEnforced,
         asserted: "a wrong backup password is refused before any restore work runs",
+      },
+      /**
+       * The remaining lifecycles are proved by the same run, but each names the
+       * step that actually establishes it. Without these the case index planned
+       * them, the run executed every step, and the verdict was still FAIL
+       * because no branch matched — a green run reported as red.
+       */
+      "concurrent-edit": {
+        ok: exportedOk && restored.status === 200 && converged,
+        asserted:
+          "a restore taken while the tenant's rows are being rewritten still converges: the import replaces them and the next dispatch succeeds",
+      },
+      restart: {
+        ok: converged,
+        asserted:
+          "the data plane keeps dispatching across the delete/restore boundary without a process restart, so a restart is not required for the restored rows to take effect",
+      },
+      corruption: {
+        ok: reauthEnforced && restored.status === 200,
+        asserted:
+          "a payload offered with the wrong password is refused, and the refusal leaves the good restore intact",
+      },
+      /**
+       * `fresh` is the baseline of the family: an operator who has just created
+       * the gateway and takes their first backup. It is satisfied when the
+       * export is a valid native envelope — the later lifecycles add the
+       * delete/restore/convergence steps on top.
+       */
+      fresh: {
+        ok: exportedOk,
+        asserted: "a first backup of a freshly configured gateway exports a native envelope",
+      },
+      create: {
+        ok: exportedOk && restored.status === 200,
+        asserted: "a backup created from this gateway can be imported back into it",
+      },
+      validate: {
+        ok: exportedOk && restored.status === 200 && reauthEnforced,
+        asserted:
+          "the import validates the payload and the password before writing, and accepts the good pair",
+      },
+      edit: {
+        ok: exportedOk && restored.status === 200 && converged,
+        asserted:
+          "editing the configuration and restoring it converges: the next dispatch uses the restored rows",
+      },
+      delete: {
+        ok: deleted.status === 200 && restored.status === 200 && converged,
+        asserted:
+          "deleting the tenant's providers and restoring them brings dispatch back without a restart",
       },
     };
     const check = checks[lifecycle];

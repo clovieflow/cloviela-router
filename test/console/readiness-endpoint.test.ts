@@ -158,7 +158,7 @@ describe("readiness read model", () => {
   test("reports the five steps in order with measured counts", async () => {
     const seed = await seedTenant();
     created.push(seed);
-    const store = new DrizzleObservabilityStore(await database());
+    const store = new DrizzleObservabilityStore(await database(), undefined);
 
     const report = await store.readiness(seed.tenantId);
     expect(report.checks.map((check) => check.id)).toEqual([
@@ -186,7 +186,7 @@ describe("readiness read model", () => {
     const seed = await seedTenant();
     created.push(seed);
     const database_ = await database();
-    const store = new DrizzleObservabilityStore(database_);
+    const store = new DrizzleObservabilityStore(database_, undefined);
 
     // `api_keys_mode_shape_check` requires a personal key to carry a hash, so
     // the row has the same shape the real issuer writes.
@@ -215,7 +215,7 @@ describe("readiness read model", () => {
     const seed = await seedTenant();
     created.push(seed);
     const database_ = await database();
-    const store = new DrizzleObservabilityStore(database_);
+    const store = new DrizzleObservabilityStore(database_, undefined);
 
     const before = await store.readiness(seed.tenantId);
     expect(before.checks.find((c) => c.id === "provider_connected")?.ok).toBe(true);
@@ -233,7 +233,7 @@ describe("readiness read model", () => {
     const seed = await seedTenant();
     created.push(seed);
     const database_ = await database();
-    const store = new DrizzleObservabilityStore(database_);
+    const store = new DrizzleObservabilityStore(database_, undefined);
 
     await database_.insert(telemetryEvents).values({
       tenantId: seed.tenantId,
@@ -252,7 +252,7 @@ describe("readiness read model", () => {
   test("counts are scoped to the tenant, not global", async () => {
     const seed = await seedTenant();
     created.push(seed);
-    const store = new DrizzleObservabilityStore(await database());
+    const store = new DrizzleObservabilityStore(await database(), undefined);
 
     // A tenant that was never seeded must not inherit anyone else's rows.
     const other = await store.readiness(randomUUID());
@@ -264,7 +264,7 @@ describe("readiness read model", () => {
   test("the endpoint serves the read model over the real HTTP surface", async () => {
     const seed = await seedTenant();
     created.push(seed);
-    const store = new DrizzleObservabilityStore(await database());
+    const store = new DrizzleObservabilityStore(await database(), undefined);
 
     // Mount the real plugin with a resolver that grants the tenant scope, then
     // call it through `handle` so the route, the operation wrapper, and the
