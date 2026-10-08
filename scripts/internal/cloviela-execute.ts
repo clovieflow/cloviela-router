@@ -182,6 +182,56 @@ export async function setupWorld(input: SetupInput): Promise<World> {
       throw new Error(`account ${family} create failed: ${account.status} ${account.exchange.bodyExcerpt}`);
     }
     accounts.set(providerId, account.body.id);
+
+    // Fault models get their own provider and account so a deliberate 401
+    // cannot disable the credential the healthy cases depend on. See
+    // `worldFaultModelIdsFor`.
+    const faultProviderId = `${providerId}-fault`;
+    const faultCreated = await client.json({
+      label: `setup:provider:${family}:fault`,
+      method: "POST",
+      path: "/console/api/providers/",
+      body: {
+        providerId: faultProviderId,
+        label: `E2E ${family} fault`,
+        enabled: true,
+        baseUrl: `${input.mockUrl}/v1`,
+        wireFamily: family,
+      },
+    });
+    if (faultCreated.status !== 201) {
+      throw new Error(
+        `fault provider ${family} create failed: ${faultCreated.status} ${faultCreated.exchange.bodyExcerpt}`,
+      );
+    }
+    const faultRegistered = await client.json<{ registered: number }>({
+      label: `setup:models:${family}:fault`,
+      method: "POST",
+      path: `/console/api/providers/${faultProviderId}/models`,
+      body: { modelIds: worldFaultModelIdsFor(family), wireFamily: family },
+    });
+    if (faultRegistered.status !== 200) {
+      throw new Error(
+        `fault model register ${family} failed: ${faultRegistered.status} ${faultRegistered.exchange.bodyExcerpt}`,
+      );
+    }
+    const faultAccount = await client.json<{ id: string }>({
+      label: `setup:account:${family}:fault`,
+      method: "POST",
+      path: `/console/api/providers/${faultProviderId}/accounts`,
+      body: {
+        label: `E2E ${family} fault account`,
+        credentialKind: "api_key",
+        credentialMode: "api_key",
+        secret: `sk-e2e-${family}-fault-fixture`,
+      },
+    });
+    if (faultAccount.status !== 201 || typeof faultAccount.body?.id !== "string") {
+      throw new Error(
+        `fault account ${family} create failed: ${faultAccount.status} ${faultAccount.exchange.bodyExcerpt}`,
+      );
+    }
+    accounts.set(faultProviderId, faultAccount.body.id);
   }
 
   const gatewayKey = await client.json<{ secret?: string }>({
@@ -216,14 +266,29 @@ export async function setupWorld(input: SetupInput): Promise<World> {
   };
 }
 
+/**
+ * Models that answer normally, and models that exist to fail.
+ *
+ * They are registered on SEPARATE providers on purpose. A gateway reacts to a
+ * 401 from upstream by marking the account's credential invalid and disabling
+ * the account — correct behaviour, and fatal to every later case when the
+ * fault model shares an account with the healthy ones. The first full matrix
+ * run proved it: the `-401` case disabled the chat account, the backup export
+ * then carried `status: "disabled"`, and the restore and every CLI case after
+ * it failed for a reason that had nothing to do with them.
+ *
+ * Giving the fault models their own provider and account keeps the deliberate
+ * failures where they belong: inside the case that asks for them.
+ */
 function worldModelIdsFor(family: "chat" | "responses" | "messages"): readonly string[] {
   const base = `e2e-${family}-model`;
+  return [base, `${base}-tool`, `${base}-reason`, `${base}-usage`, `${base}-utf8`];
+}
+
+/** The fault-injection models, registered on the family's fault provider. */
+function worldFaultModelIdsFor(family: "chat" | "responses" | "messages"): readonly string[] {
+  const base = `e2e-${family}-model`;
   return [
-    base,
-    `${base}-tool`,
-    `${base}-reason`,
-    `${base}-usage`,
-    `${base}-utf8`,
     `${base}-401`,
     `${base}-429`,
     `${base}-500`,
@@ -370,7 +435,9 @@ export async function runUpstreamFaults(
   const key = world.keys.get("gateway");
   if (key === undefined) throw new Error("world has no gateway key");
   const results: CaseResult[] = [];
-  const providerId = world.providers.chat;
+  // The fault models live on the chat family's dedicated fault provider, so a
+  // deliberate 401/500 cannot disable the account the healthy cases use.
+  const providerId = `${world.providers.chat}-fault`;
 
   const faults: readonly {
     readonly fault: string;
@@ -511,7 +578,16 @@ export async function runStreaming(
     stream: true,
   });
   const events = result.exchange.sseEvents ?? [];
-  const text = result.exchange.bodyExcerpt;
+  /**
+   * The terminal check reads the full body, not `bodyExcerpt`.
+   *
+   * The excerpt is capped for storage, and the terminal event is the LAST
+   * frame — so a responses stream longer than the cap had its
+   * `response.completed` sliced off and the case reported "terminal MISSING"
+   * for a stream that ended correctly. The evidence still stores the excerpt;
+   * only the assertion reads everything.
+   */
+  const text = result.text;
   const terminalOk =
     protocol === "chat"
       ? events.some((name) => name === "data") && text.includes("finish_reason")
@@ -816,13 +892,13 @@ export async function runBackupRestore(
    * invalidated, or a tenant-scope mismatch. The probe is evidence, not an
    * assertion: it runs only on failure and never changes the verdict.
    */
-  if (!converged) {
-    await world.console.json({
-      label: "db:backup:post-restore-account-state",
-      method: "GET",
-      path: `/console/api/providers/${world.providers.chat}/accounts`,
-    });
-  }
+  const accountProbe = converged
+    ? undefined
+    : await world.console.json({
+        label: "db:backup:post-restore-account-state",
+        method: "GET",
+        path: `/console/api/providers/${world.providers.chat}/accounts`,
+      });
 
   const wrongPassword = await world.console.json({
     label: "db:backup:wrong-password",
@@ -920,7 +996,14 @@ export async function runBackupRestore(
       status: check === undefined ? "FAIL" : check.ok ? "PASS" : "FAIL",
       detail: `export ${exported.status} (native=${exportedOk}); delete-all ${deleted.status}; import ${restored.status}; post-restore live ${live.status} with ${calls} upstream call(s); wrong-password ${wrongPassword.status}`,
       asserted: check?.asserted ?? "no assertion matched this lifecycle",
-      trace: [exported.exchange, deleted.exchange, restored.exchange, live.exchange, wrongPassword.exchange],
+      trace: [
+        exported.exchange,
+        deleted.exchange,
+        restored.exchange,
+        live.exchange,
+        ...(accountProbe === undefined ? [] : [accountProbe.exchange]),
+        wrongPassword.exchange,
+      ],
     });
   }
   return results;
