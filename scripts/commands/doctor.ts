@@ -112,7 +112,7 @@ async function doctor(): Promise<void> {
     return;
   }
 
-  console.log("🩺 Rikka Router Health Check\n");
+  console.log("🩺 Cloviela Router Health Check\n");
   console.log(`🖥️  Host platform: ${getLocalPlatform()}`);
 
   // Step 1: Check .env exists

@@ -1,6 +1,6 @@
 # Connecting clients
 
-Tested integration notes for pointing real clients at Rikka Router. Replace
+Tested integration notes for pointing real clients at Cloviela Router. Replace
 `{origin}` with the gateway origin you actually run (the dashboard's Help page
 shows it, and the `Gateway Endpoint` card on Overview copies it) and `{key}`
 with a tenant API key from **Kunci API**.

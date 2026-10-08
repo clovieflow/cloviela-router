@@ -790,7 +790,7 @@ export function DashboardShell({
             </div>
             <div className="brand-meta">
               <div className="brand-name">
-                <span>Rikka Router</span>
+                <span>Cloviela Router</span>
               </div>
               <div className="brand-version-badge">
                 <span>{DASHBOARD_RELEASE_LABEL}</span>

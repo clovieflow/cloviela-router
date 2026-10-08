@@ -25,7 +25,7 @@ RUN bun run dashboard:build
 # Backend build layer: AOT output is required before standalone compilation.
 COPY scripts ./scripts
 COPY migrations ./migrations
-RUN bun run build:aot && bun run build:binary --outfile /build/dist/rikka-router
+RUN bun run build:aot && bun run build:binary --outfile /build/dist/cloviela-router
 
 # Runtime: only the binary, dashboard assets, migrations, and entrypoint ship.
 FROM alpine:3.22
@@ -42,7 +42,7 @@ RUN apk add --no-cache ca-certificates curl libgcc libstdc++ util-linux \
 COPY --from=builder --chown=cartethyia:cartethyia /build/migrations ./migrations
 COPY --from=builder --chown=cartethyia:cartethyia /build/dist/dashboard ./dist/dashboard
 COPY --chmod=755 docker-entrypoint.sh ./entrypoint.sh
-COPY --from=builder --chown=cartethyia:cartethyia /build/dist/rikka-router ./rikka-router
+COPY --from=builder --chown=cartethyia:cartethyia /build/dist/cloviela-router ./cloviela-router
 COPY LICENSE ./LICENSE
 
 ENV CARTETHYIA_VERSION=2.0 \
@@ -60,4 +60,4 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
 
 # Start as root so mounted data ownership can be repaired, then drop to uid 10001.
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["./rikka-router"]
+CMD ["./cloviela-router"]

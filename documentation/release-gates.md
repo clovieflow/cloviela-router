@@ -1,4 +1,4 @@
-# Rikka Router release gate status
+# Cloviela Router release gate status
 
 Every gate names the evidence that produced it. `PASS` = executed in this
 session with the stated result. `BLOCKED` = needs the operator. `UNVERIFIED` =
@@ -7,7 +7,7 @@ not executed; not claimed.
 | Gate | Status | Evidence |
 |---|---|---|
 | R-01 Fork/source branch and upstream SHA | PASS | upstream `dev` `382cf23…`; branch `rikka/release`; `git ls-remote` output |
-| R-02 GPL license and derivative notices preserved | PASS | `LICENSE` unchanged (GPL-3.0); README/About attribution; CHANGELOG fork section |
+| R-02 GPL license and derivative notices preserved | PASS | `LICENSE` unchanged (GPL-3.0); README → License and credits; About → Kredit with the upstream link; CHANGELOG change notice |
 | R-03 Baseline and final code inventory | PASS | `baseline-inventory.json`; 141,815 production lines / 680 files measured |
 | R-04 No unintended data loss or credential exposure | **BLOCKED** | Test suite damaged real client configs; 15 test-created files quarantined, Hermes restored from matching backup; original Codex `config.toml` needs operator backup |
 | R-05 Bun setup and doctor in clean Lite fixture | PASS | `bun setup --non-interactive`; `bun doctor` → "All systems operational" |
@@ -37,7 +37,7 @@ not executed; not claimed.
 | R-29 README, architecture, setup, client, security, release docs | PASS | all present in `documentation/` |
 | R-30 Final report with exact passes/fails/skips/blocked | PASS | `final-report.md` |
 | R-31 Release branch commits contain reviewed real source and assets | PASS | four commits on `rikka/release` (head `77549e2`); no credentials staged; `.env` gitignored |
-| R-32 Fork push succeeds if authorized | PASS | pushed to `clovieflow/rikka-gateway` branch `rikka/release` (head `77549e2`); upstream `dev`/`SeeYouLater` untouched; PR link: https://github.com/clovieflow/rikka-gateway/pull/new/rikka/release |
+| R-32 Fork push succeeds if authorized | PASS | pushed to `clovieflow/cloviela-router` branch `rikka/release` (head `77549e2`); upstream `dev`/`SeeYouLater` untouched; PR link: https://github.com/clovieflow/cloviela-router/pull/new/rikka/release |
 
 ## Summary
 

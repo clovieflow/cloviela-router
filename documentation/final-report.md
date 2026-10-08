@@ -1,7 +1,7 @@
-# Rikka Router — final report
+# Cloviela Router — final report
 
 **Source:** Cartethyia `dev` @ `382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`
-(GPL-3.0-only). **Fork:** `clovieflow/rikka-gateway`.
+(GPL-3.0-only). **Repository:** `clovieflow/cloviela-router`.
 **Product:** private-first, local-friendly, production-ready Rikka Takarada
 personal AI gateway with the complete Cartethyia routing/protocol core.
 
@@ -79,8 +79,8 @@ each is now proven fixed by the same boundary.
 - **Backend hardening:** credential redaction, private-first binding, the
   Lite deadlock fix, provider validation, and the build fixes above.
 - **Docs:** README, getting-started (updated), architecture, clients, security,
-  release, CHANGELOG fork section, CONTRIBUTING/AGENTS/SKILL naming.
-- **E2E harness** (`scripts/ci-rikka-e2e.ts`) with a shipped 3522-case index,
+  release, CHANGELOG, CONTRIBUTING/AGENTS/SKILL naming.
+- **E2E harness** (`scripts/ci-cloviela-e2e.ts`) with a shipped 3522-case index,
   a real mock upstream for all three wire families, a safety guard that refuses
   unsafe targets, and per-ID evidence output. Written and self-checked; the
   scenario families have **not** been executed against a booted gateway.
@@ -95,7 +95,7 @@ each is now proven fixed by the same boundary.
    you had a real key there, restore it from your records. (The rest of that
    file is untouched.)
 3. **Fork push.** The repository is committed locally on branch `rikka/release`
-   with the remote configured; publishing to `clovieflow/rikka-gateway` was left
+   with the remote configured; publishing to `clovieflow/cloviela-router` was left
    for explicit confirmation.
 
 ## UNVERIFIED — stated honestly, not claimed
@@ -104,7 +104,7 @@ each is now proven fixed by the same boundary.
 - Real third-party provider calls (no provider credentials).
 - 2 vCPU / 2 GB profiling (this machine is 6-core / 8 GB; measurements are
   recorded with the actual hardware, not the target).
-- The GW/SEC/DB/CLI scenario families through `ci-rikka-e2e.ts` — the harness
+- The GW/SEC/DB/CLI scenario families through `ci-cloviela-e2e.ts` — the harness
   exists and its components were checked, but no family has been executed.
 - `POST /console/api/routing/simulate` and
   `GET /console/api/system/readiness` while their implementing work was still in
@@ -118,5 +118,5 @@ bun setup --non-interactive
 bun doctor
 bun run typecheck && bun run dashboard:typecheck
 bun run test:backend && bun run dashboard:test
-bun run build && ./dist/rikka-router
+bun run build && ./dist/cloviela-router
 ```

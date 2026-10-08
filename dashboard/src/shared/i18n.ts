@@ -414,12 +414,12 @@ const ID_MESSAGES = {
   "about.license": "Lisensi",
   "about.licenseBody":
     "Kode sumber proyek ini dilisensikan di bawah GNU General Public License v3.0 (GPL-3.0-only). Anda berhak memakai, mempelajari, mengubah, dan menyebarkan ulang kode ini dengan syarat yang sama.",
-  "about.upstream": "Proyek hulu",
+  "about.upstream": "Kredit",
   "about.upstreamBody":
-    "Proyek ini adalah fork. Kode asli berasal dari {repo}, dan hak cipta serta atribusi hulu dipertahankan.",
-  "about.derivative": "Catatan perubahan fork",
+    "Inti gateway ini dibangun di atas proyek open-source {repo} oleh risunCode, dilisensikan GPL-3.0-only. Cloviela Router mengembangkannya dengan identitas, tema, dan fitur operasionalnya sendiri.",
+  "about.derivative": "Perubahan pada kode asli",
   "about.derivativeBody":
-    "Fork ini menambahkan tema Rikka, alur panduan awal, simulator rute, dan halaman operasional tambahan. Perilaku protokol, autentikasi, dan penyimpanan tetap mengikuti hulu.",
+    "Sejak 2026: tema Cloviela, alur panduan awal, simulator rute, dan halaman operasional tambahan. Kontrak protokol, autentikasi, dan penyimpanan tidak diubah.",
   "about.fanNotice": "Catatan penggemar — tidak resmi",
   "about.fanNoticeBody":
     "Tema visual ini adalah karya penggemar tidak resmi. Karakter Rikka Takarada berasal dari SSSS.GRIDMAN dan haknya dipegang oleh pemegang hak masing-masing. Proyek ini tidak berafiliasi dengan, disponsori oleh, atau didukung oleh pemegang hak mana pun, dan tidak mengklaim hak komersial atas karakter tersebut.",
@@ -811,12 +811,12 @@ const EN_MESSAGES: Readonly<Record<MessageKey, string>> = {
   "about.license": "License",
   "about.licenseBody":
     "This project's source code is licensed under the GNU General Public License v3.0 (GPL-3.0-only). You may use, study, modify, and redistribute it under the same terms.",
-  "about.upstream": "Upstream project",
+  "about.upstream": "Credits",
   "about.upstreamBody":
-    "This project is a fork. The original code comes from {repo}; upstream copyright and attribution are preserved.",
-  "about.derivative": "Fork change notice",
+    "This gateway core is built on the open-source project {repo} by risunCode, licensed GPL-3.0-only. Cloviela Router develops it further with its own identity, theme, and operational features.",
+  "about.derivative": "Changes to the original code",
   "about.derivativeBody":
-    "This fork adds the Rikka theme, a getting-started flow, a route simulator, and additional operational pages. Protocol, authentication, and storage behavior stay aligned with upstream.",
+    "Since 2026: the Cloviela theme, a getting-started flow, a route simulator, and additional operational pages. Protocol, authentication, and storage contracts are unchanged.",
   "about.fanNotice": "Unofficial fan theme",
   "about.fanNoticeBody":
     "This visual theme is unofficial fan work. Rikka Takarada is a character from SSSS.GRIDMAN, and her rights belong to the respective rightsholders. This project is not affiliated with, sponsored by, or endorsed by any rightsholder, and claims no commercial rights to the character.",

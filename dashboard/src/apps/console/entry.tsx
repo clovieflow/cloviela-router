@@ -7,7 +7,7 @@ import "../../styles/console.css";
 
 /** Mounts the authenticated console app into the shared dashboard document. */
 export function mountConsole(root: HTMLElement): void {
-  document.title = "Rikka Router Console";
+  document.title = "Cloviela Router Console";
   createRoot(root).render(
     <StrictMode>
       <App />

@@ -53,5 +53,5 @@ cartethyia-backup-*.json
 # Rikka E2E matrix evidence. The runner writes sanitized JSON/JUnit/traces here
 # on every invocation; they describe one disposable run against a mock upstream
 # and must never be committed as if they were a permanent gate result.
-.rikka-work/e2e-rikka/
+.rikka-work/e2e-cloviela/
 .DS_Store

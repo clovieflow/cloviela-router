@@ -1,10 +1,10 @@
-# Contributing to Rikka Router
+# Contributing to Cloviela Router
 
-Rikka Router is a GPLv3 derivative of
-[Cartethyia](https://github.com/risunCode/Cartethyia). Prefer fixing shared
-gateway behavior upstream where it belongs, and keep this fork's presentation
-changes (Rikka branding, artwork, localization) separate from protocol,
-routing, and persistence changes.
+Cloviela Router is GPLv3 software. Its gateway core derives from
+[Cartethyia](https://github.com/risunCode/Cartethyia), so a bug in shared
+routing, protocol, or persistence behavior usually belongs upstream where every
+downstream project benefits. Keep presentation changes (theme, artwork,
+localization) separate from those core changes so either can move on its own.
 
 This page covers contribution workflow, code conventions, and pull requests.
 

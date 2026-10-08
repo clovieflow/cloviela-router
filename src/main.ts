@@ -107,7 +107,7 @@ if (boot) {
       maxRequestBodySize: resolveMaxBodyBytes(),
     },
     () => {
-      log.info(`Rikka Router listening on ${resolveBindHost()}:${port} (Bun ${Bun.version})`);
+      log.info(`Cloviela Router listening on ${resolveBindHost()}:${port} (Bun ${Bun.version})`);
     },
   );
   // Started here rather than inside the dependency builder: the first tick of

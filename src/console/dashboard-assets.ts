@@ -52,13 +52,13 @@ export interface SocialMeta {
 
 /** Social card for the public enrollment page (`/share/*`). */
 export const SHARE_SOCIAL_META: SocialMeta = {
-  title: "Rikka Router — Akses bersama",
+  title: "Cloviela Router — Akses bersama",
   description:
     "Akses gateway pribadi dengan kuota, penggunaan nyata, dan model yang diizinkan. Tema penggemar tidak resmi SSSS.GRIDMAN.",
   image: "/rikka/social.webp",
   imageWidth: 1200,
   imageHeight: 630,
-  imageAlt: "Rikka Router — gateway AI pribadi",
+  imageAlt: "Cloviela Router — gateway AI pribadi",
 };
 
 /** Sentinel-delimited block in the shared index document that carries the card. */

@@ -1,4 +1,4 @@
-## Rikka Router fork
+## Cloviela Router
 
 - **A long stream could grow the retained transcript without bound.** The
   canonical event history appended every event for the whole stream regardless
@@ -28,7 +28,7 @@
   certain. Fifteen regression tests cover outcome mapping, ordering parity with
   `plan()`, alias chains, tenant isolation, and the cursor guarantees.
 - **The compiled release binary could not run.** Two independent defects, both
-  found by executing `dist/rikka-router` rather than trusting the build's exit
+  found by executing `dist/cloviela-router` rather than trusting the build's exit
   code. macOS killed it on launch with `SIGKILL (Code Signature Invalid)` and no
   output, because `bun build --compile` rewrites the file after the linker signs
   it; the build now re-signs ad-hoc on darwin. And Lite mode died with

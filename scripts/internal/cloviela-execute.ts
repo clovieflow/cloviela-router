@@ -11,9 +11,9 @@
  * a scenario asserts on are the same rows an operator would create through the
  * dashboard.
  */
-import { HarnessClient, digestOf, sanitize, type Exchange } from "./rikka-client";
-import { type MockBehavior, type MockCall } from "./rikka-mock-upstream";
-import type { CaseStatus, PlannedCase } from "./rikka-plan";
+import { HarnessClient, digestOf, sanitize, type Exchange } from "./cloviela-client";
+import { type MockBehavior, type MockCall } from "./cloviela-mock-upstream";
+import type { CaseStatus, PlannedCase } from "./cloviela-plan";
 
 /** Outcome for one matrix identifier. */
 export interface CaseResult {

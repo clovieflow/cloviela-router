@@ -105,7 +105,7 @@ export function loadDimension(indexPath: string, dimension: HarnessDimension): r
 }
 
 export function defaultIndexPath(): string {
-  return join(import.meta.dir, "fixtures", "rikka-case-index.json");
+  return join(import.meta.dir, "fixtures", "cloviela-case-index.json");
 }
 
 /**
