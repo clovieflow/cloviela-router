@@ -19,8 +19,13 @@ import {
   type RoutePlan,
   type EligibilityDecision,
   type RouteSnapshot,
+  type RouteSimulationCandidate,
+  type RouteSimulationOutcome,
+  type RouteSimulationResult,
   type RoutingRevision,
+  type ProviderRoutingStrategy,
 } from "./route-model";
+import type { ServiceKind } from "../canonical-model";
 import {
   candidateSupportsRequest,
   type RequiredCapability,
@@ -30,6 +35,32 @@ const SEARCH_PROVIDER_ORDER = ["exa", "gemini", "codex"] as const;
 const SEARCH_PROVIDER_RANK = new Map<string, number>(
   SEARCH_PROVIDER_ORDER.map((provider, index) => [provider, index]),
 );
+
+/**
+ * Endpoint families the console's route simulator may evaluate, and the service
+ * kind that must serve each. Declared here rather than in the console so the
+ * simulator cannot drift from the dispatch rule it explains.
+ */
+export const SIMULATOR_ENDPOINTS = [
+  "chat.completions",
+  "responses",
+  "messages",
+  "completions",
+  "search",
+  "systemone",
+] as const;
+
+export type SimulatorEndpoint = (typeof SIMULATOR_ENDPOINTS)[number];
+
+/** Which `service_kind` a model must carry to serve each simulator family. */
+export const SERVICE_KIND_BY_ENDPOINT: Readonly<Record<SimulatorEndpoint, ServiceKind>> = {
+  "chat.completions": "llm",
+  responses: "llm",
+  messages: "llm",
+  completions: "llm",
+  search: "websearch",
+  systemone: "systemone",
+};
 
 
 /**
@@ -459,10 +490,21 @@ export class ReservationManager {
 export class RoundRobinState {
   private idx = 0;
   private servedByCurrent = 0;
-  next(candidates: readonly RouteCandidate[], rotateCount: number): RouteCandidate | undefined {
+  /**
+   * `advance = false` is a read-only peek: it answers "who is first right now"
+   * without moving the cursor or counting a served request. The route
+   * simulator needs exactly that — a preview that advanced the cursor would
+   * change which account the next real request dials.
+   */
+  next(
+    candidates: readonly RouteCandidate[],
+    rotateCount: number,
+    advance = true,
+  ): RouteCandidate | undefined {
     if (candidates.length === 0) return undefined;
     const safeCount = Math.max(1, Math.min(1000, Math.trunc(rotateCount)));
     const c = candidates[this.idx % candidates.length];
+    if (!advance) return c;
     this.servedByCurrent += 1;
     if (this.servedByCurrent >= safeCount) {
       this.idx = (this.idx + 1) % 1000000;
@@ -557,13 +599,18 @@ export class RoutingEngine {
     run: RouteCandidate[],
     settings: ProviderRoutingSetting | undefined,
     tid: string | null,
+    advance = true,
   ): RouteCandidate[] {
     if (!settings || !settings.enabled || settings.strategy === "fallback") {
       return [...run];
     }
     const rrKey = `${tid ?? "__global__"}::${run[0]!.provider_id}`;
-    const rr = this.getProviderRoundRobin(rrKey);
-    const chosen = rr.next(run, settings.rotateCount);
+    // A peek must not create a cursor entry: simulating a route for a provider
+    // that has never served a request would otherwise leave state behind that
+    // changes the first real dispatch.
+    const rr = advance ? this.getProviderRoundRobin(rrKey) : this._roundRobinByProvider.get(rrKey);
+    if (!rr) return [...run];
+    const chosen = rr.next(run, settings.rotateCount, advance);
     if (!chosen) return [...run];
     const idx = run.indexOf(chosen);
     if (idx <= 0) return [...run];
@@ -574,6 +621,7 @@ export class RoutingEngine {
     eligible: readonly RouteCandidate[],
     snapshot: RouteSnapshot,
     tid: string | null,
+    advance = true,
   ): RouteCandidate[] {
     if (eligible.length <= 1) return [...eligible];
     if (!snapshot.providerRouting) return [...eligible];
@@ -591,7 +639,7 @@ export class RoutingEngine {
       const run = eligible.slice(i, j);
       if (run.length > 1) {
         const settings = this.resolveProviderRouting(snapshot, cur.provider_id, tid);
-        const reordered = this.reorderRun([...run], settings, tid);
+        const reordered = this.reorderRun([...run], settings, tid, advance);
         result.push(...reordered);
       } else {
         result.push(...run);
@@ -603,6 +651,7 @@ export class RoutingEngine {
   private searchFallbackCandidates(
     snapshot: RouteSnapshot,
     tenantId: string | null,
+    advance = true,
   ): RouteCandidate[] {
     const ranked = snapshot.candidates
       .filter(
@@ -627,6 +676,7 @@ export class RoutingEngine {
       ],
       snapshot,
       tenantId,
+      advance,
     );
     return ordered.map((candidate) => ({ ...candidate, search_route: "fallback" as const }));
   }
@@ -640,6 +690,7 @@ export class RoutingEngine {
     allowCliMappings = false,
     keyId?: string,
     webSearch = false,
+    advance = true,
   ): Promise<RoutePlan> {
     const tid = tenantId ?? null;
     const { resolved, matching, unmatchedMembers, fusion } = this.resolveMatchingCandidates(
@@ -648,6 +699,7 @@ export class RoutingEngine {
       tid,
       allowCliMappings,
       keyId,
+      advance,
     );
     // `matching` non-empty but nothing eligible means every account serving
     // this model is currently unusable — NOT a missing model. Distinct from
@@ -720,7 +772,7 @@ export class RoutingEngine {
       if (eligible.length === 0)
         throw capabilityUnsupportedError(requiredCapabilities.join(", "));
     }
-    eligible = this.applyProviderRouting(eligible, snapshot, tid);
+    eligible = this.applyProviderRouting(eligible, snapshot, tid, advance);
     // Re-assert the cooling order: `applyProviderRouting` rotates accounts
     // within one `provider::model` run, and that rotation is by design blind to
     // health — so it can float a cooling account back to the front and undo the
@@ -742,7 +794,7 @@ export class RoutingEngine {
       );
       eligible = [
         ...searchCandidates,
-        ...this.searchFallbackCandidates(snapshot, tid),
+        ...this.searchFallbackCandidates(snapshot, tid, advance),
       ];
     }
     const chosen = eligible[0]!;
@@ -772,6 +824,7 @@ export class RoutingEngine {
     tid: string | null,
     allowCliMappings: boolean,
     keyId?: string,
+    advance = true,
   ): {
     resolved: ReturnType<typeof resolveAlias>;
     combo: ComboDefinition | undefined;
@@ -824,8 +877,11 @@ export class RoutingEngine {
       const groups = perId.map((entry) => entry.group).filter((g) => g.length > 0);
       if (combo.strategy === "round_robin" && groups.length > 1) {
         const heads = groups.map((g) => g[0] as RouteCandidate);
-        const rr = this.getRoundRobin(`${tid}::${resolved.model}`);
-        const chosen = rr.next(heads, 1);
+        // Same peek rule as provider rotation: a simulation must not advance
+        // the combo cursor, and must not create one for a combo that has never
+        // dispatched.
+        const rr = advance ? this.getRoundRobin(`${tid}::${resolved.model}`) : this._roundRobinByCombo.get(`${tid}::${resolved.model}`);
+        const chosen = rr?.next(heads, 1, advance);
         const startIndex = chosen ? heads.indexOf(chosen) : 0;
         matching = [...groups.slice(startIndex), ...groups.slice(0, startIndex)].flat();
       } else {
@@ -847,6 +903,201 @@ export class RoutingEngine {
         ? { panel: [...modelIds], judge: modelIds[0]! }
         : undefined;
     return { resolved, combo, matching, unmatchedMembers, ...(fusion === undefined ? {} : { fusion }) };
+  }
+
+  /**
+   * Read-only evaluation of the same pipeline `plan()` runs, for the console's
+   * route simulator.
+   *
+   * It reuses `resolveMatchingCandidates` and `EligibilityEvaluator` — the only
+   * eligibility owner — with `advance = false`, so a simulation cannot create or
+   * move a rotation cursor, reserve an admission slot, dispatch upstream, or
+   * decrypt a credential. `selected` is therefore only reported when a live
+   * request would take that candidate with certainty (one candidate, no
+   * rotation, no fusion); otherwise the caller is told the choice is
+   * non-deterministic rather than shown a plausible-looking winner.
+   *
+   * Outcome mapping mirrors `plan()`'s errors instead of throwing, because the
+   * simulator's job is to explain the refusal:
+   *   every candidate hard-cooling / all cooling -> accounts_rate_limited
+   *   no eligible candidate                      -> accounts_unavailable
+   *   nothing serves the requested family        -> service_kind_unsupported
+   * `model_not_found` / `ambiguous_model` still throw: they are not "why can't
+   * this dispatch" answers, they are "this model is not routable at all".
+   */
+  async simulate(input: {
+    readonly requestedModel: string;
+    readonly endpoint: SimulatorEndpoint;
+    readonly snapshot: RouteSnapshot;
+    readonly tenantId?: string | null;
+  }): Promise<RouteSimulationResult> {
+    const tid = input.tenantId ?? null;
+    const { resolved, matching, unmatchedMembers, fusion } = this.resolveMatchingCandidates(
+      input.requestedModel,
+      input.snapshot,
+      tid,
+      false,
+      undefined,
+      false,
+    );
+    const endpointServiceKind = SERVICE_KIND_BY_ENDPOINT[input.endpoint];
+    const decisions = matching.map((candidate) => this.eligibility.evaluate(candidate));
+    const cooling = new Set(
+      decisions
+        .filter((decision) => decision.eligible && decision.reason === "cooldown")
+        .map((decision) => decision.candidate),
+    );
+    const eligibleCanonical = decisions
+      .filter((decision) => decision.eligible)
+      .map((decision) => decision.candidate);
+    // Ordering rule shared with plan(): healthy first, cooling last.
+    const orderedEligible =
+      cooling.size > 0 && cooling.size < eligibleCanonical.length
+        ? [
+            ...eligibleCanonical.filter((candidate) => !cooling.has(candidate)),
+            ...eligibleCanonical.filter((candidate) => cooling.has(candidate)),
+          ]
+        : eligibleCanonical;
+    const familyServing = orderedEligible.filter(
+      (candidate) => (candidate.service_kind ?? "llm") === endpointServiceKind,
+    );
+    const routed = this.applyProviderRouting(familyServing, input.snapshot, tid, false);
+    // Re-assert the cooling order after rotation, exactly as plan() does: the
+    // rotation is health-blind by design and can float a cooling account back.
+    const ordered =
+      cooling.size > 0 && cooling.size < routed.length
+        ? [
+            ...routed.filter((candidate) => !cooling.has(candidate)),
+            ...routed.filter((candidate) => cooling.has(candidate)),
+          ]
+        : routed;
+    const healthyCount = decisions.filter(
+      (decision) => decision.eligible && decision.reason !== "cooldown",
+    ).length;
+    const outcome: RouteSimulationOutcome =
+      eligibleCanonical.length === 0
+        ? decisions.some((decision) => decision.reason === "cooldown_hard")
+          ? "accounts_rate_limited"
+          : "accounts_unavailable"
+        : healthyCount === 0
+          ? "accounts_rate_limited"
+          : ordered.length === 0
+            ? "service_kind_unsupported"
+            : "dispatchable";
+    // A rotation cursor decides the first candidate whenever more than one
+    // candidate could serve this request; fusion fans out to every member.
+    const rotationActive = ordered.length > 1;
+    const selected =
+      outcome === "dispatchable" && !rotationActive && fusion === undefined
+        ? ordered[0]
+        : undefined;
+    const strategy: ProviderRoutingStrategy | "fusion" =
+      fusion !== undefined ? "fusion" : this.strategyFor(ordered, input.snapshot, tid);
+    const strategySource: "combo" | "provider" | "default" =
+      fusion !== undefined || this.comboStrategyFor(input.snapshot, tid, resolved.model) !== undefined
+        ? "combo"
+        : strategy === "fallback"
+          ? "default"
+          : "provider";
+    const notes: string[] = [];
+    if (rotationActive)
+      notes.push(
+        "More than one candidate can serve this request, so the first one is chosen at dispatch time by the rotation cursor.",
+      );
+    if (cooling.size > 0)
+      notes.push(
+        `${cooling.size} candidate(s) are cooling down and are ordered last; they are not excluded.`,
+      );
+    if (unmatchedMembers.length > 0)
+      notes.push("Some combo members matched no candidate and were not evaluated.");
+    if (outcome === "service_kind_unsupported")
+      notes.push(
+        `No candidate serves the '${endpointServiceKind}' service for this model.`,
+      );
+    const orderedSet = new Set(ordered);
+    const projected: RouteSimulationCandidate[] = [
+      ...ordered.map((candidate) =>
+        this.projectSimulationCandidate(
+          candidate,
+          decisions.find((decision) => decision.candidate === candidate),
+          input.snapshot,
+          tid,
+          endpointServiceKind,
+        ),
+      ),
+      ...decisions
+        .filter((decision) => !orderedSet.has(decision.candidate))
+        .map((decision) =>
+          this.projectSimulationCandidate(
+            decision.candidate,
+            decision,
+            input.snapshot,
+            tid,
+            endpointServiceKind,
+          ),
+        ),
+    ];
+    return {
+      requested_model: input.requestedModel,
+      resolved_model: resolved.model,
+      resolution_chain: resolved.chain,
+      revision: input.snapshot.revision,
+      endpoint_service_kind: endpointServiceKind,
+      outcome,
+      candidates: projected,
+      ...(selected === undefined ? {} : { selected }),
+      rotation_active: rotationActive,
+      strategy,
+      strategy_source: strategySource,
+      ...(fusion === undefined ? {} : { fusion }),
+      unmatched_members: unmatchedMembers,
+    };
+  }
+
+  private projectSimulationCandidate(
+    candidate: RouteCandidate,
+    decision: EligibilityDecision | undefined,
+    snapshot: RouteSnapshot,
+    tid: string | null,
+    endpointServiceKind: ServiceKind,
+  ): RouteSimulationCandidate {
+    const reason = decision?.reason ?? "healthy";
+    const endpointSupported = (candidate.service_kind ?? "llm") === endpointServiceKind;
+    return {
+      candidate,
+      eligible: (decision?.eligible ?? false) && endpointSupported,
+      reason,
+      endpoint_supported: endpointSupported,
+      ...(this.resolveProviderRouting(snapshot, candidate.provider_id, tid) === undefined
+        ? {}
+        : {
+            provider_routing: this.resolveProviderRouting(
+              snapshot,
+              candidate.provider_id,
+              tid,
+            ) as ProviderRoutingSetting,
+          }),
+    };
+  }
+
+  /** The provider-routing strategy that governs the winning candidate, if any. */
+  private strategyFor(
+    ordered: readonly RouteCandidate[],
+    snapshot: RouteSnapshot,
+    tid: string | null,
+  ): ProviderRoutingStrategy {
+    const first = ordered[0];
+    if (first === undefined) return "fallback";
+    return this.resolveProviderRouting(snapshot, first.provider_id, tid)?.strategy ?? "fallback";
+  }
+
+  private comboStrategyFor(
+    snapshot: RouteSnapshot,
+    tid: string | null,
+    resolvedModel: string,
+  ): ComboDefinition["strategy"] | undefined {
+    if (!tid) return undefined;
+    return snapshot.combos[tid]?.[resolvedModel]?.strategy;
   }
 
   async reserve(plan: RoutePlan): Promise<Reservation> {

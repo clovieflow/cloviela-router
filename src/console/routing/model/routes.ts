@@ -9,6 +9,7 @@ import {
   type ModelRoutingConfig,
 } from "./contracts";
 import { createModelRoutingOperations } from "./operations";
+import { createRouteSimulatorOperations } from "./simulator";
 
 function modelRoutingErrorResponse(error: unknown, set: { status?: number | string }) {
   return errorResponse(error, set, "Model routing operation failed");
@@ -43,7 +44,22 @@ const updateComboBody = t.Object({
 });
 export function createModelRoutingRoutes(config: ModelRoutingConfig): Elysia {
   const factory = createModelRoutingOperations(config);
+  const simulator = config.simulator === undefined ? undefined : createRouteSimulatorOperations(config.simulator);
   return new Elysia({ prefix: "/routing" })
+    .post("/simulate", async ({ request, body, set }) => {
+      if (simulator === undefined) {
+        set.status = 503;
+        return {
+          error: "simulator_unavailable",
+          message: "The route simulator is not wired in this composition.",
+        };
+      }
+      try {
+        return await simulator.simulate(config.accessResolver(request), body);
+      } catch (e) {
+        return modelRoutingErrorResponse(e, set);
+      }
+    })
     .get("/aliases", async ({ request, set }) => {
       try {
         return await factory.listAliases(config.accessResolver(request));

@@ -113,7 +113,13 @@ describe("dropCorruptAttachments", () => {
   });
 
   it("forwards a well-formed PNG untouched", () => {
-    // The 1x1 fixture carries real CRCs, so nothing should be dropped.
+    // The exact counterpart of the corrupt fixture above: same construction,
+    // valid CRC. The pair is what makes this a regression — the same bytes
+    // pass or fail on the stored checksum alone, which is precisely the
+    // interrupted-writer defect that motivated this module.
+    const generated = png([chunk("IDAT", new Uint8Array(64))]);
+    expect(dropCorruptAttachments(imageRequest(generated)).dropped).toEqual([]);
+    // A real-world 1x1 PNG (the canonical transparent pixel) still passes too.
     const valid =
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
     const result = dropCorruptAttachments(imageRequest(valid));

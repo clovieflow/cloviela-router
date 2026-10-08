@@ -52,6 +52,21 @@ canonical implementation; a second copy of any of these rules is a defect.
 10. **Response** — the client receives the contract it asked for: JSON, SSE, or
     a typed error envelope.
 
+## Route simulation
+
+`POST /console/api/routing/simulate` answers "what would this request do"
+without doing it. It calls `RoutingEngine.simulate`, which reuses the same alias
+resolver, `EligibilityEvaluator`, ordering rules, and rotation state `plan()`
+uses — so the explanation cannot drift from what actually dispatches. The one
+added layer is the endpoint family: a model that is healthy but cannot serve the
+requested family is reported as such instead of reading as dispatchable.
+
+Read-only is enforced, not documented: rotation cursors are *peeked* rather than
+advanced, no admission slot is reserved, nothing is dispatched, and no
+credential is decrypted. `selected` is therefore present only when a single
+candidate makes the choice certain; under rotation or fusion the response says
+the choice is non-deterministic and the console presents no winner.
+
 ## Routing state
 
 `src/transport/routing/route-catalog.ts` projects database rows (providers,

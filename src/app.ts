@@ -518,6 +518,9 @@ export function createGatewayApp(deps: GatewayAppDeps) {
       app.use(
         createConsoleRouter({
           ...deps.consoleApi,
+          // The simulator reads the same engine the dispatch path uses; the
+          // preparer is the composition that owns it.
+          routeSimulator: deps.proxyPreparer,
           stateStore: requestStateStore,
           resolvePeerAddress: (request) => peerAddresses.get(request) ?? null,
           trustedProxyBoundary: deps.trustedProxyBoundary,

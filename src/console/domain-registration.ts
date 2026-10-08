@@ -36,6 +36,7 @@ import { DrizzleStudioSessionStore } from "./domains/studio/store";
 import { createPerformanceRoutes } from "./observability/performance";
 import { createBackupRoutes } from "./backup/routes";
 import { BackupService } from "./backup/service";
+import { createRestoreRuntimeSync } from "./backup/runtime-sync";
 import type { ConsoleCredentialService } from "./auth/service";
 
 import { InMemoryOAuthFlowStore, OAuthFlowStore } from "../providers/authentication/oauth-flow-store";
@@ -54,7 +55,8 @@ import type { AuditRecorder } from "./auth/service";
 import type { CliToolService } from "./cli-tools/service";
 import type { NetworkPoolSelector } from "../network/pool/selector";
 import type { ProxyRequestStateStore } from "../transport/request/state";
-import type { RouteSnapshotService } from "../transport/routing/route-model";
+import type { RouteSnapshot, RouteSnapshotService, RouteSimulationResult } from "../transport/routing/route-model";
+import type { SimulatorEndpointFamily } from "./routing/model/contracts";
 import type { ApiKeyAdmissionService } from "../security/admission/service";
 import type { ModelStrikeService } from "../security/model-abuse";
 import type { TelemetryBatchBuffer } from "../observability/telemetry-buffer";
@@ -98,6 +100,18 @@ export interface ConsoleDomainContext {
   readonly loadConsoleUser: (request: Request) => Promise<{ readonly passwordHash: string } | null>;
   /** Password verification against the console user's stored hash. */
   readonly credentialService: Pick<ConsoleCredentialService, "verifyPassword">;
+  /**
+   * Read-only route evaluation for the simulator. Absent in reduced
+   * compositions; the route then answers 503 instead of a misleading 404.
+   */
+  readonly routeSimulator?: {
+    simulate(input: {
+      readonly requestedModel: string;
+      readonly endpoint: SimulatorEndpointFamily;
+      readonly snapshot: RouteSnapshot;
+      readonly tenantId?: string | null;
+    }): Promise<RouteSimulationResult>;
+  };
 }
 import { and, eq, isNull, or } from "drizzle-orm";
 import { networkPools, providerRoutingSettings } from "../persistence/schema";
@@ -283,12 +297,35 @@ export function registerConsoleDomains(
           },
         }),
       snapshotInvalidator: ctx.routeSnapshotService,
+      // Post-restore convergence: BYOK registrations (add/update/drop), the
+      // credential cache, and the settings revision. Without it a restored
+      // provider row only becomes dispatchable after a restart, and a provider
+      // the payload removed keeps serving from the stale registration.
+      restoreRuntimeSync: createRestoreRuntimeSync({
+        db: ctx.db,
+        registry: ctx.providerRegistry,
+        ssrfPolicy: resolveSsrfPolicy(),
+      }),
       apiKeyStore,
       admissionService: ctx.admissionService,
       auditSink: ctx.auditRecorder,
     }),
   );
-  console.use(createModelRoutingRoutes({ store: modelRoutingStore, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, snapshotInvalidator: ctx.routeSnapshotService }));
+  console.use(createModelRoutingRoutes({
+    store: modelRoutingStore,
+    accessResolver: ctx.accessResolver,
+    auditSink: ctx.auditRecorder,
+    snapshotInvalidator: ctx.routeSnapshotService,
+    ...(ctx.routeSimulator === undefined
+      ? {}
+      : {
+          simulator: {
+            engine: ctx.routeSimulator,
+            snapshotService: ctx.routeSnapshotService,
+            accessResolver: ctx.accessResolver,
+          },
+        }),
+  }));
   console.use(createApiKeyRoutes({ store: apiKeyStore, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, shareStore, shareActivity, admissionService: ctx.admissionService, bucketSpend: (keyId, now) => familyBucketSpend(ctx.db, keyId, now) }));
   console.use(createCliToolsRoutes({ service: ctx.cliToolService, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, snapshotInvalidator: ctx.routeSnapshotService }));
   console.use(createAccountQuotaRoutes({

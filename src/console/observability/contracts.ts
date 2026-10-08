@@ -30,10 +30,24 @@ export interface SystemHealthResponse {
   database_healthy: boolean;
   redis_healthy: boolean;
   memory_bytes: number;
+  /**
+   * RSS as a percentage of {@link memory_limit_bytes}: the operator-configured
+   * `CARTETHYIA_MEMORY_LIMIT_BYTES` when set, otherwise the container/cgroup
+   * limit, otherwise the host's total memory. It is never measured against
+   * `heap_total_bytes` — that is a JS-heap reservation, not a memory budget.
+   */
   memory_percent: number;
+  /** The ceiling `memory_percent` is measured against, published so the figure is checkable. */
+  memory_limit_bytes: number;
   heap_used_bytes: number;
   heap_total_bytes: number;
   external_bytes: number;
+  /**
+   * Process CPU time over wall-clock time, normalized by core count: 100% means
+   * every core saturated by this process. Sourced from `process.cpuUsage()`
+   * deltas between health reads (lifetime average on the first read), never
+   * from the host load average, which includes unrelated processes.
+   */
   cpu_percent: number;
   cpu_cores: number;
   pid: number;
@@ -43,6 +57,11 @@ export interface SystemHealthResponse {
   latency_avg_ms: number;
   latency_p95_ms: number;
   latency_p99_ms: number;
+  /**
+   * Cached input tokens over input tokens across the health window, restricted
+   * to requests that reported a cache breakdown (`cached_input_tokens IS NOT
+   * NULL`). 0 when no request in the window reported one.
+   */
   cache_hit_rate_percent: number;
   avg_tokens_per_sec: number;
 }
@@ -62,6 +81,7 @@ export interface UsageResponse {
 export interface UsageSummaryTotals {
   requests: number;
   inputTokens: number;
+  /** Cached (cache-read) input tokens over every row in the window. */
   cachedTokens: number;
   outputTokens: number;
   /**
@@ -79,7 +99,13 @@ export interface UsageSummaryTotals {
   estimatedCostUsd: number;
   /** True when completed rows without persisted cost exist in the window. */
   partial: boolean;
-  /** Cache hit rate percentage (0-100). */
+  /**
+   * Cache hit rate percentage (0-100): `cachedTokens` over the input of the
+   * requests that reported a cache breakdown. Not `cachedTokens / inputTokens`
+   * — a provider that never reports the breakdown contributes input but no
+   * cache data, so dividing by all input would understate the measured rate.
+   * 0 when no request in the window reported a breakdown.
+   */
   cacheHitRate: number;
   /** Average tokens per second across the period. */
   avgTokensPerSec: number;
@@ -93,6 +119,7 @@ export interface UsageChartBucket {
   t: string;
   requests: number;
   input: number;
+  /** Cache-read input tokens in the bucket; a subset of `input`. */
   cached: number;
   output: number;
 }
@@ -104,6 +131,7 @@ export interface UsageByRow {
   requests: number;
   input: number;
   output: number;
+  /** Cache-read input tokens in this group; a subset of `input`. */
   cached: number;
   total: number;
   errors: number;
@@ -111,7 +139,10 @@ export interface UsageByRow {
   costUsd: number | null;
   /** Resolved API key label for the `key` dimension; absent otherwise. */
   label?: string;
-  /** Cache hit rate percentage (0-100). */
+  /**
+   * Cache hit rate percentage (0-100): `cached` over the input of this group's
+   * rows that reported a cache breakdown (0 when none did).
+   */
   cacheHitRate: number;
   /** Average tokens per second for this dimension. */
   avgTokensPerSec: number;
@@ -131,9 +162,15 @@ export interface UsageByResponse {
 export interface UsageCacheResponse {
   period: string;
   inputTokens: number;
+  /** Cache-read input tokens over every row in the window. */
   cachedTokens: number;
   /** Always zero: cache-write tokens are not tracked by the telemetry schema. */
   cacheWriteTokens: number;
+  /**
+   * Cache hit rate percentage (0-100): `cachedTokens` over the input of the
+   * requests that reported a cache breakdown (0 when none did). Same definition
+   * as the health endpoint and the usage summary.
+   */
   hitRate: number;
 }
 export type UsageRequestMode = "stream" | "non_stream";

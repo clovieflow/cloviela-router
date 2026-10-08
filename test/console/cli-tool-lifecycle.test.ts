@@ -37,7 +37,19 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createFileInjector, INJECTORS } from "../../src/console/cli-tools/injectors/driver";
+import { claudeSpec } from "../../src/console/cli-tools/injectors/claude";
+import { clineSpec } from "../../src/console/cli-tools/injectors/cline";
 import { codexSpec } from "../../src/console/cli-tools/injectors/codex";
+import { copilotSpec } from "../../src/console/cli-tools/injectors/copilot";
+import { coworkSpec } from "../../src/console/cli-tools/injectors/cowork";
+import { deepseekTuiSpec } from "../../src/console/cli-tools/injectors/deepseek-tui";
+import { droidSpec } from "../../src/console/cli-tools/injectors/droid";
+import { grokBuildSpec } from "../../src/console/cli-tools/injectors/grok-build";
+import { hermesSpec } from "../../src/console/cli-tools/injectors/hermes";
+import { jcodeSpec } from "../../src/console/cli-tools/injectors/jcode";
+import { kiloSpec } from "../../src/console/cli-tools/injectors/kilo";
+import { openclawSpec } from "../../src/console/cli-tools/injectors/openclaw";
+import { opencodeSpec } from "../../src/console/cli-tools/injectors/opencode";
 import { homeDir, readTextFile, textGet, textHas, writeTextFile } from "../../src/console/cli-tools/fs-ops";
 import { TOOL_IDS, TOOL_REGISTRY, type InjectorSpec } from "../../src/console/cli-tools/contracts";
 
@@ -136,6 +148,21 @@ function assertHomeRedirect(home: string): void {
   }
 }
 
+/**
+ * Kilo's second write target: VS Code's own settings.json, resolved under a
+ * platform directory (APPDATA on Windows, Application Support on macOS,
+ * ~/.config on Linux). Mirrors `kiloVscodeSettingsPath` in the injector, which
+ * the spec API does not expose — it is the write most likely to escape a
+ * HOME-only redirect, so it is asserted before the loop writes.
+ */
+function kiloVscodeSettingsPath(home: string): string {
+  if (process.platform === "win32")
+    return join(process.env.APPDATA ?? home, "Code", "User", "settings.json");
+  if (process.platform === "darwin")
+    return join(home, "Library", "Application Support", "Code", "User", "settings.json");
+  return join(home, ".config", "Code", "User", "settings.json");
+}
+
 /** Companion files an injector writes beside its primary config. */
 function companionFiles(toolId: string, home: string): ReadonlyArray<readonly [string, string]> {
   switch (toolId) {
@@ -146,6 +173,10 @@ function companionFiles(toolId: string, home: string): ReadonlyArray<readonly [s
       ];
     case "cline":
       return [["secrets", join(home, ".cline", "data", "secrets.json")]];
+    case "kilo":
+      // The injector writes the data-dir auth.json *and* the editor's own
+      // settings.json; both must be inside the fixture.
+      return [["vscodeSettings", kiloVscodeSettingsPath(home)]];
     case "hermes":
       return [["env", join(home, ".hermes", ".env")]];
     case "jcode":
@@ -180,27 +211,30 @@ function assertToolPathsInsideHome(toolId: string, home: string, spec: InjectorS
   }
 }
 
-describe("the injector registry", () => {
-  test("covers every tool in the registry, with no gaps", () => {
-    // `INJECTORS` is built exhaustively from `TOOL_IDS`, so a tool added to the
-    // registry without an injector throws at import. This pins that the map is
-    // actually complete for the registry as it stands.
-    for (const toolId of TOOL_IDS) {
-      expect(INJECTORS[toolId]).toBeDefined();
-      expect(INJECTORS[toolId].toolId).toBe(toolId);
-    }
-  });
+/**
+ * The declarative spec behind each file injector.
+ *
+ * The driver is what writes, but the spec is what computes every write target
+ * (`resolvePath`, `resolveDir`), so it is the right source for the pre-write
+ * boundary assertions. Guide-only tools have no spec: they write nothing.
+ */
+const TOOL_SPECS: Record<string, InjectorSpec> = {
+  claude: claudeSpec,
+  cline: clineSpec,
+  codex: codexSpec,
+  copilot: copilotSpec,
+  cowork: coworkSpec,
+  "deepseek-tui": deepseekTuiSpec,
+  droid: droidSpec,
+  "grok-build": grokBuildSpec,
+  hermes: hermesSpec,
+  jcode: jcodeSpec,
+  kilo: kiloSpec,
+  openclaw: openclawSpec,
+  opencode: opencodeSpec,
+};
 
-  test("every injector exposes the full lifecycle", () => {
-    for (const toolId of TOOL_IDS) {
-      const injector = INJECTORS[toolId];
-      expect(typeof injector.getStatus).toBe("function");
-      expect(typeof injector.apply).toBe("function");
-      expect(typeof injector.reset).toBe("function");
-      expect(typeof injector.download).toBe("function");
-    }
-  });
-
+describe("guide-only tools", () => {
   test("a guide-only tool refuses to apply and says why", async () => {
     // Guide tools have no file to write, so `apply` must fail loudly rather
     // than report success for a change that never happened.
@@ -680,10 +714,28 @@ describe("every file injector round-trips apply → status → reset", () => {
     // Guards the loop below against silently testing nothing if the registry
     // ever changes shape.
     expect(fileToolIds.length).toBeGreaterThan(10);
+    // Every file tool must have a spec the boundary assertions can read.
+    for (const toolId of fileToolIds) {
+      expect(`${toolId}:spec=${TOOL_SPECS[toolId] !== undefined}`).toBe(`${toolId}:spec=true`);
+    }
   });
+
+  /**
+   * The fixture assertion each loop runs before its first write for a tool.
+   *
+   * A path that resolved outside the temp home must fail the test before
+   * apply/reset can write — not after the operator's real config has already
+   * been rewritten.
+   */
+  function assertToolBoundary(toolId: string): void {
+    const spec = TOOL_SPECS[toolId];
+    if (spec === undefined) return; // asserted separately above
+    assertToolPathsInsideHome(toolId, home, spec);
+  }
 
   test("apply succeeds and reset succeeds for every tool", async () => {
     for (const toolId of fileToolIds) {
+      assertToolBoundary(toolId);
       const injector = INJECTORS[toolId];
       const applied = await injector.apply(INPUT);
       expect(`${toolId}:${applied.success}`).toBe(`${toolId}:true`);
@@ -697,6 +749,7 @@ describe("every file injector round-trips apply → status → reset", () => {
     // process spawn per tool, and this suite is meant to stay fast.
     for (const toolId of fileToolIds) {
       if (NOT_CONFIGURED_BY_DESIGN.has(toolId)) continue;
+      assertToolBoundary(toolId);
       const injector = INJECTORS[toolId];
       await injector.apply(INPUT);
       const status = await injector.getStatus();
@@ -714,6 +767,7 @@ describe("every file injector round-trips apply → status → reset", () => {
 
   test("reset returns every tool to unconfigured", async () => {
     for (const toolId of fileToolIds) {
+      assertToolBoundary(toolId);
       const injector = INJECTORS[toolId];
       await injector.apply(INPUT);
       await injector.reset();
@@ -728,6 +782,7 @@ describe("every file injector round-trips apply → status → reset", () => {
     // links produce — became `http://host:12800//v1`, a different path that
     // every downstream client 404s.
     for (const toolId of fileToolIds) {
+      assertToolBoundary(toolId);
       const injector = INJECTORS[toolId];
       const applied = await injector.apply(INPUT);
       const download = await injector.download(INPUT);
@@ -742,6 +797,7 @@ describe("every file injector round-trips apply → status → reset", () => {
   test("no written TOML config glues a key onto a header or a value onto the next header", async () => {
     // The corruption that made the target CLI refuse to start.
     for (const toolId of fileToolIds) {
+      assertToolBoundary(toolId);
       const applied = await INJECTORS[toolId].apply(INPUT);
       const path = applied.settingsPath;
       if (path === undefined) continue;

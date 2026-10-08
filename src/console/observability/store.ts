@@ -1,10 +1,11 @@
-import { loadavg, cpus } from "node:os";
+import { cpus, totalmem } from "node:os";
 import { and, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import type { CartethyiaDatabase } from "../../persistence/postgres";
 import type { RedisClient } from "../../persistence/redis";
 import { apiKeys, networkPools, telemetryEvents, telemetryPayloads } from "../../persistence/schema";
 import { decodeDatedCursor, encodeCursor } from "../../persistence/page-cursor";
 import { CARTETHYIA_VERSION } from "../../transport/version";
+import { resolveMemoryLimitBytes } from "../../observability/runtime-metrics";
 import { CachedPreferencesReader, DrizzlePreferencesReader, type PreferencesReader } from "../../persistence/tenant-preferences";
 import type {
   ObservabilityStore,
@@ -207,6 +208,13 @@ const TOP_N = 50;
 
 /** Real Drizzle-backed observability repository used by the production console. */
 export class DrizzleObservabilityStore implements ObservabilityStore {
+  /**
+   * Previous CPU sample, for the delta the process actually spent between
+   * health reads. Kept per instance so two stores in one process (a test and
+   * the console) do not report each other's window.
+   */
+  private lastCpuSample: { readonly user: number; readonly system: number; readonly at: number } | undefined;
+
   constructor(
     private readonly db: CartethyiaDatabase,
     private readonly redis: RedisClient | undefined,
@@ -226,7 +234,15 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
 
   private async computeHealth(tenantId: string): Promise<SystemHealthResponse> {
     const memory = process.memoryUsage();
-    const cpuPercent = Math.round((loadavg()[0]! / Math.max(cpus().length, 1)) * 10000) / 100;
+    const cpuPercent = this.sampleProcessCpuPercent();
+    // The budget the operator actually configured, or the host's total — never
+    // heapTotal, which is a JS-heap reservation, not a limit. `undefined` (no
+    // override and no cgroup limit) falls back to total memory so the percent
+    // is always against a real ceiling. `memory_limit_bytes` publishes which
+    // one was used, so the figure is checkable instead of implied.
+    const configuredLimit = resolveMemoryLimitBytes();
+    const memoryLimitBytes = configuredLimit ?? totalmem();
+    const memoryPercent = Math.round((memory.rss / Math.max(memoryLimitBytes, 1)) * 10000) / 100;
 
     let databaseHealthy = true;
     let total = 0;
@@ -249,7 +265,6 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
           p99: sql<number>`coalesce(percentile_cont(0.99) within group (order by ${telemetryEvents.latencyMs}), 0)`,
           cachedTokens: sql<number>`coalesce(sum(${telemetryEvents.cachedInputTokens}) filter (where ${telemetryEvents.cachedInputTokens} is not null), 0)`,
           inputTokens: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}) filter (where ${telemetryEvents.cachedInputTokens} is not null), 0)`,
-          outputTokens: sql<number>`coalesce(sum(${telemetryEvents.outputTokens}) filter (where ${telemetryEvents.cachedInputTokens} is not null), 0)`,
           avgTokensPerSec: sql<number>`coalesce(avg(${telemetryEvents.tokensPerSec}) filter (where ${telemetryEvents.tokensPerSec} is not null), 0)`,
         })
         .from(telemetryEvents)
@@ -260,12 +275,17 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
       avg = Math.round(Number(row?.avg ?? 0));
       p95 = Math.round(Number(row?.p95 ?? 0));
       p99 = Math.round(Number(row?.p99 ?? 0));
-      const inputTokens = Number(row?.inputTokens ?? 0);
-      const outputTokens = Number(row?.outputTokens ?? 0);
-      // Prompt share of all tokens: the operator-facing cache column now
-      // leads with input, so a cached/input ratio would read a constant 100%.
-      const tokenTotal = inputTokens + outputTokens;
-      cacheHitRate = tokenTotal > 0 ? Math.round((inputTokens / tokenTotal) * 10000) / 100 : 0;
+      // Real cache hit rate: cached input over input, restricted to the rows
+      // that reported a cache breakdown (the only rows where either number is
+      // meaningful). The previous formula was input/(input+output) — the
+      // prompt's share of all tokens, which reads as ~100% on a cacheless
+      // provider and says nothing about caching.
+      const cacheInputTokens = Number(row?.inputTokens ?? 0);
+      const cacheCachedTokens = Number(row?.cachedTokens ?? 0);
+      cacheHitRate =
+        cacheInputTokens > 0
+          ? Math.round((cacheCachedTokens / cacheInputTokens) * 10000) / 100
+          : 0;
       avgTokensPerSec = Number(row?.avgTokensPerSec ?? 0);
     } catch {
       databaseHealthy = false;
@@ -294,7 +314,9 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
       database_healthy: databaseHealthy,
       redis_healthy: redisHealthy,
       memory_bytes: memory.rss,
-      memory_percent: Math.round((memory.rss / Math.max(memory.heapTotal, 1)) * 10000) / 100,
+      memory_percent: memoryPercent,
+      /** The ceiling `memory_percent` is measured against (override, cgroup, or host total). */
+      memory_limit_bytes: memoryLimitBytes,
       heap_used_bytes: memory.heapUsed,
       heap_total_bytes: memory.heapTotal,
       external_bytes: memory.external,
@@ -311,6 +333,35 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
       avg_tokens_per_sec: avgTokensPerSec,
     };
   }
+  /**
+   * Process CPU utilization as a share of all cores, from real CPU time.
+   *
+   * The previous value was `loadavg / cores` — the OS run-queue length, which
+   * includes every other process on the host and reads ~0 on an idle machine
+   * even while this gateway is busy. This samples `process.cpuUsage()` and
+   * divides the delta by the wall-clock delta and the core count, so 100% means
+   * every core saturated by *this process*. The first call after boot has no
+   * previous sample, so it reports the lifetime average (real CPU time since
+   * start over uptime) rather than inventing a zero.
+   */
+  private sampleProcessCpuPercent(): number {
+    const usage = process.cpuUsage();
+    const at = Date.now();
+    const previous = this.lastCpuSample;
+    this.lastCpuSample = { user: usage.user, system: usage.system, at };
+    const cores = Math.max(cpus().length, 1);
+    const cpuMicros = usage.user + usage.system;
+    if (previous === undefined) {
+      const uptimeSeconds = process.uptime();
+      if (uptimeSeconds <= 0) return 0;
+      return Math.round(((cpuMicros / 1e6) / uptimeSeconds / cores) * 10000) / 100;
+    }
+    const elapsedMs = at - previous.at;
+    if (elapsedMs <= 0) return 0;
+    const deltaMicros = cpuMicros - (previous.user + previous.system);
+    return Math.round(((deltaMicros / 1e6) / (elapsedMs / 1000) / cores) * 10000) / 100;
+  }
+
   async usage(tenantId: string, period: string): Promise<UsageResponse> {
     return this.computeUsage(tenantId, period);
   }
@@ -392,7 +443,8 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
       .select({
         requests: sql<number>`count(*)`,
         inputTokens: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}), 0)`,
-        cachedTokens: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}) filter (where ${telemetryEvents.cachedInputTokens} > 0), 0)`,
+        cachedTokens: sql<number>`coalesce(sum(${telemetryEvents.cachedInputTokens}), 0)`,
+        cacheReportingInputTokens: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}) filter (where ${telemetryEvents.cachedInputTokens} is not null), 0)`,
         outputTokens: sql<number>`coalesce(sum(${telemetryEvents.outputTokens}), 0)`,
         errors: sql<number>`count(*) filter (where ${gatewayErrors()})`,
         cancelled: sql<number>`count(*) filter (where ${telemetryEvents.status} = 'cancelled')`,
@@ -420,6 +472,12 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
     const inputTokens = Number(row?.inputTokens ?? 0);
     const cachedTokens = Number(row?.cachedTokens ?? 0);
     const outputTokens = Number(row?.outputTokens ?? 0);
+    // Cached input over the input of the rows that actually reported a cache
+    // breakdown. Dividing by all input would understate the rate on providers
+    // that never report the breakdown (they contribute 0 to the numerator but
+    // their full input to the denominator); `inputTokens` above stays the
+    // all-rows sum so the displayed totals remain complete.
+    const cacheReportingInputTokens = Number(row?.cacheReportingInputTokens ?? 0);
     return {
       period,
       totals: {
@@ -434,7 +492,10 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
         avgDurationMs: Number(row?.avgDurationMs ?? 0),
         estimatedCostUsd: Number(row?.estimatedCostUsd ?? 0),
         partial: Number(row?.unpriced ?? 0) > 0,
-        cacheHitRate: inputTokens > 0 ? (cachedTokens / inputTokens) * 100 : 0,
+        cacheHitRate:
+          cacheReportingInputTokens > 0
+            ? (cachedTokens / cacheReportingInputTokens) * 100
+            : 0,
         avgTokensPerSec: Number(row?.avgTokensPerSec ?? 0),
       },
     };
@@ -448,7 +509,7 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
         bucket: sql<Date>`to_timestamp(floor(extract(epoch from ${telemetryEvents.createdAt}) / ${bucketSeconds}) * ${bucketSeconds})`,
         requests: sql<number>`count(*)`,
         input: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}), 0)`,
-        cached: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}) filter (where ${telemetryEvents.cachedInputTokens} > 0), 0)`,
+        cached: sql<number>`coalesce(sum(${telemetryEvents.cachedInputTokens}), 0)`,
         output: sql<number>`coalesce(sum(${telemetryEvents.outputTokens}), 0)`,
       })
       .from(telemetryEvents)
@@ -502,7 +563,8 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
         requests: sql<number>`count(*)`,
         input: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}), 0)`,
         output: sql<number>`coalesce(sum(${telemetryEvents.outputTokens}), 0)`,
-        cached: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}) filter (where ${telemetryEvents.cachedInputTokens} > 0), 0)`,
+        cached: sql<number>`coalesce(sum(${telemetryEvents.cachedInputTokens}), 0)`,
+        cacheReportingInput: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}) filter (where ${telemetryEvents.cachedInputTokens} is not null), 0)`,
         errors: sql<number>`count(*) filter (where ${gatewayErrors()})`,
         cost: sql<string | null>`sum(${telemetryEvents.estimatedCostUsd})`,
         avgTokensPerSec: sql<number>`coalesce(avg(${telemetryEvents.tokensPerSec}) filter (where ${telemetryEvents.tokensPerSec} is not null), 0)`,
@@ -520,6 +582,7 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
       const input = Number(row.input ?? 0);
       const output = Number(row.output ?? 0);
       const cached = Number(row.cached ?? 0);
+      const cacheReportingInput = Number(row.cacheReportingInput ?? 0);
       if (typeof row.name !== "string" || row.name.length === 0)
         throw new ConsoleDomainError("internal_error", 500, "Usage breakdown row missing name");
       const name = dimension === "client" ? clientNameFromUserAgent(row.name) : row.name;
@@ -532,7 +595,7 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
         total: input + output,
         errors: Number(row.errors ?? 0),
         costUsd: row.cost === null ? null : Number(row.cost),
-        cacheHitRate: input + output > 0 ? (input / (input + output)) * 100 : 0,
+        cacheHitRate: cacheReportingInput > 0 ? (cached / cacheReportingInput) * 100 : 0,
         avgTokensPerSec: Number(row.avgTokensPerSec ?? 0),
       };
     });
@@ -545,33 +608,55 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
       // hosts into one display name (`203.0.113.7` and `203.0.113.9` both become
       // `203.0.113.xxx`). Re-aggregate by the masked name: two rows the operator
       // cannot tell apart are one row, and the totals must not be understated.
-      const merged = new Map<string, (typeof mapped)[number]>();
+      // The cache denominator is carried alongside so the merged rate stays a
+      // real cached/reporting-input ratio rather than a re-derived guess.
+      const reportingInputByRaw = new Map<string, number>(
+        rows.map((row) => [
+          typeof row.name === "string" ? row.name : "",
+          Number(row.cacheReportingInput ?? 0),
+        ]),
+      );
+      const merged = new Map<
+        string,
+        { row: (typeof mapped)[number]; cacheReportingInput: number }
+      >();
       for (const row of mapped) {
         const masked = maskClientIp(row.name);
         const existing = merged.get(masked);
         if (existing === undefined) {
-          merged.set(masked, { ...row, name: masked });
+          merged.set(masked, {
+            row: { ...row, name: masked },
+            cacheReportingInput: reportingInputByRaw.get(row.name) ?? 0,
+          });
           continue;
         }
-        const input = existing.input + row.input;
-        const output = existing.output + row.output;
+        const input = existing.row.input + row.input;
+        const output = existing.row.output + row.output;
         merged.set(masked, {
-          ...existing,
-          requests: existing.requests + row.requests,
-          input,
-          output,
-          cached: existing.cached + row.cached,
-          total: input + output,
-          errors: existing.errors + row.errors,
-          costUsd:
-            existing.costUsd === null && row.costUsd === null
-              ? null
-              : (existing.costUsd ?? 0) + (row.costUsd ?? 0),
-          cacheHitRate: input + output > 0 ? (input / (input + output)) * 100 : 0,
+          row: {
+            ...existing.row,
+            requests: existing.row.requests + row.requests,
+            input,
+            output,
+            cached: existing.row.cached + row.cached,
+            total: input + output,
+            errors: existing.row.errors + row.errors,
+            costUsd:
+              existing.row.costUsd === null && row.costUsd === null
+                ? null
+                : (existing.row.costUsd ?? 0) + (row.costUsd ?? 0),
+          },
+          cacheReportingInput:
+            existing.cacheReportingInput + (reportingInputByRaw.get(row.name) ?? 0),
         });
       }
       return {
-        rows: [...merged.values()].sort((a, b) => b.requests - a.requests),
+        rows: [...merged.values()]
+          .sort((a, b) => b.row.requests - a.row.requests)
+          .map(({ row, cacheReportingInput }) => ({
+            ...row,
+            cacheHitRate: cacheReportingInput > 0 ? (row.cached / cacheReportingInput) * 100 : 0,
+          })),
       };
     }
     if (dimension !== "key") return { rows: mapped };
@@ -599,21 +684,24 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
     const [row] = await this.db
       .select({
         inputTokens: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}), 0)`,
-        cachedTokens: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}) filter (where ${telemetryEvents.cachedInputTokens} > 0), 0)`,
-        outputTokens: sql<number>`coalesce(sum(${telemetryEvents.outputTokens}), 0)`,
+        cachedTokens: sql<number>`coalesce(sum(${telemetryEvents.cachedInputTokens}), 0)`,
+        cacheReportingInputTokens: sql<number>`coalesce(sum(${telemetryEvents.inputTokens}) filter (where ${telemetryEvents.cachedInputTokens} is not null), 0)`,
       })
       .from(telemetryEvents)
       .where(this.usageScope(tenantId, period));
     const inputTokens = Number(row?.inputTokens ?? 0);
     const cachedTokens = Number(row?.cachedTokens ?? 0);
-    const outputTokens = Number(row?.outputTokens ?? 0);
-    const tokenTotal = inputTokens + outputTokens;
+    // Same definition as the health endpoint and the summary: cached input over
+    // the input of rows that reported a cache breakdown. The previous formula
+    // divided by input+output, so a cacheless provider's rate moved with its
+    // completion volume.
+    const cacheReportingInputTokens = Number(row?.cacheReportingInputTokens ?? 0);
     return {
       period,
       inputTokens,
       cachedTokens,
       cacheWriteTokens: 0,
-      hitRate: tokenTotal > 0 ? (cachedTokens / tokenTotal) * 100 : 0,
+      hitRate: cacheReportingInputTokens > 0 ? (cachedTokens / cacheReportingInputTokens) * 100 : 0,
     };
   }
 
