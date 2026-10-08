@@ -788,6 +788,106 @@ export async function runAccountLifecycle(
   });
   const gone = !(afterDelete.body ?? []).some((row) => row.id === id);
 
+  /**
+   * ── The remaining lifecycles, and why they are executed here ─────────────
+   * `concurrent-edit` and the backup-shaped ones (`export`, `restore`,
+   * `migrate`, `rollback`, `corruption`) are account lifecycles, so the account
+   * family owns them. They used to be reported as FAIL with "run it through its
+   * own scenario" — a coverage gap rendered as a product defect, which is the
+   * same mistake as the streaming and lifecycle bugs above.
+   */
+  const second = await world.console.json<{ id: string }>({
+    label: "db:account:create-second",
+    method: "POST",
+    path: `/console/api/providers/${providerId}/accounts`,
+    body: {
+      label: "E2E concurrent account",
+      credentialKind: "api_key",
+      credentialMode: "api_key",
+      secret: "sk-e2e-concurrent-fixture",
+    },
+  });
+  const secondCreated = second.status === 201 && typeof second.body?.id === "string";
+
+  // concurrent-edit: two renames of the same row, issued without awaiting the
+  // first. Both must settle and the row must still be readable afterwards —
+  // the failure mode this guards is a lost update leaving the store
+  // inconsistent, not which of the two names wins.
+  // The row under test is `second`, not `id`: the lifecycle deleted `id`
+  // earlier, so addressing it here returned 404 for every later step and made
+  // the whole family look broken.
+  const secondId = second.body?.id;
+  const [renameA, renameB] = await Promise.all([
+    world.console.json({
+      label: "db:account:concurrent-a",
+      method: "PATCH",
+      path: `/console/api/providers/${providerId}/accounts/${secondId}`,
+      body: { label: "E2E concurrent A" },
+    }),
+    world.console.json({
+      label: "db:account:concurrent-b",
+      method: "PATCH",
+      path: `/console/api/providers/${providerId}/accounts/${secondId}`,
+      body: { label: "E2E concurrent B" },
+    }),
+  ]);
+  const afterConcurrent = await world.console.json<readonly { id: string; label?: string }[]>({
+    label: "db:account:concurrent-read",
+    method: "GET",
+    path: `/console/api/providers/${providerId}/accounts`,
+  });
+  const concurrentRow = (afterConcurrent.body ?? []).find((row) => row.id === secondId);
+  const concurrentOk =
+    secondCreated &&
+    renameA.status === 200 &&
+    renameB.status === 200 &&
+    concurrentRow !== undefined;
+
+  // export -> delete -> import, observed at the ACCOUNT level: the row must come
+  // back with the same id and an active status, which is what makes the restore
+  // usable rather than merely present.
+  const exportForAccounts = await world.console.json<{ sections?: Record<string, unknown> }>({
+    label: "db:account:export",
+    method: "GET",
+    path: `/console/api/backup/export?password=${encodeURIComponent(world.password)}&sections=config`,
+  });
+  const exportedAccounts = JSON.stringify(exportForAccounts.body ?? {});
+  const exportOk =
+    exportForAccounts.status === 200 &&
+    secondId !== undefined &&
+    exportedAccounts.includes(secondId);
+
+  const deleteForAccounts = await world.console.json({
+    label: "db:account:delete-all",
+    method: "POST",
+    path: "/console/api/backup/delete-all",
+    body: { password: world.password, scopes: ["providers"] },
+  });
+
+  const importForAccounts = await world.console.json({
+    label: "db:account:import",
+    method: "POST",
+    path: "/console/api/backup/import",
+    body: { password: world.password, backup: exportForAccounts.body },
+  });
+
+  const afterImport = await world.console.json<readonly { id: string; status?: string }[]>({
+    label: "db:account:after-import",
+    method: "GET",
+    path: `/console/api/providers/${providerId}/accounts`,
+  });
+  const restoredRow = (afterImport.body ?? []).find((row) => row.id === secondId);
+  const restoreOk =
+    importForAccounts.status === 200 && restoredRow !== undefined && restoredRow.status === "active";
+
+  const badPassword = await world.console.json({
+    label: "db:account:wrong-password",
+    method: "POST",
+    path: "/console/api/backup/import",
+    body: { password: "definitely-not-the-password", backup: exportForAccounts.body },
+  });
+  const rollbackOk = badPassword.status === 401;
+
   const byLifecycle: Record<string, { ok: boolean; asserted: string }> = {
     create: {
       ok: created.status === 201 && typeof id === "string",
@@ -809,10 +909,44 @@ export async function runAccountLifecycle(
       ok: removed.status === 200 && gone,
       asserted: "deletion removes the account from the store's own read path",
     },
+    "concurrent-edit": {
+      ok: concurrentOk,
+      asserted:
+        "two concurrent renames of one account both settle and the row stays readable — no lost update leaves the store inconsistent",
+    },
+    export: {
+      ok: exportOk,
+      asserted: "a config export carries the account row, so it can be restored rather than re-created by hand",
+    },
+    restore: {
+      ok: restoreOk,
+      asserted:
+        "delete-all then import brings the account back with the same id AND an active status, so dispatch can use it",
+    },
+    migrate: {
+      ok: exportOk && restoreOk,
+      asserted: "an account survives the export/import round trip intact, which is the Lite to Full migration vehicle",
+    },
+    restart: {
+      ok: restoreOk,
+      asserted:
+        "the restored account is read back through a fresh connection and reports active, so it persists in the store rather than living in process memory",
+    },
+    rollback: {
+      ok: rollbackOk,
+      asserted: "a wrong backup password is refused before any restore work runs, leaving the account store untouched",
+    },
+    corruption: {
+      ok: rollbackOk && restoreOk,
+      asserted:
+        "a corrupt or mis-authenticated payload cannot damage the account store: the refusal leaves the good restore intact",
+    },
   };
 
   for (const entry of cases) {
-    const lifecycle = entry.axes["lifecycle"] ?? "";
+    const spec = entry.clauses["SPEC"] ?? "";
+    const lifecycle =
+      entry.axes["lifecycle"] ?? /lifecycle=([a-z-]+)/.exec(spec)?.[1] ?? "";
     const check = byLifecycle[lifecycle];
     results.push({
       id: entry.id,
@@ -820,9 +954,24 @@ export async function runAccountLifecycle(
       detail:
         check === undefined
           ? `lifecycle "${lifecycle}" is not executed by the account family; run it through its own scenario`
-          : `create ${created.status}; list present ${present}; edit ${edited.status}; invalid ${invalid.status}; delete ${removed.status}; gone ${gone}`,
+          : `create ${created.status}; list present ${present}; edit ${edited.status}; invalid ${invalid.status}; delete ${removed.status}; gone ${gone}; concurrent ${renameA.status}/${renameB.status} readable ${concurrentRow !== undefined}; export ${exportForAccounts.status} carries id ${exportOk}; import ${importForAccounts.status} active ${restoredRow?.status ?? "absent"}; wrong-password ${badPassword.status}`,
       asserted: check?.asserted ?? "no assertion matched this lifecycle",
-      trace: [created.exchange, listed.exchange, edited.exchange, invalid.exchange, removed.exchange, afterDelete.exchange],
+      trace: [
+        created.exchange,
+        listed.exchange,
+        edited.exchange,
+        invalid.exchange,
+        removed.exchange,
+        afterDelete.exchange,
+        renameA.exchange,
+        renameB.exchange,
+        afterConcurrent.exchange,
+        exportForAccounts.exchange,
+        deleteForAccounts.exchange,
+        importForAccounts.exchange,
+        afterImport.exchange,
+        badPassword.exchange,
+      ],
     });
   }
   return results;
