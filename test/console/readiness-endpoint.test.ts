@@ -152,6 +152,48 @@ async function seedTenant(): Promise<{ tenantId: string; providerId: string }> {
   return { tenantId, providerId };
 }
 
+/**
+ * The published memory counters must not contradict each other or the RSS they
+ * are part of.
+ *
+ * Bun's counters stop being mutually consistent once a WebAssembly module is
+ * loaded. Measured on this build after PGlite opened its data directory:
+ * rss 264.7 MB, heapUsed 1599.2 MB, heapTotal 89.1 MB, external 1591.6 MB.
+ * The dashboard subtracts heapUsed and external from rss to derive the runtime
+ * slice, so it rendered a negative term and reported 819 MB of memory for a
+ * 162 MB process. These assertions are the shape of that bug.
+ *
+ * It lives in this suite because the PGlite client below is what makes the
+ * counters inconsistent in the first place — a mock would not reproduce it.
+ */
+describe("health memory counters", () => {
+  test("heap and external stay consistent with each other and with RSS", async () => {
+    const database_ = await database();
+    const store = new DrizzleObservabilityStore(database_, undefined);
+    const health = await store.health(randomUUID());
+
+    // A process cannot use more heap than it has reserved.
+    expect(health.heap_used_bytes).toBeLessThanOrEqual(health.heap_total_bytes);
+    // The slices the UI adds up must fit inside the whole they are part of.
+    expect(health.heap_used_bytes + health.external_bytes).toBeLessThanOrEqual(
+      health.memory_bytes,
+    );
+    // The runtime term the Overview derives must not go negative.
+    expect(
+      health.memory_bytes - health.heap_used_bytes - health.external_bytes,
+    ).toBeGreaterThanOrEqual(0);
+    for (const value of [
+      health.memory_bytes,
+      health.heap_used_bytes,
+      health.heap_total_bytes,
+      health.external_bytes,
+    ]) {
+      expect(Number.isFinite(value)).toBe(true);
+      expect(value).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
+
 describe("readiness read model", () => {
   const created: Array<{ tenantId: string; providerId: string }> = [];
 
