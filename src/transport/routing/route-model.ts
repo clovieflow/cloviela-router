@@ -207,6 +207,69 @@ export interface EligibilityDecision {
   readonly candidate: RouteCandidate;
 }
 
+/**
+ * Why the gateway cannot dispatch for the evaluated model + endpoint family.
+ * `dispatchable` means the canonical planner would produce a candidate list;
+ * it deliberately does NOT promise a slot (admission is not simulated).
+ */
+export type RouteSimulationOutcome =
+  | "dispatchable"
+  | "accounts_unavailable"
+  | "accounts_rate_limited"
+  | "service_kind_unsupported";
+
+/** One evaluated candidate: the canonical verdict plus the family verdict. */
+export interface RouteSimulationCandidate {
+  readonly candidate: RouteCandidate;
+  /**
+   * Whether a live request for this endpoint family could dispatch to it:
+   * the canonical eligibility verdict AND the endpoint-family check. A
+   * candidate that cannot serve the family is never eligible here even when
+   * the evaluator calls it healthy.
+   */
+  readonly eligible: boolean;
+  /** Canonical verdict for this candidate, before the family layer. */
+  readonly reason: EligibilityReason;
+  /** Whether this candidate's service kind serves the requested family. */
+  readonly endpoint_supported: boolean;
+  /** Resolved provider routing setting for this candidate's (tenant, provider). */
+  readonly provider_routing?: ProviderRoutingSetting;
+}
+
+/**
+ * Read-only route evaluation, produced by `RoutingEngine.simulate` and
+ * projected by the console's route simulator.
+ *
+ * Every verdict here comes from the same `EligibilityEvaluator` and the same
+ * ordering rules live routing uses; the only added layer is the endpoint
+ * family. Producing it must not reserve a slot, dispatch upstream, decrypt a
+ * credential, or advance any rotation cursor — `selected` is therefore only
+ * present when a single candidate is guaranteed.
+ */
+export interface RouteSimulationResult {
+  readonly requested_model: string;
+  readonly resolved_model: string;
+  /**
+   * Alias hops walked to reach `resolved_model`, ending in the resolved name.
+   * Empty when the requested name needed no alias — the common case.
+   */
+  readonly resolution_chain: readonly string[];
+  readonly revision: RoutingRevision;
+  readonly endpoint_service_kind: ServiceKind;
+  readonly outcome: RouteSimulationOutcome;
+  /** Family candidates in plan order first, then the ones that cannot serve it. */
+  readonly candidates: readonly RouteSimulationCandidate[];
+  /** The candidate a live request would take — only when deterministic. */
+  readonly selected?: RouteCandidate;
+  /** True when a rotation cursor decides the first candidate at dispatch time. */
+  readonly rotation_active: boolean;
+  readonly strategy: ProviderRoutingStrategy | "fusion";
+  readonly strategy_source: "combo" | "provider" | "default";
+  readonly fusion?: { readonly panel: readonly string[]; readonly judge: string };
+  /** Combo members that matched no candidate; empty unless a combo was resolved. */
+  readonly unmatched_members: readonly string[];
+}
+
 export interface Reservation {
   readonly candidate: RouteCandidate;
   readonly lease_id: string;
@@ -328,9 +391,16 @@ export function accountsRateLimitedError(
 
 
 
-export type SnapshotBuilder = () => Promise<
-  Omit<RouteSnapshot, "revision" | "created_at"> & { created_at?: number }
->;
+/**
+ * What a builder returns: a snapshot body before the service stamps its
+ * revision and creation time. Named so consumers and tests describe the
+ * contract instead of deriving it from `SnapshotBuilder`.
+ */
+export type BuiltRouteSnapshot = Omit<RouteSnapshot, "revision" | "created_at"> & {
+  created_at?: number;
+};
+
+export type SnapshotBuilder = () => Promise<BuiltRouteSnapshot>;
 
 function deepFreeze<T>(obj: T): T {
   if (obj && typeof obj === "object" && !Object.isFrozen(obj)) {
@@ -342,9 +412,33 @@ function deepFreeze<T>(obj: T): T {
   return obj;
 }
 
+/**
+ * How long a built snapshot may serve before the next reader rebuilds it.
+ *
+ * `invalidate()` only tells the process that *saw* the write. In a Full
+ * deployment Bun's `reusePort` spreads connections across worker processes, so
+ * a console mutation lands on one worker and every other worker keeps serving
+ * its pre-mutation routing until something else invalidates it — nothing
+ * else ever would, and the catalog would be retained forever. This TTL bounds
+ * that staleness window per worker without any cross-process messaging: the
+ * first reader after expiry pays one rebuild, concurrent readers keep reading
+ * the cached object, and an explicit `invalidate()` still drops it instantly
+ * on the worker that handled the write.
+ */
+const DEFAULT_SNAPSHOT_TTL_MS = 30_000;
+
+export interface InMemoryRouteSnapshotOptions {
+  /** Max age of a cached snapshot; `0` disables caching entirely (test seam). */
+  readonly ttlMs?: number;
+  /** Clock seam, matching the repo's `TtlCache` convention. */
+  readonly now?: () => number;
+}
+
 export class InMemoryRouteSnapshotService implements RouteSnapshotService {
   private revision: RoutingRevision = 0;
   private snapshot: RouteSnapshot | undefined;
+  private readonly ttlMs: number;
+  private readonly now: () => number;
   /**
    * The in-flight build, tagged with the revision it is building.
    *
@@ -359,10 +453,25 @@ export class InMemoryRouteSnapshotService implements RouteSnapshotService {
    */
   private building: { revision: RoutingRevision; promise: Promise<RouteSnapshot> } | undefined;
 
-  constructor(private readonly builder: SnapshotBuilder) {}
+  constructor(
+    private readonly builder: SnapshotBuilder,
+    options: InMemoryRouteSnapshotOptions = {},
+  ) {
+    this.ttlMs = options.ttlMs ?? DEFAULT_SNAPSHOT_TTL_MS;
+    this.now = options.now ?? Date.now;
+  }
 
   async getSnapshot(): Promise<RouteSnapshot> {
-    if (this.snapshot) return this.snapshot;
+    if (this.snapshot) {
+      // `ttlMs === 0` disables caching (tests that want a rebuild per call).
+      // A cached snapshot older than the TTL is stale by policy: the worker
+      // that handled the mutation already dropped its own copy, and this is
+      // the bound for every other worker in the deployment.
+      if (this.ttlMs > 0 && this.now() - this.snapshot.created_at < this.ttlMs) {
+        return this.snapshot;
+      }
+      this.snapshot = undefined;
+    }
     if (this.building && this.building.revision === this.revision) return this.building.promise;
     const revision = this.revision;
     const promise = this.build(revision);
@@ -414,7 +523,9 @@ export class InMemoryRouteSnapshotService implements RouteSnapshotService {
       // Unfrozen copy: deepFreeze must reach the inner per-tenant settings —
       // a pre-frozen record trips its is-frozen guard and skips recursion.
       ...(built.poolRouting ? { poolRouting: { ...built.poolRouting } } : {}),
-      created_at: built.created_at ?? Date.now(),
+      // Stamped from the same clock the TTL reads, so an injected clock keeps
+      // the age comparison and the stamp on one timeline.
+      created_at: built.created_at ?? this.now(),
     });
     // A mutation during the build means this snapshot describes a catalog that
     // has already been superseded. Returning it is fine — the caller asked

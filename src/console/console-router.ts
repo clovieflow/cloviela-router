@@ -29,6 +29,8 @@ import { CliToolMappingStore } from "./cli-tools/store";
 import { CliToolService } from "./cli-tools/service";
 import { DrizzleCliToolSecretSource } from "./cli-tools/secret-source";
 import type { ProviderRegistry } from "../providers/provider-registry";
+import type { RouteSnapshot, RouteSimulationResult } from "../transport/routing/route-model";
+import type { SimulatorEndpointFamily } from "./routing/model/contracts";
 import type { BundledProviderCatalog } from "../providers/operations/provider-catalog-service";
 import type { ValidatedNetworkBindingFactory } from "../network/pool/resolver";
 import type { TrustedProxyBoundary } from "../config";
@@ -65,6 +67,19 @@ export interface ConsoleApiCompositionDeps {
     | undefined;
   readonly resolvePeerAddress?: (request: Request) => string | null;
   readonly trustedProxyBoundary?: TrustedProxyBoundary;
+  /**
+   * Read-only route evaluation for the simulator. The dispatch composition owns
+   * the routing engine, so it is passed in rather than constructed here — a
+   * second engine would have its own rotation cursors and answer differently.
+   */
+  readonly routeSimulator?: {
+    simulate(input: {
+      readonly requestedModel: string;
+      readonly endpoint: SimulatorEndpointFamily;
+      readonly snapshot: RouteSnapshot;
+      readonly tenantId?: string | null;
+    }): Promise<RouteSimulationResult>;
+  };
 }
 /**
  * Extracts a bearer API key from a console request, or `undefined`.
@@ -169,6 +184,7 @@ export function createConsoleRouter(deps: ConsoleApiCompositionDeps): Elysia {
     admissionService: deps.admissionService,
     ...(deps.modelStrikes ? { modelStrikes: deps.modelStrikes } : {}),
     readRoutingAccountInflight: deps.readRoutingAccountInflight,
+    ...(deps.routeSimulator === undefined ? {} : { routeSimulator: deps.routeSimulator }),
     credentialService,
     // The backup surface re-authenticates the operator, so it needs the current
     // user's hash. Read from the session on the request that asks for it, never

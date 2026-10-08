@@ -1,5 +1,15 @@
 ## Rikka Router fork
 
+- **Route simulator (`POST /console/api/routing/simulate`).** The dashboard's
+  simulator screen had no backend, so it honestly showed "not available". It now
+  answers from the same `RoutingEngine` the dispatcher uses — same alias
+  resolver, same `EligibilityEvaluator`, same ordering rules — so an explanation
+  cannot drift from what a real request does. Read-only is enforced rather than
+  documented: rotation cursors are *peeked* instead of advanced, no admission
+  slot is reserved, nothing is dispatched, and no credential is decrypted, which
+  is why `selected` appears only when a single candidate makes the choice
+  certain. Fifteen regression tests cover outcome mapping, ordering parity with
+  `plan()`, alias chains, tenant isolation, and the cursor guarantees.
 - **The compiled release binary could not run.** Two independent defects, both
   found by executing `dist/rikka-router` rather than trusting the build's exit
   code. macOS killed it on launch with `SIGKILL (Code Signature Invalid)` and no

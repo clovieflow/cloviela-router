@@ -39,9 +39,12 @@ These are real and should not be read as covered:
    support. Several inherited pages still render English only; the list is
    enumerated in `dashboard/src/shared/i18n.ts` (`UNTRANSLATED_SURFACES`) and
    rendered on the About screen rather than implied away.
-2. **The route simulator depends on a backend endpoint.** If
-   `POST /console/api/routing/simulate` is not mounted, the screen states that
-   plainly instead of showing a browser-side reimplementation of routing.
+2. **The route simulator is read-only by construction, and says so.** It
+   answers from the same `RoutingEngine` the dispatcher uses, with rotation
+   peeking instead of advancing, so asking "what would this do" cannot change
+   what the next real request does. `selected` is reported only when a single
+   candidate makes the choice certain; otherwise the page states that the
+   rotation cursor decides at dispatch time.
 3. **Readiness has a transition fallback.** Until
    `GET /console/api/system/readiness` is mounted, the checklist is composed
    from existing endpoints and says so on screen. The fallback is gated to

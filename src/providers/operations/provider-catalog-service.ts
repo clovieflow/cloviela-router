@@ -316,3 +316,40 @@ export async function syncByokProvider(
   }
   return host;
 }
+
+/**
+ * Converges the live BYOK registrations with the committed `providers` rows.
+ *
+ * {@link registerByokProviders} only adds and updates: it walks the rows that
+ * qualify *now*, so a provider whose row was removed (or whose `base_url` was
+ * cleared / disabled) is never visited, and its registration — adapter, SSRF
+ * upstream host, and any cached state hanging off the registry entry — stays
+ * alive for the life of the process. After a wholesale configuration change
+ * (a restore) that is exactly the stale state the data plane must not keep:
+ * traffic would still dispatch to an endpoint the committed catalog no longer
+ * describes. This drops every tracked registration the current rows do not
+ * justify, then returns the qualifying hosts.
+ *
+ * Process-global by nature, and tenant-safe by construction: the registry is
+ * one per process and this reads the whole `providers` table, so a restore of
+ * one tenant's backup can only remove a registration when the row itself is
+ * gone — another tenant's BYOK rows are still read back and stay registered.
+ */
+export async function reconcileByokProviders(
+  registry: ProviderRegistry,
+  db: CartethyiaDatabase,
+  ssrfPolicy: SsrfPolicy = {},
+): Promise<{ readonly hosts: ReadonlyMap<string, ByokUpstreamHost>; readonly removed: number }> {
+  const hosts = await registerByokProviders(registry, db, ssrfPolicy);
+  let removed = 0;
+  // The fingerprint map is the registry's own bookkeeping of what it has
+  // registered, so it is the authoritative list of candidates to drop — no
+  // second registry is introduced to track them.
+  for (const providerId of [...byokRegistrationFingerprints.keys()]) {
+    if (hosts.has(providerId)) continue;
+    registry.unregister(providerId);
+    byokRegistrationFingerprints.delete(providerId);
+    removed += 1;
+  }
+  return { hosts, removed };
+}

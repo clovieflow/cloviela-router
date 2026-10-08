@@ -28,7 +28,7 @@
  * was silently running the dashboard suites a second time. The paths below are
  * the single definition of what each scope covers.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -103,7 +103,12 @@ const sharedEnv = {
  * has its own `tsconfig.json` and dependency resolution (the dashboard has its
  * own `package.json`).
  */
-function runTests(cwd: string, label: string, paths: readonly string[]): Promise<number> {
+function runTests(
+  cwd: string,
+  label: string,
+  paths: readonly string[],
+  options: { readonly serial?: boolean } = {},
+): Promise<number> {
   const proc = Bun.spawn(
     [
       "bun",
@@ -111,7 +116,7 @@ function runTests(cwd: string, label: string, paths: readonly string[]): Promise
       ...(watch ? ["--watch"] : []),
       "--timeout",
       "15000",
-      "--parallel",
+      ...(options.serial === true ? [] : ["--parallel"]),
       ...paths,
       ...testArgs,
     ],
@@ -123,9 +128,63 @@ function runTests(cwd: string, label: string, paths: readonly string[]): Promise
   });
 }
 
+/**
+ * Suites that run DDL (`ALTER TABLE`) against the shared test database.
+ *
+ * They are split out of the parallel batch because PostgreSQL takes an
+ * `AccessExclusiveLock` for `ALTER TABLE`, and any concurrently running suite
+ * that deletes a tenant takes a `RowExclusiveLock` on the same table through
+ * `ON DELETE CASCADE`. The two orders deadlock, and PostgreSQL aborts one of
+ * them — measured as an intermittent `40P01 deadlock detected` on whichever
+ * suite happened to lose, roughly one full-suite run in three. Running these
+ * four files serially after the parallel batch removes the interleaving
+ * entirely; they are independent of each other and of the batch.
+ */
+const MIGRATION_SUITES = [
+  "test/persistence/migration-bridge-pool-kind.test.ts",
+  "test/persistence/migration-global-credit-limit.test.ts",
+  "test/persistence/migration-max-inflight.test.ts",
+  "test/persistence/migration-model-access-modes.test.ts",
+] as const;
+
+/** True when `path` is one of the serialized DDL suites. */
+function isMigrationSuite(path: string): boolean {
+  return MIGRATION_SUITES.some((suite) => path.endsWith(suite.replace("test/", "")));
+}
+
+/** Every `*.test.ts` under `root`, excluding the serialized DDL suites. */
+function backendTestFilesExcludingMigrationSuites(): string[] {
+  const files: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!entry.name.endsWith(".test.ts")) continue;
+      if (isMigrationSuite(full)) continue;
+      files.push(full);
+    }
+  };
+  walk(BACKEND_TESTS);
+  return files.sort();
+}
+
 let exitCode = 0;
 if (scope === "all" || scope === "backend") {
-  exitCode = await runTests(PROJECT_ROOT, "backend", [BACKEND_TESTS]);
+  if (watch) {
+    // Watch mode is an interactive loop; the DDL suites are not split out
+    // because a file list would not re-discover new files.
+    exitCode = await runTests(PROJECT_ROOT, "backend", [BACKEND_TESTS]);
+  } else {
+    exitCode = await runTests(PROJECT_ROOT, "backend", backendTestFilesExcludingMigrationSuites());
+    if (exitCode === 0) {
+      exitCode = await runTests(PROJECT_ROOT, "backend (migrations, serial)", MIGRATION_SUITES, {
+        serial: true,
+      });
+    }
+  }
 }
 if (exitCode === 0 && (scope === "all" || scope === "dashboard")) {
   exitCode = await runTests(DASHBOARD_ROOT, "dashboard", [DASHBOARD_TESTS]);

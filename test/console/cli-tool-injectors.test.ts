@@ -24,13 +24,13 @@
  *   `https://notlocalhost.com` and `https://evil.com/localhost` both read as
  *   *this* gateway — and that value is what the dashboard shows the operator.
  *
- * The last block drives the real `codex` injector end to end against a temp
- * `HOME`, because the unit-level guarantees only matter if the composed
- * apply → status → reset lifecycle holds: a reset must leave the user's
- * original file semantically intact.
+ * The last block covers the production write guard itself: every write helper
+ * refuses a path outside the disposable sandbox *before* it touches the
+ * filesystem, so a mis-redirected fixture fails the test instead of rewriting
+ * the operator's real configs.
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -40,6 +40,7 @@ import {
   keyPrefix,
   readJsonFile,
   readTextFile,
+  removeFile,
   stripV1Suffix,
   textGet,
   textHas,
@@ -743,12 +744,22 @@ model_provider = "openai"
 
 describe("readJsonFile and writeJsonFile", () => {
   let dir: string;
+  let savedRoot: string | undefined;
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "cartethyia-fsops-"));
+    // Narrow the production write guard to this suite's own temp dir. Under
+    // the harness the whole sandbox is allowed, but a direct `bun test` run
+    // has no root set at all — and with `NODE_ENV=test` the guard then refuses
+    // every write, including these. Pinning the root to the fixture keeps the
+    // suite runnable both ways without ever widening it.
+    savedRoot = process.env.CARTETHYIA_TEST_HOME_ROOT;
+    process.env.CARTETHYIA_TEST_HOME_ROOT = dir;
   });
 
   afterEach(() => {
+    if (savedRoot === undefined) delete process.env.CARTETHYIA_TEST_HOME_ROOT;
+    else process.env.CARTETHYIA_TEST_HOME_ROOT = savedRoot;
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -793,5 +804,119 @@ describe("readJsonFile and writeJsonFile", () => {
     const path = join(nested, "f.txt");
     await writeTextFile(path, "x");
     expect(await readTextFile(path)).toBe("x");
+  });
+});
+
+/**
+ * The production write guard: every write helper refuses an outside path
+ * *before* it touches the filesystem.
+ *
+ * This is the boundary that keeps a mis-redirected fixture from rewriting the
+ * operator's real `~/.codex/config.toml`: the guard is in the production
+ * module (`assertTestWritePath`), so it protects every caller — injectors and
+ * tests alike — and it must fail *first*, with the operator's file untouched.
+ * The containment check is path-relative and symlink-resolved, so a sibling
+ * that merely shares a name prefix, and a symlink that escapes the sandbox
+ * (dangling or not), are all refused.
+ */
+describe("the production write guard", () => {
+  let sandbox: string;
+  let outside: string;
+  let savedRoot: string | undefined;
+  let savedNodeEnv: string | undefined;
+
+  beforeEach(() => {
+    sandbox = mkdtempSync(join(tmpdir(), "cartethyia-guard-root-"));
+    outside = mkdtempSync(join(tmpdir(), "cartethyia-guard-outside-"));
+    savedRoot = process.env.CARTETHYIA_TEST_HOME_ROOT;
+    savedNodeEnv = process.env.NODE_ENV;
+    process.env.CARTETHYIA_TEST_HOME_ROOT = sandbox;
+  });
+
+  afterEach(() => {
+    if (savedRoot === undefined) delete process.env.CARTETHYIA_TEST_HOME_ROOT;
+    else process.env.CARTETHYIA_TEST_HOME_ROOT = savedRoot;
+    if (savedNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = savedNodeEnv;
+    rmSync(sandbox, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  });
+
+  /** Creates a symlink, or reports false where the OS forbids it (Windows). */
+  function trySymlink(target: string, path: string): boolean {
+    try {
+      symlinkSync(target, path);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  test("a write outside the sandbox is refused before the file is created", async () => {
+    const target = join(outside, "operator-config.json");
+    await expect(writeJsonFile(target, { secret: true })).rejects.toThrow(
+      /disposable home sandbox/,
+    );
+    expect(existsSync(target)).toBe(false);
+  });
+
+  test("every write helper refuses an outside path", async () => {
+    await expect(writeTextFile(join(outside, "a.txt"), "x")).rejects.toThrow(/sandbox/);
+    await expect(writeJsonFile(join(outside, "a.json"), {})).rejects.toThrow(/sandbox/);
+    await expect(ensureDir(join(outside, "nested", "dir"))).rejects.toThrow(/sandbox/);
+    expect(existsSync(join(outside, "a.txt"))).toBe(false);
+    expect(existsSync(join(outside, "nested"))).toBe(false);
+  });
+
+  test("removeFile refuses an outside path and leaves the file in place", async () => {
+    const target = join(outside, "keep-me.txt");
+    await Bun.write(target, "operator data");
+    await expect(removeFile(target)).rejects.toThrow(/sandbox/);
+    expect(existsSync(target)).toBe(true);
+  });
+
+  test("a sibling directory that merely shares the prefix is outside", async () => {
+    // `/tmp/x-home-evil` must not pass for `/tmp/x-home`; the check is a
+    // path-relative containment test, not a string prefix.
+    const sibling = `${sandbox}-evil`;
+    await expect(writeTextFile(join(sibling, "f.txt"), "x")).rejects.toThrow(/sandbox/);
+    expect(existsSync(sibling)).toBe(false);
+  });
+
+  test("a symlink pointing outside the sandbox is refused", async () => {
+    const link = join(sandbox, "escape");
+    if (!trySymlink(outside, link)) return; // Windows without symlink privilege
+    await expect(writeTextFile(join(link, "f.txt"), "x")).rejects.toThrow(/sandbox/);
+    expect(existsSync(join(outside, "f.txt"))).toBe(false);
+  });
+
+  test("a dangling symlink that points outside is refused", async () => {
+    const link = join(sandbox, "dangling");
+    if (!trySymlink(join(outside, "missing-target"), link)) return;
+    await expect(writeTextFile(link, "x")).rejects.toThrow(/sandbox/);
+    expect(existsSync(join(outside, "missing-target"))).toBe(false);
+  });
+
+  test("a write inside the sandbox passes the guard", async () => {
+    const target = join(sandbox, "config.toml");
+    await writeTextFile(target, "ok");
+    expect(await readTextFile(target)).toBe("ok");
+  });
+
+  test("with no root under NODE_ENV=test the guard names the harness", async () => {
+    delete process.env.CARTETHYIA_TEST_HOME_ROOT;
+    process.env.NODE_ENV = "test";
+    const target = join(outside, "f.txt");
+    await expect(writeTextFile(target, "x")).rejects.toThrow(/isolated bun run test harness/);
+    expect(existsSync(target)).toBe(false);
+  });
+
+  test("with no root outside a test run the write is allowed", async () => {
+    // Production must not be blocked by a test-only guard.
+    delete process.env.CARTETHYIA_TEST_HOME_ROOT;
+    delete process.env.NODE_ENV;
+    const target = join(outside, "production.txt");
+    await writeTextFile(target, "ok");
+    expect(existsSync(target)).toBe(true);
   });
 });

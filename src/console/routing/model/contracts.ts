@@ -5,6 +5,7 @@
 import type { ConsoleAccessResolver } from "../../auth/access";
 import type { AuditSink } from "../../domains/audit/contracts";
 import type { ComboStrategy } from "../../../persistence/schema";
+import type { RouteSnapshot, RouteSimulationResult } from "../../../transport/routing/route-model";
 
 export type { ComboStrategy };
 
@@ -111,6 +112,12 @@ export interface ModelRoutingConfig {
   readonly accessResolver: ConsoleAccessResolver;
   readonly auditSink?: AuditSink;
   readonly snapshotInvalidator?: ModelRoutingSnapshotInvalidator;
+  /**
+   * Route simulator dependencies. Optional so reduced compositions (route-only
+   * shells, test doubles) keep working; when absent the simulate route answers
+   * 503 rather than pretending there is no such endpoint.
+   */
+  readonly simulator?: RouteSimulatorConfig;
 }
 
 const MAX_ALIAS_DEPTH = 16;
@@ -200,3 +207,102 @@ export async function partitionResolvableMembers(
   return { resolvable, dangling };
 }
 
+
+/** Endpoint families the route simulator evaluates; mirrors the engine's list. */
+export type SimulatorEndpointFamily =
+  | "chat.completions"
+  | "responses"
+  | "messages"
+  | "completions"
+  | "search"
+  | "systemone";
+
+/** Parsed `{ model, endpoint? }` body of `POST /routing/simulate`. */
+export interface SimulatorRequestBody {
+  readonly model: string;
+  readonly endpoint: SimulatorEndpointFamily;
+}
+
+/** One exclusion/eligibility cause, with the backend's own explanation. */
+export interface SimulatorReasonResponse {
+  readonly code: string;
+  readonly message: string;
+}
+
+/** Provider-specific quota context, when the candidate carries any. */
+export interface SimulatorQuotaResponse {
+  readonly status: "ok" | "below_floor" | "unknown";
+  readonly creditLimitEnabled?: boolean;
+  readonly creditLimit?: number;
+  readonly lastRemainingCredit?: number;
+  readonly lastRemainingPercent?: number | null;
+}
+
+/** Provider routing settings that govern this candidate's rotation. */
+export interface SimulatorProviderRoutingResponse {
+  readonly strategy?: string;
+  readonly rotateCount?: number;
+  readonly enabled?: boolean;
+  readonly bypassProxy?: boolean;
+}
+
+/** One evaluated candidate row. Field names are the dashboard's contract. */
+export interface SimulatorCandidateResponse {
+  readonly providerId: string;
+  readonly providerLabel: string;
+  readonly modelId: string;
+  readonly accountId?: string;
+  readonly accountLabel?: string;
+  readonly wireFamily?: string;
+  readonly serviceKind?: string;
+  readonly upstreamEndpoint?: string;
+  readonly eligible: boolean;
+  readonly reasons: readonly SimulatorReasonResponse[];
+  readonly priority: number;
+  readonly cooldownKind?: string;
+  readonly cooldownUntil?: string;
+  readonly modelCooldownUntil?: string;
+  readonly maxInflight?: number;
+  readonly quota?: SimulatorQuotaResponse;
+  readonly providerRouting?: SimulatorProviderRoutingResponse;
+}
+
+/** The candidate a live request would take; only present when deterministic. */
+export interface SimulatorSelectedResponse {
+  readonly providerId: string;
+  readonly modelId?: string;
+  readonly accountId?: string;
+}
+
+/** Full `POST /routing/simulate` response. */
+export interface SimulatorResponse {
+  readonly model: string;
+  readonly resolvedModel?: string;
+  readonly resolutionChain: readonly string[];
+  readonly revision?: number;
+  readonly readOnly: boolean;
+  readonly strategy?: "fallback" | "round_robin" | "fusion";
+  readonly strategySource?: "combo" | "provider" | "default";
+  readonly rotationActive: boolean;
+  readonly outcome?: string;
+  readonly candidates: readonly SimulatorCandidateResponse[];
+  readonly selected: SimulatorSelectedResponse | null;
+  readonly selectedIsDeterministic: boolean;
+  readonly fusion?: { readonly panel: readonly string[]; readonly judge?: string };
+  readonly unmatchedMembers: readonly string[];
+  readonly notes: readonly string[];
+}
+
+/** Dependencies the simulator needs; the engine is the canonical routing owner. */
+export interface RouteSimulatorConfig {
+  readonly engine: {
+    simulate(input: {
+      readonly requestedModel: string;
+      readonly endpoint: SimulatorEndpointFamily;
+      readonly snapshot: RouteSnapshot;
+      readonly tenantId?: string | null;
+    }): Promise<RouteSimulationResult>;
+  };
+  readonly snapshotService: { getSnapshot(): Promise<RouteSnapshot> };
+  readonly accessResolver: ConsoleAccessResolver;
+}

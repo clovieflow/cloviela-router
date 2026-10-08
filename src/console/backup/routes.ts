@@ -22,6 +22,7 @@ import { MAX_BACKUP_BYTES } from "./contracts";
 import type { BackupSection } from "./contracts";
 import { DELETE_ALL_SCOPES } from "./store";
 import type { BackupService } from "./service";
+import type { RestoreRuntimeSync } from "./runtime-sync";
 import type { AuditSink } from "../domains/audit/contracts";
 
 export interface BackupRoutesConfig {
@@ -58,6 +59,16 @@ export interface BackupRoutesConfig {
    * reservation/counter state. Paired with {@link apiKeyStore} on restore.
    */
   readonly admissionService?: { purgeKey(apiKeyId: string): Promise<void> };
+  /**
+   * Canonical post-restore completion hook: converges process state the commit
+   * cannot reach — BYOK adapter/upstream-host registrations (including dropping
+   * the ones the committed rows no longer justify), the credential cache, and
+   * the settings revision. Runs only after the restore transaction has
+   * committed, so a failed or rolled-back restore never reaches it. Supplied by
+   * `domain-registration.ts` via `createRestoreRuntimeSync`; optional so a host
+   * without a provider registry (tests) keeps working unchanged.
+   */
+  readonly restoreRuntimeSync?: () => Promise<RestoreRuntimeSync>;
   readonly auditSink?: AuditSink;
 }
 
@@ -154,6 +165,11 @@ export function createBackupRoutes(config: BackupRoutesConfig): Elysia {
         // Routing-visible write: the restore has committed, so the cached
         // snapshot must be rebuilt before the next `/v1/*` dispatch.
         await config.snapshotInvalidator?.invalidate();
+        // The commit cannot reach process state: BYOK registrations (including
+        // stale ones the payload removed), the credential cache, and the
+        // settings revision. Converge them before returning, so the very next
+        // request in this process routes through the restored endpoint.
+        const runtime = await config.restoreRuntimeSync?.();
         // A restore can re-insert keys the tenant revoked after the backup, and
         // `revokeKey` purged their counters when they went away. Drop the whole
         // auth cache (the restore is rare, and a stale entry for any key must
@@ -168,7 +184,7 @@ export function createBackupRoutes(config: BackupRoutesConfig): Elysia {
           }
         }
         set.status = 200;
-        return result;
+        return runtime === undefined ? result : { ...result, runtime };
       } catch (error) {
         return errorResponse(error, set, "Backup import failed");
       }

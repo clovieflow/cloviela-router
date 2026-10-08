@@ -1,8 +1,8 @@
 import { GatewayError } from "../gateway-error";
 import type { CanonicalRequest, ContentPart, ServiceKind } from "../canonical-model";
 import type { ApiKeyAdmissionService } from "../../security/admission/service";
-import type { RouteCandidate as RouteCandidate, InMemoryRouteSnapshotService, RoutePlan } from "../routing/route-model";
-import { resolveAliasTarget, type RoutingEngine } from "../routing/router";
+import type { RouteCandidate as RouteCandidate, InMemoryRouteSnapshotService, RoutePlan, RouteSimulationResult, RouteSnapshot } from "../routing/route-model";
+import { resolveAliasTarget, type RoutingEngine, type SimulatorEndpoint } from "../routing/router";
 import {
   deriveRequiredCapabilities,
   isWebSearchTool,
@@ -417,6 +417,23 @@ export interface ProxyRequestPreparerDeps {
 
 export class ProxyRequestPreparer {
   constructor(private readonly deps: ProxyRequestPreparerDeps) {}
+
+  /**
+   * Read-only route evaluation for the console's simulator.
+   *
+   * Delegates to the same `RoutingEngine` the dispatch path uses, so the
+   * simulator cannot drift from production routing. Exposed here because the
+   * preparer is the composition that already owns the engine — a second engine
+   * instance would have its own rotation cursors and answer differently.
+   */
+  async simulate(input: {
+    readonly requestedModel: string;
+    readonly endpoint: SimulatorEndpoint;
+    readonly snapshot: RouteSnapshot;
+    readonly tenantId?: string | null;
+  }): Promise<RouteSimulationResult> {
+    return this.deps.routingEngine.simulate(input);
+  }
 
   async prepare(input: {
     readonly canonicalRequest: CanonicalRequest;

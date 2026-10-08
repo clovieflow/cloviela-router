@@ -23,6 +23,7 @@ import type { BackupSection } from "./contracts";
 import { deleteAll, exportBackup, applyRestore, type DeleteAllResult, type DeleteAllScope } from "./store";
 import { detectFormat, restoreOrder, validateRestorePayload } from "./validate";
 import { convert9RouterBackup, type ImportReport } from "./nine-router";
+import type { RestoreRuntimeSync } from "./runtime-sync";
 
 export interface BackupServiceOptions {
   readonly db: CartethyiaDatabase;
@@ -42,6 +43,13 @@ export interface ImportResult {
   readonly skipped: Record<string, number>;
   readonly report?: ImportReport;
   readonly format: "native" | "nine_router";
+  /**
+   * What the post-restore completion hook converged in the live process
+   * (BYOK registrations added/removed, settings revision). Attached by the
+   * import route after the transaction committed; absent when the host wires
+   * no hook.
+   */
+  readonly runtime?: RestoreRuntimeSync;
 }
 
 function sectionsOrDefault(sections: readonly BackupSection[] | undefined): readonly BackupSection[] {
