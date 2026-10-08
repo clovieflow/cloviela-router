@@ -1,4 +1,10 @@
-# Contributing to Cartethyia
+# Contributing to Rikka Router
+
+Rikka Router is a GPLv3 derivative of
+[Cartethyia](https://github.com/risunCode/Cartethyia). Prefer fixing shared
+gateway behavior upstream where it belongs, and keep this fork's presentation
+changes (Rikka branding, artwork, localization) separate from protocol,
+routing, and persistence changes.
 
 This page covers contribution workflow, code conventions, and pull requests.
 

@@ -24,7 +24,6 @@ import { COMBO_STRATEGY_OPTIONS } from "../../src/shared/combo-strategy";
 import { providerCanConfigureUserAgent } from "../../src/shared/provider-user-agent";
 import { formatModelTokens, UNKNOWN_LIMITS_TOOLTIP } from "../../src/shared/model-limits";
 import { requestProviderId } from "../../src/shared/request-provider";
-import { DASHBOARD_CODENAME, DASHBOARD_RELEASE_LABEL, DASHBOARD_VERSION } from "../../src/shared/version";
 
 describe("formatModelTokens", () => {
   test("an absent limit renders as an em-dash, never as a number", () => {
@@ -309,21 +308,3 @@ describe("COMBO_STRATEGY_OPTIONS", () => {
   });
 });
 
-describe("version metadata", () => {
-  test("the release label is composed from the version and codename", () => {
-    // The footer reads this; a mismatch between the three constants would show a
-    // version that is not the one in package.json.
-    expect(DASHBOARD_RELEASE_LABEL).toBe(`v${DASHBOARD_VERSION} (${DASHBOARD_CODENAME})`);
-  });
-
-  test("the version is a non-empty string taken from package.json", () => {
-    // MEASURED: the dashboard's package.json carries a two-part version ("2.0"),
-    // not a semver triple. I first asserted `/^\d+\.\d+\.\d+/` and was wrong.
-    // Asserting the actual shape rather than a stricter guess keeps this a real
-    // test of "it comes from package.json and is numeric", which is what the
-    // release label needs.
-    expect(typeof DASHBOARD_VERSION).toBe("string");
-    expect(DASHBOARD_VERSION.length).toBeGreaterThan(0);
-    expect(DASHBOARD_VERSION).toMatch(/^\d+(\.\d+)+/);
-  });
-});

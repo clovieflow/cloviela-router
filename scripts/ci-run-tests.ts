@@ -28,7 +28,8 @@
  * was silently running the dashboard suites a second time. The paths below are
  * the single definition of what each scope covers.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const PROJECT_ROOT = join(import.meta.dir, "..");
@@ -63,9 +64,35 @@ const passthrough = rawArgs.filter((_arg, index) => {
 const watch = passthrough.includes("--watch");
 const testArgs = passthrough.filter((arg) => arg !== "--watch");
 
+// Set these before the worker starts: Bun caches OS home/temp paths at startup.
+// Per-suite HOME changes are an additional seam, not the safety boundary.
+const sandbox = mkdtempSync(join(tmpdir(), "rikka-tests-"));
+const isolatedHome = join(sandbox, "home");
+const isolatedTmp = join(sandbox, "tmp");
+mkdirSync(isolatedHome, { recursive: true });
+mkdirSync(isolatedTmp, { recursive: true });
+process.on("exit", () => rmSync(sandbox, { recursive: true, force: true }));
+
 const sharedEnv = {
   ...process.env,
   ...loadEnvFile(join(PROJECT_ROOT, ".env.test")),
+  NODE_ENV: "test",
+  HOME: isolatedHome,
+  USERPROFILE: isolatedHome,
+  TMPDIR: isolatedTmp,
+  TMP: isolatedTmp,
+  TEMP: isolatedTmp,
+  XDG_CONFIG_HOME: join(isolatedHome, ".config"),
+  XDG_DATA_HOME: join(isolatedHome, ".local", "share"),
+  XDG_STATE_HOME: join(isolatedHome, ".local", "state"),
+  XDG_CACHE_HOME: join(isolatedHome, ".cache"),
+  APPDATA: join(isolatedHome, "AppData", "Roaming"),
+  LOCALAPPDATA: join(isolatedHome, "AppData", "Local"),
+  CODEX_HOME: join(isolatedHome, ".codex"),
+  CLAUDE_CONFIG_DIR: join(isolatedHome, ".claude"),
+  CARTETHYIA_TEST_HOME_ROOT: sandbox,
+  CARTETHYIA_DATA_DIR: join(sandbox, "runtime-data"),
+  CARTETHYIA_DB_MODE: "full",
 };
 
 /**

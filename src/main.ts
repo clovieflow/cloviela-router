@@ -1,7 +1,7 @@
 import { createGatewayApp, createGatewayShell } from "./app";
 import { bootstrap } from "./runtime/lifecycle";
 import type { CartethyiaBoot } from "./runtime/lifecycle";
-import { resolveDrainToken, resolveIdleTimeout, resolveMaxBodyBytes, resolvePort } from "./config";
+import { resolveBindHost, resolveDrainToken, resolveIdleTimeout, resolveMaxBodyBytes, resolvePort } from "./config";
 import { Manifest } from "elysia";
 import { log } from "./observability/logger";
 
@@ -92,6 +92,7 @@ if (boot) {
   boot.server = app.listen(
     {
       port,
+      hostname: resolveBindHost(),
       // Cap idle sockets so a Slowloris/keep-alive-abuse client cannot
       // pin one of the server's `maxRequestBodySize`-budgeted sockets
       // indefinitely. 60 s aligns with the DB pool idle timeout so all
@@ -106,7 +107,7 @@ if (boot) {
       maxRequestBodySize: resolveMaxBodyBytes(),
     },
     () => {
-      log.info(`Cartethyia listening on :${port} (Bun ${Bun.version})`);
+      log.info(`Rikka Router listening on ${resolveBindHost()}:${port} (Bun ${Bun.version})`);
     },
   );
   // Started here rather than inside the dependency builder: the first tick of

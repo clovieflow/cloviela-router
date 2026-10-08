@@ -32,7 +32,7 @@ export function EmptyState({
         <div className="state-box-icon" aria-hidden="true">
           {icon ?? <Inbox size={20} />}
         </div>
-        <h3>{title}</h3>
+        <h2>{title}</h2>
         <p>{message}</p>
         {action ? <div style={{ marginTop: "8px" }}>{action}</div> : null}
       </div>
@@ -76,7 +76,7 @@ export function ErrorState({
         <div className="state-box-icon state-box-icon-danger" aria-hidden="true">
           <TriangleAlert size={20} />
         </div>
-        <h3 style={{ color: "var(--red)" }}>{title}</h3>
+        <h2 style={{ color: "var(--red)" }}>{title}</h2>
         <p role="alert">{message}</p>
         {action ? <div style={{ marginTop: "8px" }}>{action}</div> : null}
         {onRetry ? (

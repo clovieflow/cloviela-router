@@ -8,6 +8,8 @@ import { ErrorState, LoadingState } from "../components/ui/state";
 import { Inline } from "../components/ui/inline";
 import { Stack } from "../components/ui/stack";
 import { BackupPanel } from "../components/BackupPanel";
+import { PageHead } from "../components/PageHead";
+import { useT } from "../shared/locale-context";
 import { toast } from "../shared/toast";
 import { useChangePassword } from "../hooks/auth";
 import { useRuntimeSettings, useUpdateRuntimeSettings } from "../hooks/settings";
@@ -240,8 +242,15 @@ function PasswordChangeForm(): ReactNode {
 }
 
 export default function Settings(): ReactNode {
+  const t = useT();
   return (
-    <div className="settings-column">
+    <div className="dashboard-page">
+      <PageHead
+        title={t("nav.settings")}
+        description={t("about.localization")}
+        art="settings"
+      />
+      <div className="settings-column">
       {/* Security Controls / Password Change */}
       <Card>
         <CardHeader
@@ -257,8 +266,9 @@ export default function Settings(): ReactNode {
       {/* Privacy */}
       <PrivacyPanel />
 
-      {/* Backup & Restore */}
-      <BackupPanel />
+        {/* Backup & Restore */}
+        <BackupPanel />
+      </div>
     </div>
   );
 }

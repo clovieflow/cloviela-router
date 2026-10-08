@@ -22,6 +22,7 @@ import { Badge } from "../../components/ui/badge";
 import { DataTable } from "../../components/ui/layout";
 import { Inline } from "../../components/ui/inline";
 import { StatePanel, EmptyState, LoadingState, ErrorState } from "../../components/ui/state";
+import { PageHead } from "../../components/PageHead";
 import { ProviderIcon } from "../../components/ProviderIcon";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { HealthEventsModal } from "../../components/HealthEventsModal";
@@ -873,6 +874,11 @@ export default function QuotaPage(): ReactNode {
 
   return (
     <Stack gap="16px" className="dashboard-page" style={{ minHeight: 0, flex: 1 }}>
+      <PageHead
+        title="Quota Management"
+        description="Provider quota windows, cooldowns, and saved resets"
+        art="quota"
+      />
       <Toolbar className="page-toolbar-sticky">
         <SlidersHorizontal
           size={14}

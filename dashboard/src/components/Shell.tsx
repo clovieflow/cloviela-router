@@ -1,23 +1,24 @@
 import {
   Activity,
   Bell,
+  BookOpen,
   Clock,
   Cpu,
   FlaskConical,
   Globe,
+  Info,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
-  Moon,
   Network,
   Rocket,
+  Route,
   Search,
   Server,
   Settings as SettingsIcon,
   ShieldAlert,
   ScrollText,
-  Sun,
-  Terminal,
   Timer,
   X,
   type LucideIcon,
@@ -27,7 +28,12 @@ import { createPortal } from "react-dom";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { usePresence } from "../hooks/use-presence";
 import { useModalFocus } from "../hooks/use-modal-focus";
-import { applyConsoleTheme, isDarkEffective, readConsoleTheme, writeConsoleTheme } from "../shared/theme";
+import { resolveConsoleTheme, subscribeToOSTheme, readConsoleTheme } from "../shared/theme";
+import { useT } from "../shared/locale-context";
+import { ThemeChooser } from "./ThemeChooser";
+import { AmbientArt, AvatarArt } from "./rikka/art-surfaces";
+import { RikkaArt } from "./rikka/RikkaArt";
+import type { MessageKey } from "../shared/i18n";
 import { consoleRequest } from "../data/api";
 import { queryClient } from "../data/query-client";
 import { prefetchRouteIntent } from "../data/route-prefetch";
@@ -39,72 +45,98 @@ import type { SessionUser } from "../data/contracts";
 import { formatUptime } from "../shared/format";
 
 interface NavItemDef {
-  readonly label: string;
+  /** Message key, not a literal: the shell renders in the operator's locale. */
+  readonly labelKey: MessageKey;
   readonly path: string;
   readonly icon: LucideIcon;
   readonly badge?: string;
 }
 
 interface NavGroupDef {
-  readonly label: string;
+  readonly labelKey: MessageKey;
   readonly items: readonly NavItemDef[];
 }
 
+/**
+ * Console navigation.
+ *
+ * ── Why the grouping changed ────────────────────────────────────────────────
+ * The previous list mixed a *catalog* (Providers), a *task* (Model Lab) and an
+ * *implementation detail* (Combos & Routes) in one "Main" column, and buried
+ * the operational screens an operator actually needs during an incident
+ * (Health, Logs) behind a "System" heading that read as settings-adjacent.
+ *
+ * The order below follows the operator's actual journey: set up → observe →
+ * configure → investigate. Every entry points at a real, working route; the
+ * legacy pages keep their own paths and are all still reachable.
+ */
 export const navigationGroups: readonly NavGroupDef[] = [
   {
-    label: "Main",
+    labelKey: "nav.group.main",
     items: [
-      { label: "Overview", path: "/", icon: LayoutDashboard },
-      { label: "Usage", path: "/usage", icon: Activity },
-      { label: "Providers", path: "/providers", icon: Server },
-      { label: "Model Lab", path: "/model-lab", icon: FlaskConical },
+      { labelKey: "nav.overview", path: "/", icon: LayoutDashboard },
+      { labelKey: "nav.onboarding", path: "/onboarding", icon: Rocket },
+      { labelKey: "nav.health", path: "/health", icon: Activity },
+      { labelKey: "nav.usage", path: "/usage", icon: Timer },
+      { labelKey: "nav.logs", path: "/console-log", icon: ScrollText },
     ],
   },
   {
-    label: "Control",
+    labelKey: "nav.group.control",
     items: [
-      { label: "Combos & Routes", path: "/combos", icon: Cpu },
-      { label: "Quota Management", path: "/quota", icon: ShieldAlert },
-      { label: "Proxy & Requests", path: "/proxy", icon: Network },
-      { label: "CLI Tools", path: "/cli-tools", icon: Terminal },
+      { labelKey: "nav.providers", path: "/providers", icon: Server },
+      { labelKey: "nav.models", path: "/models", icon: Cpu },
+      { labelKey: "nav.routing", path: "/combos", icon: Network },
+      { labelKey: "nav.simulator", path: "/simulator", icon: Route },
+      { labelKey: "nav.quota", path: "/quota", icon: ShieldAlert },
     ],
   },
   {
-    label: "System",
+    labelKey: "nav.group.system",
     items: [
-      { label: "Console Log", path: "/console-log", icon: ScrollText },
-      { label: "Settings", path: "/settings", icon: SettingsIcon },
+      { labelKey: "nav.apiKeys", path: "/api-keys", icon: KeyRound },
+      { labelKey: "nav.networks", path: "/proxy", icon: Globe },
+      { labelKey: "nav.studio", path: "/model-lab", icon: FlaskConical },
+      { labelKey: "nav.help", path: "/help", icon: BookOpen },
+      { labelKey: "nav.settings", path: "/settings", icon: SettingsIcon },
+      { labelKey: "nav.about", path: "/about", icon: Info },
     ],
   },
 ];
 
 
-const titlesMap: Record<string, { title: string; sub: string }> = {
-  "/": { title: "Overview", sub: "Gateway health, capacity, and live metrics" },
-  "/usage": { title: "Usage & Metrics", sub: "Token economics, requests, and cost breakdown" },
-  "/providers": { title: "Provider Catalog", sub: "Upstream credentials, models, and latency" },
-  "/combos": {
-    title: "Combos & Routing",
-    sub: "Failover policies, model aliases, and weighted routes",
-  },
-  "/quota": { title: "Quota Management", sub: "Rate limits, leases, and tenant quotas" },
-  "/proxy": {
-    title: "Proxy & Requests",
-    sub: "Network pools, SOCKS5/HTTP egress, and dispatch",
-  },
-  "/console-log": { title: "Console Log", sub: "Live server logs and audit trail" },
-  "/model-lab": { title: "Model Lab", sub: "Live model playground — chat, thinking, and image generation" },
-  "/cli-tools": {
-    title: "CLI Tools",
-    sub: "Claude Code CLI, OpenCode, and local developer tool integrations",
-  },
-  "/settings": {
-    title: "Settings",
-    sub: "Account security, runtime preferences, and state recovery",
-  },
+/**
+ * Topbar title/subtitle per route.
+ *
+ * Titles are message keys so the shell renders in the operator's locale. The
+ * legacy pages keep their own upstream titles: renaming them here would make
+ * the header disagree with the page body, which is worse than an English
+ * heading above an English page.
+ */
+const titlesMap: Record<string, { title: MessageKey; sub: MessageKey }> = {
+  "/": { title: "overview.title", sub: "overview.subtitle" },
+  "/onboarding": { title: "onboarding.title", sub: "onboarding.subtitle" },
+  "/health": { title: "health.title", sub: "health.subtitle" },
+  "/usage": { title: "nav.usage", sub: "health.subtitle" },
+  "/providers": { title: "nav.providers", sub: "models.subtitle" },
+  "/models": { title: "models.title", sub: "models.subtitle" },
+  "/combos": { title: "routing.title", sub: "routing.subtitle" },
+  "/simulator": { title: "simulator.title", sub: "simulator.subtitle" },
+  "/quota": { title: "nav.quota", sub: "health.storage" },
+  "/proxy": { title: "nav.networks", sub: "health.connectivity" },
+  "/api-keys": { title: "nav.apiKeys", sub: "models.aliasSectionHint" },
+  "/console-log": { title: "nav.logs", sub: "health.gateway" },
+  "/model-lab": { title: "nav.studio", sub: "help.clients" },
+  "/cli-tools": { title: "nav.more", sub: "help.quickstartHint" },
+  "/help": { title: "help.title", sub: "help.subtitle" },
+  "/about": { title: "about.title", sub: "about.subtitle" },
+  "/settings": { title: "nav.settings", sub: "about.localization" },
 };
 
-const CONSOLE_FALLBACK = { title: "Console", sub: "Cartethyia AI Gateway Administration" };
+const CONSOLE_FALLBACK: { title: MessageKey; sub: MessageKey } = {
+  title: "nav.overview",
+  sub: "overview.subtitle",
+};
 
 /**
  * Resolves the topbar title/subtitle for a pathname.
@@ -116,23 +148,27 @@ const CONSOLE_FALLBACK = { title: "Console", sub: "Cartethyia AI Gateway Adminis
 function resolveRouteMeta(
   pathname: string,
   providers: readonly { readonly providerId: string; readonly displayName: string; readonly label?: string }[],
+  t: (key: MessageKey) => string,
 ): { title: string; sub: string } {
   const providerMatch = /^\/providers\/([^/]+)\/?$/.exec(pathname);
   if (providerMatch?.[1]) {
     const provider = providers.find((candidate) => candidate.providerId === providerMatch[1]);
     return {
+      // A provider's own display name is data, not chrome: it is rendered as-is
+      // in every locale, exactly as the catalog reports it.
       title: provider?.label || provider?.displayName || providerMatch[1],
-      sub: "Routing, accounts, models, and health",
+      sub: t("nav.providers"),
     };
   }
   const toolMatch = /^\/cli-tools\/([^/]+)\/?$/.exec(pathname);
   if (toolMatch?.[1]) {
     return {
-      title: "CLI Tool",
-      sub: `${toolMatch[1]} — mappings, endpoints, and downloadable config`,
+      title: toolMatch[1],
+      sub: t("help.quickstartHint"),
     };
   }
-  return titlesMap[pathname] ?? CONSOLE_FALLBACK;
+  const meta = titlesMap[pathname] ?? CONSOLE_FALLBACK;
+  return { title: t(meta.title), sub: t(meta.sub) };
 }
 
 function useSafeSystemHealth() {
@@ -143,42 +179,8 @@ function useSafeSystemHealth() {
   }
 }
 
-function ThemeToggle() {
-  const [theme, setTheme] = useState(() => readConsoleTheme());
-  const dark = isDarkEffective(theme);
-
-  // Stay in sync with theme changes from another tab.
-  useEffect(() => {
-    const resync = () => setTheme(readConsoleTheme());
-    window.addEventListener("storage", resync);
-    return () => window.removeEventListener("storage", resync);
-  }, []);
-
-  useEffect(() => {
-    applyConsoleTheme(theme);
-  }, [theme]);
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        const next = dark ? "light" : "dark";
-        setTheme(next);
-        writeConsoleTheme(next);
-      }}
-      aria-label="Toggle theme"
-      aria-pressed={dark}
-      className="topbar-icon-button"
-      title={dark ? "Switch to light mode" : "Switch to dark mode"}
-    >
-      <span key={dark ? "sun" : "moon"} style={{ display: "grid", placeItems: "center" }}>
-        {dark ? <Sun size={17} /> : <Moon size={17} />}
-      </span>
-    </button>
-  );
-}
-
 function NotificationsPopover({ isHealthy }: { isHealthy: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -213,7 +215,7 @@ function NotificationsPopover({ isHealthy }: { isHealthy: boolean }) {
         ref={triggerRef}
         type="button"
         className="topbar-icon-button"
-        aria-label="Notifications"
+        aria-label={t("nav.commandPalette")}
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((v) => !v)}
@@ -225,7 +227,7 @@ function NotificationsPopover({ isHealthy }: { isHealthy: boolean }) {
             <div
               ref={contentRef}
               role="dialog"
-              aria-label="Notifications"
+              aria-label={t("nav.commandPalette")}
               className="popout-enter glass"
               style={{
                 position: "fixed",
@@ -270,11 +272,11 @@ function NotificationsPopover({ isHealthy }: { isHealthy: boolean }) {
                   >
                     <Bell size={13} />
                   </span>
-                  <span>Notifications</span>
+                  <span>{t("nav.commandPalette")}</span>
                 </div>
                 <button
                   type="button"
-                  aria-label="Close notifications"
+                  aria-label={t("action.close")}
                   onClick={() => setOpen(false)}
                   style={{ fontSize: "12px", color: "var(--text-tertiary)", background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}
                 >
@@ -295,10 +297,10 @@ function NotificationsPopover({ isHealthy }: { isHealthy: boolean }) {
                 >
                   <div>
                     <p style={{ fontWeight: 600, fontSize: "12.5px" }}>
-                      {isHealthy ? "All systems operational" : "Gateway degraded"}
+                      {isHealthy ? t("health.status.healthy") : t("health.status.degraded")}
                     </p>
                     <p style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                      {isHealthy ? "Postgres & Redis admission connected." : "Check connection logs."}
+                      {isHealthy ? t("health.readinessReady") : t("state.offline")}
                     </p>
                   </div>
                 </div>
@@ -322,7 +324,7 @@ function NotificationsPopover({ isHealthy }: { isHealthy: boolean }) {
                       {DASHBOARD_RELEASE_LABEL}
                     </p>
                     <p style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                      High-performance AI Gateway & Protocol Orchestrator.
+                      {t("overview.subtitle")}
                     </p>
                   </div>
                 </div>
@@ -336,13 +338,14 @@ function NotificationsPopover({ isHealthy }: { isHealthy: boolean }) {
 }
 
 function CommandPalette({ open, close }: { readonly open: boolean; readonly close: () => void }) {
+  const t = useT();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const items = useMemo(() => navigationGroups.flatMap((group) => group.items), []);
-  const filtered = items.filter((item) => item.label.toLowerCase().includes(query.toLowerCase()));
+  const filtered = items.filter((item) => t(item.labelKey).toLowerCase().includes(query.toLowerCase()));
 
   const { mounted, closing } = usePresence(open);
   // Shared modal focus contract: initial focus, Tab containment, opener
@@ -446,7 +449,7 @@ function CommandPalette({ open, close }: { readonly open: boolean; readonly clos
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKeyDown}
-            placeholder="Go to page… (e.g. Providers, Quota)"
+            placeholder={t("nav.searchPages")}
             role="combobox"
             aria-expanded="true"
             aria-autocomplete="list"
@@ -509,7 +512,7 @@ function CommandPalette({ open, close }: { readonly open: boolean; readonly clos
               }}
             >
               <item.icon size={16} style={{ color: "var(--text-secondary)" }} />
-              <span style={{ flex: 1 }}>{item.label}</span>
+              <span style={{ flex: 1 }}>{t(item.labelKey)}</span>
               <span style={{ fontSize: "11px", color: "var(--text-tertiary)" }}>↵</span>
             </button>
           ))}
@@ -522,7 +525,7 @@ function CommandPalette({ open, close }: { readonly open: boolean; readonly clos
                 color: "var(--text-tertiary)",
               }}
             >
-              No matching pages found.
+              {t("nav.noMatches")}
             </p>
           ) : null}
         </div>
@@ -541,9 +544,10 @@ function SidebarNavGroup({
   readonly pathname: string;
   readonly onIntent: (path: string) => void;
 }): ReactNode {
+  const t = useT();
   return (
     <div className="nav-group-section">
-      <p className="nav-group-title">{group.label}</p>
+      <p className="nav-group-title">{t(group.labelKey)}</p>
       <SidebarNavList items={group.items} pathname={pathname} onIntent={onIntent} />
     </div>
   );
@@ -558,6 +562,7 @@ function SidebarNavList({
   readonly pathname: string;
   readonly onIntent: (path: string) => void;
 }) {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState({ top: 0, height: 0, opacity: 0 });
 
@@ -605,7 +610,7 @@ function SidebarNavList({
             onFocus={() => onIntent(item.path)}
           >
             <item.icon size={17} className="nav-link-icon" />
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
             {item.badge ? <span className="nav-link-badge">{item.badge}</span> : null}
           </NavLink>
         );
@@ -615,6 +620,7 @@ function SidebarNavList({
 }
 
 function FooterClock() {
+  const t = useT();
   const healthQuery = useSafeSystemHealth();
   const [now, setNow] = useState(() => new Date());
   const location = useLocation();
@@ -641,10 +647,10 @@ function FooterClock() {
         <div className="footer-status-pill">
           <span>
             {isError
-              ? "System offline"
+              ? t("state.offline")
               : isHealthy
-                ? "All systems operational"
-                : "Connecting to gateway…"}
+                ? t("health.status.healthy")
+                : t("state.loading")}
           </span>
         </div>
       ) : null}
@@ -683,6 +689,7 @@ export function DashboardShell({
   readonly user: SessionUser;
   readonly children: ReactNode;
 }): ReactNode {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -741,17 +748,32 @@ export function DashboardShell({
     }
   };
 
-  const meta = resolveRouteMeta(location.pathname, providersQuery.data ?? []);
-  const defaultLogoUrl = `${import.meta.env.BASE_URL}favicon_love.webp`;
-  const logoUrl = defaultLogoUrl;
+  const meta = resolveRouteMeta(location.pathname, providersQuery.data ?? [], t);
+  // The ambient scene follows the *applied* palette, so a `system` operator
+  // sees the night scene at night. `data-theme` is the resolved value written
+  // by `theme.ts`, which makes it the one attribute both this read and the
+  // stylesheet agree on.
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(
+    () => resolveConsoleTheme(readConsoleTheme()),
+  );
+  useEffect(() => {
+    const sync = () => setResolvedTheme(resolveConsoleTheme(readConsoleTheme()));
+    const unsubscribe = subscribeToOSTheme(sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
   return (
     <>
       <div className="app-bg" aria-hidden="true" />
+      <AmbientArt theme={resolvedTheme} />
       <div className="app-shell-root">
         {drawerPresence.mounted && (
           <button
             type="button"
-            aria-label="Close navigation"
+            aria-label={t("nav.close")}
             className={`mobile-scrim${drawerPresence.closing ? " closing" : ""}`}
             onClick={() => setDrawerOpen(false)}
           />
@@ -760,23 +782,15 @@ export function DashboardShell({
         {/* Sidebar Rail */}
         <aside
           className={`glass app-sidebar ${drawerOpen ? "is-open" : ""}`}
-          aria-label="Dashboard navigation"
+          aria-label={t("nav.open")}
         >
           <div className="brand-header">
             <div className="brand-icon" aria-hidden="true" style={{ overflow: "hidden", padding: 0 }}>
-              <img
-                src={logoUrl}
-                alt="Cartethyia"
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src = defaultLogoUrl;
-                }}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-              />
+              <RikkaArt name="app-icon" width="100%" height="100%" radius="0" priority />
             </div>
             <div className="brand-meta">
               <div className="brand-name">
-                <span>Cartethyia</span>
+                <span>Rikka Router</span>
               </div>
               <div className="brand-version-badge">
                 <span>{DASHBOARD_RELEASE_LABEL}</span>
@@ -787,7 +801,7 @@ export function DashboardShell({
           <nav style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
             {navigationGroups.map((group) => (
               <SidebarNavGroup
-                key={group.label}
+                key={group.labelKey}
                 group={group}
                 pathname={location.pathname}
                 onIntent={prefetchIntent}
@@ -798,9 +812,11 @@ export function DashboardShell({
           {/* User Card */}
           <div className="sidebar-user-card">
             <div className="user-card-content">
-              <div className="user-avatar" aria-hidden="true">
-                {(user.displayName ?? user.email).slice(0, 2).toUpperCase()}
-              </div>
+              <AvatarArt
+                name="avatar"
+                size={30}
+                fallbackText={(user.displayName ?? user.email).slice(0, 2).toUpperCase()}
+              />
               <div className="user-info">
                 <p className="user-name">{user.displayName || "Admin"}</p>
                 <p className="user-role">{user.email}</p>
@@ -809,8 +825,8 @@ export function DashboardShell({
                 type="button"
                 onClick={() => void logout()}
                 disabled={loggingOut}
-                aria-label="Sign out"
-                title="Sign out"
+                aria-label={t("nav.signOut")}
+                title={t("nav.signOut")}
                 className="topbar-icon-button"
                 style={{ width: "30px", height: "30px", borderRadius: "8px" }}
               >
@@ -835,13 +851,13 @@ export function DashboardShell({
               transition: pull.pullPx === 0 && !pull.refreshing ? "height 180ms ease" : undefined,
             }}
           >
-            {pull.refreshing ? "Refreshing…" : pull.pullPx > 0 ? "Pull to refresh" : ""}
+            {pull.refreshing ? t("action.refreshing") : pull.pullPx > 0 ? t("action.refresh") : ""}
           </div>
           {/* Topbar Header */}
           <header className="glass app-topbar">
             <button
               type="button"
-              aria-label="Open navigation"
+              aria-label={t("nav.open")}
               className="topbar-menu-btn"
               onClick={() => setDrawerOpen(true)}
             >
@@ -857,10 +873,10 @@ export function DashboardShell({
                 type="button"
                 onClick={() => setPaletteOpen(true)}
                 className="topbar-button"
-                aria-label="Command palette"
+                aria-label={t("nav.commandPalette")}
               >
                 <Search size={14} />
-                <span>Command palette</span>
+                <span>{t("nav.commandPalette")}</span>
                 <kbd
                   style={{
                     fontSize: "10px",
@@ -873,7 +889,7 @@ export function DashboardShell({
                   ⌘K
                 </kbd>
               </button>
-              <ThemeToggle />
+              <ThemeChooser />
               <NotificationsPopover isHealthy={Boolean(isHealthy)} />
             </div>
           </header>

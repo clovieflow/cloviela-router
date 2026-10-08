@@ -695,13 +695,21 @@ export class DrizzleProviderCatalogStore implements ProviderCatalogStore {
   private async accountsWithUsage(
     tenantId: string,
     rows: readonly (typeof providerAccounts.$inferSelect)[],
+    executor?: CartethyiaDatabase | Parameters<Parameters<CartethyiaDatabase["transaction"]>[0]>[0],
   ): Promise<readonly ProviderAccountResponse[]> {
     if (rows.length === 0) return [];
+    // Reads inside an open transaction MUST use the transaction executor. Lite
+    // is a single-connection embedded PGlite: issuing these queries on the
+    // outer handle while a transaction holds that connection deadlocks the
+    // process permanently — no statement completes, readiness reports the
+    // database disconnected, and every later request hangs. Full mode hides
+    // the bug because a second pool connection can serve the nested read.
+    const reader = executor ?? this.db;
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
     const accountIds = rows.map((row) => row.id);
     const [todayRows, lifetimeRows] = await Promise.all([
-      this.db
+      reader
         .select({
           accountId: telemetryEvents.accountId,
           requests: sql<number>`count(*)`,
@@ -721,7 +729,7 @@ export class DrizzleProviderCatalogStore implements ProviderCatalogStore {
           ),
         )
         .groupBy(telemetryEvents.accountId),
-      this.db
+      reader
         .select()
         .from(telemetryUsageTotals)
         .where(
@@ -754,7 +762,14 @@ export class DrizzleProviderCatalogStore implements ProviderCatalogStore {
       };
     };
     const first = rows[0];
-    const inflightByAccount = await this.accountInflightFor(tenantId, first?.providerId);
+    // The in-flight gauge is runtime state read through the outer handle, so it
+    // must not be consulted while a transaction holds the single Lite
+    // connection. Inside a transaction the row was just written and has no
+    // in-flight work by construction.
+    const inflightByAccount =
+      executor === undefined
+        ? await this.accountInflightFor(tenantId, first?.providerId)
+        : new Map<string, number>();
     return rows.map((row) => {
       const inflight = inflightByAccount.get(row.id);
       return this.mapAccount(row, {
@@ -990,7 +1005,7 @@ export class DrizzleProviderCatalogStore implements ProviderCatalogStore {
           );
         }
 
-        const [account] = await this.accountsWithUsage(tenantId, [row]);
+        const [account] = await this.accountsWithUsage(tenantId, [row], tx);
         if (!account) throw new Error("created provider account could not be mapped");
         return account;
       });

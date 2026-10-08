@@ -10,6 +10,10 @@ export const queryKeys = {
   },
   system: {
     health: ["console", "system", "health"] as const,
+    /** Canonical five-step readiness report (`/system/readiness`). */
+    readiness: ["console", "system", "readiness"] as const,
+    /** Public `/health/ready` probe; a different question from the snapshot. */
+    readinessProbe: ["console", "system", "readiness-probe"] as const,
   },
   usageAnalytics: {
     summary: (period: string) => ["console", "usage", "summary", period] as const,

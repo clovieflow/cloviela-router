@@ -1,4 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { LocaleProvider } from "../shared/locale-context";
+import SystemError from "../routes/SystemError";
 
 interface ErrorBoundaryProps {
   /** Distinguishes navigation targets. A change clears a recovered error so a
@@ -13,9 +15,21 @@ interface ErrorBoundaryState {
 }
 
 /**
- * Root error boundary for the console shell. Lazy route imports can fail on a
- * transient chunk fetch; rather than leaving a blank viewport the boundary
- * renders a recoverable surface and offers a full reload as the last resort.
+ * Root error boundary for the console shell.
+ *
+ * Lazy route imports can fail on a transient chunk fetch; rather than leaving
+ * a blank viewport the boundary renders the localized `SystemError` recovery
+ * surface, which shows a copyable diagnostic id, the interface error message,
+ * a retry that clears the boundary, and a reload as the last resort.
+ *
+ * ── Why it re-provides `LocaleProvider` ────────────────────────────────────
+ * This boundary sits *above* the route tree, so when the failure is inside a
+ * page it is still under the app's provider and reads the operator's locale.
+ * But `App` mounts its provider inside the query client and a failure during
+ * the provider's own subtree would leave the fallback with no context. Wrapping
+ * the fallback in a fresh provider (reading the same persisted preference) is
+ * what keeps the recovery screen in the operator's language in both cases.
+ * It is a fallback-only wrapper: the success path renders `children` untouched.
  */
 export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { error: null };
@@ -25,6 +39,8 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
+    // The stack is developer-facing; the operator sees the message plus the
+    // diagnostic id on the recovery surface.
     console.error("[console] route render failed:", error, info.componentStack);
   }
 
@@ -34,45 +50,16 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     }
   }
 
+  private readonly reset = (): void => {
+    this.setState({ error: null });
+  };
+
   override render(): ReactNode {
     if (this.state.error === null) return this.props.children;
     return (
-      <main className="auth-viewport">
-        <div className="card-solid auth-window" style={{ border: "1px solid var(--red-soft)" }}>
-          <div className="auth-header">
-            <h1 className="auth-title">Console view failed</h1>
-            <p className="auth-desc">This view could not be rendered.</p>
-          </div>
-
-          <div
-            style={{
-              padding: "14px",
-              borderRadius: "12px",
-              background: "var(--surface-2)",
-              border: "1px solid var(--inner-border)",
-              fontSize: "12.5px",
-              color: "var(--text-secondary)",
-              lineHeight: 1.5,
-            }}
-          >
-            <strong style={{ display: "block", color: "var(--text-primary)", marginBottom: "4px" }}>
-              Rendering error
-            </strong>
-            <span className="select-text" style={{ wordBreak: "break-word" }}>
-              {this.state.error.message}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ width: "100%", marginTop: "6px", height: "40px" }}
-            onClick={() => window.location.reload()}
-          >
-            Reload console
-          </button>
-        </div>
-      </main>
+      <LocaleProvider>
+        <SystemError error={this.state.error} onReset={this.reset} />
+      </LocaleProvider>
     );
   }
 }

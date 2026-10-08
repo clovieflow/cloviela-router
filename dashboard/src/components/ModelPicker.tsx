@@ -10,7 +10,7 @@ import type { ApiErrorShape } from "../data/api";
 import type { FlatModelCatalogEntry } from "../data/contracts";
 import { UNKNOWN_LIMITS_TOOLTIP } from "../shared/model-limits";
 import { queryKeys } from "../data/query-keys";
-import { querySignal } from "../hooks/common";
+import { assertFlatModelCatalog, querySignal } from "../hooks/common";
 
 export type FlatModelEntry = FlatModelCatalogEntry;
 
@@ -23,9 +23,9 @@ export function useAllModelsCatalog(enabled: boolean): {
   const query = useQuery<FlatModelEntry[], ApiErrorShape>({
     queryKey: queryKeys.providers.flatAll,
     queryFn: (context) =>
-      consoleRequest<FlatModelEntry[]>("/providers/models/flat", {
+      consoleRequest<unknown>("/providers/models/flat", {
         signal: querySignal(context),
-      }),
+      }).then(assertFlatModelCatalog),
     enabled,
     staleTime: 0,
   });

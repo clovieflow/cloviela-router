@@ -1,15 +1,60 @@
-// Client-IP presentation masking.
-//
-// This module used to also carry a telemetry redactor that rewrote any string
-// containing a credential-shaped token into a placeholder. It was meant for
-// display, but `***REDACTED***` in a captured body is indistinguishable from
-// `***REDACTED***` in a payload that was actually sent — so a memory-review
-// turn quoting one JWT rendered as a fully redacted message, and a 400 from
-// the provider looked like the gateway had mangled the request.
-//
-// Payload bodies are stored verbatim now. The upstream already refuses and
-// reports credentials on its own; a second, string-sniffing layer only
-// destroys the evidence needed to read a failure.
+// Credential redaction at publication/storage boundaries, never on provider wire.
+
+const REDACTED = "[redacted]";
+const SECRET_FIELD =
+  /^(?:authorization|proxyauthorization|cookie|setcookie|xapikey|apikey|secret|clientsecret|password|passwd|credential|accesstoken|refreshtoken|idtoken|bearer|token|keyencrypted)$/i;
+
+/** Preserve diagnostic text while removing credential-bearing substrings. */
+export function redactTelemetryText(value: string): string {
+  return value
+    .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+\/=-]+/gi, "$1 [redacted]")
+    .replace(/\b(?:sk-|rk-|gh[pousr]_|github_pat_)[A-Za-z0-9_-]{8,}\b/g, REDACTED)
+    .replace(/\bAIza[A-Za-z0-9_-]{20,}\b/g, REDACTED)
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, REDACTED)
+    .replace(/(\bhttps?:\/\/)[^\/?@\s]+@/gi, "$1[redacted]@")
+    .replace(
+      /(\b(?:api[-_ ]?key|access[-_]?token|refresh[-_]?token|id[-_]?token|client[-_]?secret|password|secret)\b["']?\s*[:=]\s*["']?)[^\s"',;}&]+/gi,
+      "$1[redacted]",
+    )
+    .replace(/(\b(?:set-)?cookie:\s*)[^\r\n]+/gi, "$1[redacted]");
+}
+
+/** Copy only diagnostic data; sensitive fields and cycles cannot cross the boundary. */
+export function redactTelemetryValue(
+  value: unknown,
+  seen = new WeakSet<object>(),
+  depth = 0,
+): unknown {
+  if (typeof value === "string") return redactTelemetryText(value);
+  if (value === null || typeof value !== "object") return value;
+  if (depth > 16) return "[truncated]";
+  if (seen.has(value)) return "[circular]";
+  if (value instanceof Date) return value.toISOString();
+  if (value instanceof Headers) {
+    const headers: Record<string, unknown> = {};
+    value.forEach((entry, key) => { headers[key] = entry; });
+    return redactTelemetryValue(headers, seen, depth);
+  }
+  seen.add(value);
+  try {
+    if (Array.isArray(value))
+      return value.map((entry) => redactTelemetryValue(entry, seen, depth + 1));
+    const record: Record<string, unknown> = Object.create(null);
+    if (value instanceof Error) {
+      record.name = value.name;
+      record.message = redactTelemetryText(value.message);
+      if (value.stack) record.stack = redactTelemetryText(value.stack);
+    }
+    for (const [key, entry] of Object.entries(value)) {
+      record[key] = SECRET_FIELD.test(key.replace(/[-_ ]/g, ""))
+        ? REDACTED
+        : redactTelemetryValue(entry, seen, depth + 1);
+    }
+    return record;
+  } finally {
+    seen.delete(value);
+  }
+}
 
 /**
  * Masks a client IP for presentation: IPv4 keeps the first three octets

@@ -1,6 +1,6 @@
 {
-  "name": "cartethyia-dashboard",
-  "version": "2.0",
+  "name": "rikka-router-dashboard",
+  "version": "2.0.0-rikka.1",
   "private": true,
   "type": "module",
   "scripts": {

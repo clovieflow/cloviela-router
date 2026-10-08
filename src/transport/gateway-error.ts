@@ -1,5 +1,6 @@
 // Typed gateway failures: the stable public error codes, the error class, and
 // the sanitizers that keep upstream payloads out of public envelopes.
+import { redactTelemetryText, redactTelemetryValue } from "../observability/redaction";
 
 /** Stable typed error codes returned at gateway boundaries. */
 export type GatewayErrorCode =
@@ -110,7 +111,7 @@ function stripLegacyOriginLabel(message: string): string {
  * layer read `error.origin`.
  */
 export function formatPublicErrorMessage(code: string, message: string): string {
-  const explanatory = stripLegacyOriginLabel(message);
+  const explanatory = redactTelemetryText(stripLegacyOriginLabel(message));
   if (explanatory.length === 0) return code;
   if (explanatory === code || explanatory.startsWith(`${code}:`)) return explanatory;
   return `${code}: ${explanatory}`;
@@ -171,8 +172,10 @@ function sanitizePublicDetail(value: unknown, depth = 0): unknown {
 export function publicGatewayErrorDetails(
   error: GatewayError,
 ): Readonly<Record<string, unknown>> {
+  const safe = redactTelemetryValue(error.details);
+  if (safe === null || typeof safe !== "object" || Array.isArray(safe)) return {};
   return Object.fromEntries(
-    Object.entries(error.details)
+    Object.entries(safe)
       .filter(([key]) => PUBLIC_ERROR_DETAIL_KEYS.has(key))
       .map(([key, value]) => [key, sanitizePublicDetail(value)]),
   );

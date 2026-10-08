@@ -1329,3 +1329,46 @@ html[data-app="share"] .share-hud-card {
     padding-right: 6px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RIKKA PUBLIC SHARE SURFACE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Portrait column inside the enrollment hero.
+   The public share page is the one place a recipient meets the product, so it
+   carries character art the console keeps behind auth. It is a bounded column
+   rather than a background: the policy text, quota figures, and the issue
+   button must never sit on top of an illustration, and a phone drops the
+   column entirely instead of shrinking the type to make room. */
+.share-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.share-hero-art {
+  display: block;
+  width: 100%;
+  max-width: 168px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--inner-border);
+  margin-bottom: 18px;
+  pointer-events: none;
+}
+
+.share-hero-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  display: block;
+}
+
+@media (max-width: 620px) {
+  .share-hero-art {
+    max-width: 120px;
+    margin-bottom: 14px;
+  }
+}

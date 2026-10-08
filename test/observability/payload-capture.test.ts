@@ -59,4 +59,34 @@ describe("payload capture", () => {
       _hint: expect.stringContaining("Capture depth"),
     });
   });
+
+  test("all retained trace stages redact secrets without mutating sent data", () => {
+    const body = { apiKey: "EXAMPLE-local-secret", prompt: "diagnostic", usage: { input_tokens: 5 } };
+    const record = buildPayloadRecord({
+      tenantId: "tenant-redaction",
+      scope: "tenant",
+      tenantOptIn: true,
+      requestBody: body,
+      responseBody: body,
+      clientResponseBody: body,
+      providerRequestBody: body,
+      providerResponseBody: body,
+    });
+    for (const retained of [record.request_body, record.response_body, record.client_response_body, record.provider_request_body, record.provider_response_body]) {
+      expect(JSON.stringify(retained)).not.toContain("EXAMPLE-local-secret");
+      expect(retained).toMatchObject({ prompt: "diagnostic", usage: { input_tokens: 5 } });
+    }
+    expect(body.apiKey).toBe("EXAMPLE-local-secret");
+  });
+
+  test("the capture cap counts UTF-8 bytes rather than character count", () => {
+    const record = buildPayloadRecord({
+      tenantId: "tenant-utf8",
+      scope: "tenant",
+      requestBody: { prompt: "界".repeat(100) },
+      responseBody: null,
+    }, new Date("2026-01-01T00:00:00.000Z"), 200);
+    expect(record.request_body).toMatchObject({ _truncated: true });
+    expect(record.response_body).toMatchObject({ _truncated: true });
+  });
 });

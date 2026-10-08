@@ -1,11 +1,14 @@
-import { LogIn } from "lucide-react";
+import { LogIn, ShieldAlert } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { AuthArt } from "../components/rikka/art-surfaces";
+import { RikkaArt } from "../components/rikka/RikkaArt";
 import { consoleRequest } from "../data/api";
 import { queryClient } from "../data/query-client";
 import { queryKeys } from "../data/query-keys";
+import { useT, type TranslateFn } from "../shared/locale-context";
 
 interface LoginResult {
   readonly status: "success" | "failed";
@@ -18,7 +21,35 @@ function safeReturnPath(value: string | null): string {
   return "/";
 }
 
+/**
+ * Maps a failed sign-in to operator-facing copy.
+ *
+ * The gateway's lockout and rate-limit paths answer 429 (and 403 for a locked
+ * address), and the raw message is either generic or absent. Rendering the
+ * specific cause is the difference between "wait a minute" and "your password
+ * is wrong, and now you are locked out because you kept trying".
+ */
+function loginFailureMessage(error: unknown, t: TranslateFn): string {
+  if (typeof error !== "object" || error === null) return t("login.networkError");
+  const status = "status" in error ? error.status : undefined;
+  const code = "code" in error ? error.code : undefined;
+  if (status === 429 || code === "rate_limited" || code === "too_many_requests") {
+    return t("login.rateLimited");
+  }
+  if (status === 403 || code === "locked_out" || code === "ip_locked") {
+    return t("login.lockedOut");
+  }
+  if (status === 401 || status === 400) {
+    return t("login.failed");
+  }
+  if ("message" in error && typeof error.message === "string" && error.message.length > 0) {
+    return error.message;
+  }
+  return t("login.networkError");
+}
+
 export default function Login(): ReactNode {
+  const t = useT();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [username, setUsername] = useState("");
@@ -60,7 +91,7 @@ export default function Login(): ReactNode {
           navigate("/setup", { replace: true });
           return;
         }
-        setError(result.message ?? "Authentication failed. Please check your credentials.");
+        setError(result.message ?? t("login.failed"));
         return;
       }
       // Drop any cached session state (including a stale unauthenticated
@@ -71,14 +102,7 @@ export default function Login(): ReactNode {
         replace: true,
       });
     } catch (reason: unknown) {
-      if (reason && typeof reason === "object" && "message" in reason) {
-        const msg = (reason as { message: unknown }).message;
-        if (typeof msg === "string") {
-          setError(msg);
-          return;
-        }
-      }
-      setError("An unexpected network error occurred.");
+      setError(loginFailureMessage(reason, t));
     } finally {
       setPending(false);
     }
@@ -89,11 +113,11 @@ export default function Login(): ReactNode {
       <main className="auth-viewport">
         <div className="card-solid auth-window">
           <div className="auth-header">
-            <div className="auth-logo" aria-hidden="true">
-              C
+            <div className="auth-logo" aria-hidden="true" style={{ overflow: "hidden", padding: 0 }}>
+              <RikkaArt name="app-icon" width="100%" height="100%" radius="0" priority />
             </div>
-            <h1 className="auth-title">Cartethyia Console</h1>
-            <p className="auth-desc">Checking console setup...</p>
+            <h1 className="auth-title">{t("login.title")}</h1>
+            <p className="auth-desc">{t("login.checkingSetup")}</p>
           </div>
         </div>
       </main>
@@ -102,62 +126,75 @@ export default function Login(): ReactNode {
 
   return (
     <main className="auth-viewport">
-      <div className="card-solid auth-window">
-        <div className="auth-header">
-          <div className="auth-logo" aria-hidden="true">
-            C
+      <div className="auth-split">
+        <div className="card-solid auth-window">
+          <div className="auth-header">
+            <div className="auth-logo" aria-hidden="true" style={{ overflow: "hidden", padding: 0 }}>
+              <RikkaArt name="app-icon" width="100%" height="100%" radius="0" priority />
+            </div>
+            <h1 className="auth-title">{t("login.title")}</h1>
+            <p className="auth-desc">{t("login.subtitle")}</p>
           </div>
-          <h1 className="auth-title">Cartethyia Console</h1>
-          <p className="auth-desc">Sign in to manage AI Gateway routing and providers</p>
+
+          <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <Input
+              label={t("login.username")}
+              id="login-username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              autoComplete="username"
+              placeholder="admin"
+            />
+
+            <Input
+              label={t("login.password")}
+              id="login-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+
+            {error ? (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  background: "var(--red-soft)",
+                  color: "var(--red)",
+                  fontSize: "12.5px",
+                  fontWeight: 500,
+                  lineHeight: 1.5,
+                }}
+                role="alert"
+              >
+                <ShieldAlert size={15} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>{error}</span>
+              </div>
+            ) : null}
+
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={pending}
+              style={{ width: "100%", marginTop: "6px", height: "40px" }}
+              icon={<LogIn size={15} />}
+              loading={pending}
+            >
+              {pending ? t("login.pending") : t("login.submit")}
+            </Button>
+          </form>
         </div>
 
-        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <Input
-            label="Username"
-            id="login-username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            autoComplete="username"
-            placeholder="admin"
-          />
-
-          <Input
-            label="Password"
-            id="login-password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-
-          {error ? (
-            <div
-              style={{
-                padding: "10px 14px",
-                borderRadius: "10px",
-                background: "var(--red-soft)",
-                color: "var(--red)",
-                fontSize: "12.5px",
-                fontWeight: 500,
-              }}
-              role="alert"
-            >
-              {error}
-            </div>
-          ) : null}
-
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={pending}
-            style={{ width: "100%", marginTop: "6px", height: "40px" }}
-            icon={<LogIn size={15} />}
-          >
-            {pending ? "Authenticating…" : "Sign In"}
-          </Button>
-        </form>
+        {/* Decorative portrait column. `AuthArt` self-hides when the asset is
+            absent and below 900px, and it is aria-hidden, so it never competes
+            with the form for a screen reader or a phone's width. */}
+        <AuthArt alt={t("login.artAlt")} />
       </div>
     </main>
   );

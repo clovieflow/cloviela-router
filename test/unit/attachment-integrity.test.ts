@@ -1,9 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { dropCorruptAttachments } from "../../src/transport/translation/attachment-integrity";
 import type { CanonicalRequest, ContentPart } from "../../src/transport/canonical-model";
-import { readFileSync } from "node:fs";
-
-const CORRUPT_SCREENSHOT = "C:\\Users\\Aria\\Desktop\\awok..txt";
 
 function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
@@ -44,8 +41,11 @@ function badChunk(type: string, data: Uint8Array): Uint8Array {
 function png(parts: readonly Uint8Array[]): string {
   const sig = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   const ihdr = new Uint8Array(13);
-  new DataView(ihdr.buffer).setUint32(0, 1);
-  new DataView(ihdr.buffer).setUint32(4, 1);
+  const header = new DataView(ihdr.buffer);
+  header.setUint32(0, 1); // width
+  header.setUint32(4, 1); // height
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 6; // colour type: RGBA — compression/filter/interlace stay 0
   const pieces = [sig, chunk("IHDR", ihdr), ...parts, chunk("IEND", new Uint8Array())];
   const total = pieces.reduce((sum, p) => sum + p.length, 0);
   const out = new Uint8Array(total);
@@ -143,32 +143,13 @@ describe("dropCorruptAttachments", () => {
     expect(texts(result.request)).toHaveLength(2);
   });
 
-  // Regression: the capture that motivated this module. The screenshot at
-  // message 637 was written before the writer flushed, so one IDAT chunk's
-  // stored CRC does not match its bytes — and the upstream rejected the whole
-  // request with an unnamed `model_param_invalid`.
-  it("drops the real corrupt screenshot from the captured request", () => {
-    const captured = JSON.parse(readFileSync(CORRUPT_SCREENSHOT, "utf-8")) as {
-      body: {
-        messages: Array<{ role: string; content: Array<{ type?: string; image_url?: { url: string } }> }>;
-      };
-    };
-    const url = captured.body.messages[637]!.content.find((p) => p.type === "image_url")?.image_url
-      ?.url;
-    expect(url).toBeDefined();
-    const result = dropCorruptAttachments(imageRequest(url!));
-    expect(result.dropped.map((d) => d.defect)).toEqual(["png_crc_mismatch"]);
-  });
-
-  it("accepts the well-formed screenshot from the same capture", () => {
-    const captured = JSON.parse(readFileSync(CORRUPT_SCREENSHOT, "utf-8")) as {
-      body: {
-        messages: Array<{ role: string; content: Array<{ type?: string; image_url?: { url: string } }> }>;
-      };
-    };
-    const url = captured.body.messages[640]!.content.find((p) => p.type === "image_url")?.image_url
-      ?.url;
-    expect(url).toBeDefined();
-    expect(dropCorruptAttachments(imageRequest(url!)).dropped).toEqual([]);
-  });
+  // The regression that motivated this module came from a private capture: a
+  // screenshot whose IDAT chunk failed its CRC after the writer was
+  // interrupted, which the upstream rejected as an unnamed
+  // `model_param_invalid`. The capture was a Windows desktop file and is not
+  // portable, so it is not repinned here — the defect is already covered above
+  // by the self-contained generated fixtures: "drops a PNG whose chunk CRC
+  // disagrees with its bytes" drives the corrupt side and "forwards a
+  // well-formed PNG untouched" the valid side, both through the real
+  // `dropCorruptAttachments` boundary.
 });

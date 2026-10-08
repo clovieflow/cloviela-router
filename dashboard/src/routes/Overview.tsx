@@ -18,6 +18,9 @@ import { Inline } from "../components/ui/inline";
 import { Stack } from "../components/ui/stack";
 import { ApiKeysPanel } from "../components/ApiKeysPanel";
 import { CompressionPanel } from "../components/CompressionPanel";
+import { ReadinessPanel } from "../components/ReadinessPanel";
+import { ArtBanner } from "../components/rikka/art-surfaces";
+import { useT } from "../shared/locale-context";
 import { useTrackedTimeout } from "../hooks/use-timeout";
 import { useNetworkPools } from "../hooks/network";
 import { useSystemHealth } from "../hooks/system";
@@ -165,7 +168,7 @@ function SystemOverviewPanel({
               <span className="overview-card-primary-label">RSS</span>
             </div>
             <p className="overview-card-summary">
-              RSS is the full Cartethyia process — Bun runtime, JIT heap, and buffers combined.
+              RSS is the full Rikka Router process — Bun runtime, JIT heap, and buffers combined.
             </p>
             <div className="overview-card-footer">
               <div className="overview-mini-grid">
@@ -540,7 +543,7 @@ function ApiEndpointCard() {
           >
             <code>{endpoint}</code>
             <span style={{ fontSize: "11px", color: "var(--text-tertiary)", fontWeight: 400 }}>
-              PORT 12800
+              PORT {new URL(endpoint).port || (window.location.protocol === "https:" ? "443" : "80")}
             </span>
           </div>
           <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
@@ -556,6 +559,7 @@ function ApiEndpointCard() {
 // ── Main Page Export ──────────────────────────────────────────────────────────
 
 export default function Overview(): ReactNode {
+  const t = useT();
   const healthQuery = useSystemHealth();
   const poolsQuery = useNetworkPools();
 
@@ -567,6 +571,10 @@ export default function Overview(): ReactNode {
 
   return (
     <Stack gap="16px">
+      {/* The welcome banner is the one hero on this page; every other surface
+          uses its own compact vignette so no two screens repeat a layout. */}
+      <ArtBanner name="dashboard-hero" caption={t("overview.artAlt")} />
+      <ReadinessPanel />
       <ApiEndpointCard />
       <SystemOverviewPanel onRefresh={refresh} refreshing={isFetching} />
       <CompressionPanel />

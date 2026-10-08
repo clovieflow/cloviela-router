@@ -5,7 +5,7 @@
 # `oven/bun:debian` and runtime with `debian:bookworm-slim`, then
 # replace apk/user commands with apt equivalents. Verify native modules and tools.
 
-FROM oven/bun:alpine AS builder
+FROM oven/bun:1.4.0-alpine AS builder
 
 WORKDIR /build
 
@@ -25,10 +25,10 @@ RUN bun run dashboard:build
 # Backend build layer: AOT output is required before standalone compilation.
 COPY scripts ./scripts
 COPY migrations ./migrations
-RUN bun run build:aot && bun run build:binary --outfile /build/dist/cartethyia
+RUN bun run build:aot && bun run build:binary --outfile /build/dist/rikka-router
 
 # Runtime: only the binary, dashboard assets, migrations, and entrypoint ship.
-FROM alpine:latest
+FROM alpine:3.22
 
 WORKDIR /app
 
@@ -42,10 +42,12 @@ RUN apk add --no-cache ca-certificates curl libgcc libstdc++ util-linux \
 COPY --from=builder --chown=cartethyia:cartethyia /build/migrations ./migrations
 COPY --from=builder --chown=cartethyia:cartethyia /build/dist/dashboard ./dist/dashboard
 COPY --chmod=755 docker-entrypoint.sh ./entrypoint.sh
-COPY --from=builder --chown=cartethyia:cartethyia /build/dist/cartethyia ./cartethyia
+COPY --from=builder --chown=cartethyia:cartethyia /build/dist/rikka-router ./rikka-router
+COPY LICENSE ./LICENSE
 
 ENV CARTETHYIA_VERSION=2.0 \
     NODE_ENV=production \
+    CARTETHYIA_BIND_HOST=0.0.0.0 \
     DASHBOARD_DIST=/app/dist/dashboard \
     CARTETHYIA_DATA_DIR=/app/data \
     CARTETHYIA_INSTALL_ID_DIR=/app/data/.cartethyia
@@ -58,4 +60,4 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
 
 # Start as root so mounted data ownership can be repaired, then drop to uid 10001.
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["./cartethyia"]
+CMD ["./rikka-router"]

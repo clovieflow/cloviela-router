@@ -284,6 +284,7 @@ export function BackupPanel(): ReactNode {
                 </label>
               ))}
               <Input
+                id="backup-delete-password"
                 label="Password required for Delete all"
                 type="password"
                 value={deletePassword}

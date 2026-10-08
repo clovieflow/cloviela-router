@@ -5,16 +5,9 @@
  * read path drops the last label so a support screenshot does not publish a
  * customer's IP.
  *
- * This module used to also carry a telemetry redactor that rewrote any string
- * containing a credential-shaped token into `***REDACTED***`. It was removed:
- * a placeholder in a captured body is indistinguishable from a placeholder in
- * a payload that was actually sent, so one quoted JWT in a long message made
- * the whole message read as redacted — and a provider 400 looked like the
- * gateway had mangled the request. These cases pin only the masking that
- * remains.
  */
 import { describe, expect, test } from "bun:test";
-import { maskClientIp } from "../../src/observability/redaction";
+import { maskClientIp, redactTelemetryValue } from "../../src/observability/redaction";
 
 describe("maskClientIp", () => {
   test("keeps the first three IPv4 octets", () => {
@@ -68,5 +61,36 @@ describe("maskClientIp", () => {
       expect(masked.endsWith(".xxx")).toBe(true);
       expect(masked).toBe(`${address.split(".").slice(0, 3).join(".")}.xxx`);
     }
+  });
+});
+
+describe("diagnostic credential boundaries", () => {
+  test("scrubs nested opaque credentials without altering the upstream request", () => {
+    const original = {
+      headers: { Authorization: "Bearer EXAMPLE-private", Cookie: "session=EXAMPLE-cookie" },
+      api_key: "EXAMPLE-opaque-key",
+      authState: { access_token: "EXAMPLE-access", refreshToken: "EXAMPLE-refresh" },
+      message: "Provider rejected sk-ant-EXAMPLE-not-a-real-key; request req-123",
+      usage: { input_tokens: 100, output_tokens: 20 },
+    };
+    const before = JSON.stringify(original);
+    const safe = redactTelemetryValue(original);
+    const encoded = JSON.stringify(safe);
+    for (const secret of ["EXAMPLE-private", "EXAMPLE-cookie", "EXAMPLE-opaque-key", "EXAMPLE-access", "EXAMPLE-refresh", "sk-ant-EXAMPLE-not-a-real-key"])
+      expect(encoded).not.toContain(secret);
+    expect(encoded).toContain("req-123");
+    expect(encoded).toContain('"input_tokens":100');
+    expect(encoded).toContain('"output_tokens":20');
+    expect(JSON.stringify(original)).toBe(before);
+  });
+
+  test("retains repeated references while safely bounding an actual cycle", () => {
+    const shared = { status: 429 };
+    const cyclic: Record<string, unknown> = { left: shared, right: shared };
+    cyclic.self = cyclic;
+    const safe = redactTelemetryValue(cyclic);
+    expect(safe).toMatchObject({ left: { status: 429 }, right: { status: 429 } });
+    expect(JSON.stringify(safe)).not.toContain("undefined");
+    expect(JSON.stringify(safe)).toContain("circular");
   });
 });

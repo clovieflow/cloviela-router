@@ -1,5 +1,6 @@
 import pino from 'pino';
 import { pushConsoleLog, type ConsoleLogLevel } from './log-ring';
+import { redactTelemetryText, redactTelemetryValue } from './redaction';
 
 /**
  * Structured logger using Pino for production-ready logging.
@@ -52,34 +53,10 @@ const logger = pino({
   ...developmentOptions,
 });
 
-/**
- * Circular-safe, depth-capped structural copy for the ring pre-pass.
- * `redactTelemetryValue` (the canonical redactor, applied next) recurses
- * without a cycle guard, so a circular log arg would overflow the stack
- * before redaction even runs. Errors collapse to name+message - stacks are
- * too long for a tail line and the message already carries the cause.
- */
-function decycle(value: unknown, seen: WeakSet<object> = new WeakSet(), depth = 0): unknown {
-  if (value === null || typeof value !== "object") return value;
-  if (seen.has(value)) return "[circular]";
-  if (depth > 5) return "[truncated]";
-  if (value instanceof Error) return { name: value.name, message: value.message };
-  seen.add(value);
-  if (Array.isArray(value)) return value.map((item) => decycle(item, seen, depth + 1));
-  const out: Record<string, unknown> = {};
-  for (const [key, entry] of Object.entries(value)) out[key] = decycle(entry, seen, depth + 1);
-  return out;
-}
-
-/**
- * Flatten a log call into one ring line. Args keep their real values: a log
- * line whose credential was rewritten into `***REDACTED***` is
- * indistinguishable from a payload that really carried that placeholder, so
- * redacting here destroyed the evidence a failure has to be read from.
- */
+/** Sanitize both terminal output and the dashboard ring without changing wire data. */
 function safeLogValue(value: unknown): unknown {
   try {
-    return decycle(value);
+    return redactTelemetryValue(value);
   } catch {
     return "[unserializable args]";
   }
@@ -109,10 +86,11 @@ function ring(level: ConsoleLogLevel, msg: string, safeArgs: readonly unknown[])
   }
 }
 
-function logArgs(level: ConsoleLogLevel, write: (args: unknown[]) => void, msg: string, args: readonly unknown[]): void {
+function logArgs(level: ConsoleLogLevel, write: (args: unknown[], message: string) => void, msg: string, args: readonly unknown[]): void {
   const safeArgs = safeLogArgs(args);
-  ring(level, msg, safeArgs);
-  write(safeArgs);
+  const safeMessage = redactTelemetryText(msg);
+  ring(level, safeMessage, safeArgs);
+  write(safeArgs, safeMessage);
 }
 
 function safeErrorForRing(error: Error): unknown {
@@ -148,19 +126,20 @@ function safeErrorForPino(error: Error): Error {
 }
 
 function logError(msg: string, error: Error | undefined, args: readonly unknown[]): void {
+  const safeMessage = redactTelemetryText(msg);
   const safe = safeLogArgs(args);
   const ringError = error === undefined ? undefined : safeErrorForRing(error);
   const pinoError = error === undefined ? undefined : safeErrorForPino(error);
-  ring("error", msg, error === undefined ? safe : [ringError, ...safe]);
-  logger.error({ ...(pinoError === undefined ? {} : { error: pinoError }), args: safe }, msg);
+  ring("error", safeMessage, error === undefined ? safe : [ringError, ...safe]);
+  logger.error({ ...(pinoError === undefined ? {} : { error: pinoError }), args: safe }, safeMessage);
 }
 
 export const log = {
   debug: (msg: string, ...args: unknown[]) =>
-    logArgs("debug", (safe) => logger.debug({ args: safe }, msg), msg, args),
+    logArgs("debug", (safe, message) => logger.debug({ args: safe }, message), msg, args),
   info: (msg: string, ...args: unknown[]) =>
-    logArgs("info", (safe) => logger.info({ args: safe }, msg), msg, args),
+    logArgs("info", (safe, message) => logger.info({ args: safe }, message), msg, args),
   warn: (msg: string, ...args: unknown[]) =>
-    logArgs("warn", (safe) => logger.warn({ args: safe }, msg), msg, args),
+    logArgs("warn", (safe, message) => logger.warn({ args: safe }, message), msg, args),
   error: (msg: string, error?: Error, ...args: unknown[]) => logError(msg, error, args),
 };

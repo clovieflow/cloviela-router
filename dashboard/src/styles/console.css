@@ -860,22 +860,31 @@
   box-sizing: border-box;
 }
 
+/* Rikka ambient wash.
+ *
+ * Restrained, low-saturation radial fields in the theme's own indigo/cream
+ * (light) or indigo/slate/rose (dark) family. No neon: the previous palette
+ * used saturated sky-blue/violet/magenta at up to 18% alpha, which read as a
+ * gamer HUD rather than a calm operator console, and it fought the status
+ * colours for meaning — a red error badge should be the only warm thing on
+ * screen. Peak alpha here is 12%, and every stop is a theme token.
+ */
 .app-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(55rem 38rem at 8% -12%, rgba(250, 212, 178, 0.32), transparent 60%),
-    radial-gradient(48rem 34rem at 108% 6%, rgba(246, 222, 182, 0.3), transparent 60%),
-    radial-gradient(42rem 42rem at 50% 118%, rgba(240, 192, 169, 0.2), transparent 60%),
+    radial-gradient(52rem 36rem at 6% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
+    radial-gradient(44rem 32rem at 104% 4%, color-mix(in srgb, var(--rose) 8%, transparent), transparent 62%),
+    radial-gradient(40rem 40rem at 50% 116%, color-mix(in srgb, var(--purple) 7%, transparent), transparent 62%),
     var(--page-bg);
 }
 :root[data-theme="dark"] .app-bg {
   background:
-    radial-gradient(55rem 38rem at 8% -12%, rgba(14, 165, 233, 0.18), transparent 60%),
-    radial-gradient(48rem 34rem at 108% 6%, rgba(139, 92, 246, 0.16), transparent 60%),
-    radial-gradient(42rem 42rem at 50% 118%, rgba(190, 24, 93, 0.12), transparent 60%),
+    radial-gradient(52rem 36rem at 6% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 62%),
+    radial-gradient(44rem 32rem at 104% 4%, color-mix(in srgb, var(--rose) 8%, transparent), transparent 62%),
+    radial-gradient(40rem 40rem at 50% 116%, color-mix(in srgb, var(--purple) 9%, transparent), transparent 62%),
     var(--page-bg);
 }
 @media (max-width: 1024px) {
@@ -2025,7 +2034,7 @@
 
 .console-log-time {
   flex: 0 0 auto;
-  color: #6b7573;
+  color: #98a29e;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2049,7 +2058,7 @@
 .console-log-method {
   flex: 0 0 auto;
   min-width: 38px;
-  color: #6b7573;
+  color: #98a29e;
   font-size: 10.5px;
   font-weight: 600;
 }
@@ -2068,7 +2077,7 @@
 /* Only a failing status is coloured; a 2xx stays neutral so the column does
    not read as a wall of green. */
 .console-log-status--ok {
-  color: #6b7573;
+  color: #98a29e;
 }
 
 .console-log-status--warn {
@@ -2082,7 +2091,7 @@
 }
 
 .console-log-status--pending {
-  color: #4d5654;
+  color: #98a29e;
   letter-spacing: 0.1em;
 }
 
@@ -2975,5 +2984,688 @@
 
   .quota-window-pagination {
     flex-wrap: wrap;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RIKKA SURFACES — theme chooser, onboarding, health, simulator, help, about
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Theme chooser popover ──────────────────────────────────────────────────
+   Three named options with thumbnails rather than an icon toggle: the design
+   system has two authored palettes plus "follow the system", and an operator
+   cannot tell which one an anonymous sun/moon glyph selects. */
+.theme-popover {
+  position: fixed;
+  z-index: 60;
+  top: 64px;
+  right: 16px;
+  width: min(320px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--inner-border);
+  background: var(--popover-bg);
+  box-shadow: var(--shadow-popout);
+}
+
+.theme-popover-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.theme-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  text-align: left;
+  transition:
+    background-color var(--dur-micro) var(--ease-spring),
+    border-color var(--dur-micro) var(--ease-spring);
+}
+
+.theme-option:hover {
+  background: var(--surface-hover);
+}
+
+.theme-option[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.theme-option-swatch {
+  width: 40px;
+  height: 26px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--inner-border);
+}
+
+.theme-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.theme-option-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.theme-option-hint {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+/* Language options reuse the theme list shape; a segmented row fits two
+   choices better than a stacked list. */
+.language-options {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--inner-border);
+}
+
+.language-option {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background-color var(--dur-micro) var(--ease-spring);
+}
+
+.language-option:hover {
+  background: var(--surface-hover);
+}
+
+.language-option[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Page header with art ───────────────────────────────────────────────────
+   A shared frame so every new page presents title/description/art identically
+   instead of each screen inventing its own header row. */
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.page-head-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.page-head-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  max-width: 68ch;
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Onboarding checklist ───────────────────────────────────────────────────
+   A vertical timeline: the connecting rail carries progress, so the operator
+   reads "how far along am I" before reading any individual step. */
+.onboarding-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.onboarding-progress-rail {
+  flex: 1 1 180px;
+  min-width: 120px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width var(--dur-macro) var(--ease-spring);
+}
+
+.onboarding-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-step {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--inner-border);
+}
+
+.onboarding-step:last-child {
+  border-bottom: none;
+}
+
+.onboarding-step-marker {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+}
+
+.onboarding-step[data-state="done"] .onboarding-step-marker {
+  background: var(--green-soft);
+  border-color: color-mix(in srgb, var(--green) 40%, var(--inner-border));
+  color: var(--green);
+}
+
+.onboarding-step[data-state="active"] .onboarding-step-marker {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.onboarding-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.onboarding-step-title {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.onboarding-step-detail {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.onboarding-step-action {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 560px) {
+  .onboarding-step-action {
+    align-self: flex-start;
+    width: 100%;
+  }
+}
+
+/* Code sample block: monospace, horizontally scrollable, and never wider than
+   its card on a 320px viewport. */
+.code-sample {
+  position: relative;
+  border: 1px solid var(--inner-border);
+  border-radius: 12px;
+  background: var(--code-surface);
+  overflow: hidden;
+}
+
+.code-sample-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--inner-border);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.code-sample pre {
+  margin: 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  font-size: 11.5px;
+  line-height: 1.55;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  white-space: pre;
+  word-break: normal;
+}
+
+/* ── Health screen ──────────────────────────────────────────────────────────
+   Grouped status cards. Each group states a fact and, when the fact is bad,
+   what to do about it — a red dot with no remediation is a dead end. */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.health-fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--inner-border);
+  font-size: 12px;
+}
+
+.health-fact:last-child {
+  border-bottom: none;
+}
+
+.health-fact-label {
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+.health-fact-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.health-remediation {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--orange) 32%, var(--inner-border));
+  background: color-mix(in srgb, var(--orange) 10%, var(--surface-2));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.health-remediation[data-tone="danger"] {
+  border-color: color-mix(in srgb, var(--red) 36%, var(--inner-border));
+  background: color-mix(in srgb, var(--red) 9%, var(--surface-2));
+}
+
+.health-remediation[data-tone="ok"] {
+  border-color: color-mix(in srgb, var(--green) 30%, var(--inner-border));
+  background: color-mix(in srgb, var(--green) 8%, var(--surface-2));
+}
+
+/* ── Route simulator ────────────────────────────────────────────────────────
+   Read-only notice is a first-class element, not a footnote: the whole page
+   is only trustworthy if the operator knows nothing was dispatched. */
+.simulator-notice {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--inner-border));
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.simulator-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.simulator-form-field {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.simulator-candidate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--inner-border);
+  font-size: 12px;
+}
+
+.simulator-candidate:last-child {
+  border-bottom: none;
+}
+
+.simulator-candidate[data-eligible="false"] {
+  color: var(--text-secondary);
+}
+
+.simulator-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 0;
+  flex: 1 1 180px;
+}
+
+.simulator-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--green) 34%, var(--inner-border));
+  background: color-mix(in srgb, var(--green) 8%, var(--surface-2));
+}
+
+/* ── Help screen ────────────────────────────────────────────────────────────
+   Troubleshooting as a definition list so the symptom/answer pairing survives
+   a screen reader and a narrow viewport. */
+.trouble-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trouble-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-2);
+}
+
+.trouble-symptom {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.trouble-fix {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* ── About screen ───────────────────────────────────────────────────────────
+   Legal and attribution text reads as prose, at a comfortable measure, with
+   the fan notice visually separated because it is the one paragraph a reader
+   must not skim past. */
+.about-prose {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-width: 72ch;
+}
+
+.about-prose strong {
+  color: var(--text-primary);
+}
+
+.about-notice {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--rose) 34%, var(--inner-border));
+  background: var(--rose-soft);
+}
+
+.about-notice .about-prose,
+.about-notice strong {
+  color: var(--text-primary);
+}
+
+.about-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.about-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-2);
+}
+
+.about-fact-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.about-fact-value {
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.about-missing-list {
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* ── Full-page (non-shell) surfaces ─────────────────────────────────────────
+   Not-found and system-error render outside the console shell, so they need
+   their own centred frame; the system-error variant adds a monospace
+   diagnostic block. */
+.fullpage-viewport {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.fullpage-card {
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px 26px;
+  border-radius: 22px;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-popout);
+}
+
+.fullpage-head {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.fullpage-title {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.fullpage-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: 4px;
+}
+
+.fullpage-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.diagnostic-id {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-details {
+  border: 1px solid var(--inner-border);
+  border-radius: 10px;
+  background: var(--code-surface);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ── Auth layout with art column ────────────────────────────────────────────
+   Two columns above 900px, one below. The art column is `order: 2` so a
+   keyboard user reaches the form first in DOM order regardless of which side
+   the picture renders on. */
+.auth-split {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 340px);
+  gap: 24px;
+  align-items: stretch;
+  width: min(100%, 820px);
+}
+
+@media (max-width: 900px) {
+  .auth-split {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(100%, 420px);
+  }
+}
+
+.auth-split .auth-window {
+  width: 100%;
+}
+
+/* ── Model catalog toolbar ──────────────────────────────────────────────────
+   Capability filters as toggle chips: the model list is the content, and a
+   row of chips keeps it above the fold where a select-per-capability would
+   not. */
+.model-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.model-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background-color var(--dur-micro) var(--ease-spring);
+}
+
+.model-filter-chip:hover {
+  background: var(--surface-hover);
+}
+
+.model-filter-chip[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.capability-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.capability-badge {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Responsive guard for the shell at 320px ────────────────────────────────
+   The desktop shell is a 272px rail plus a content column; at 320px the rail
+   is off-canvas (1024px rule) but padding and gap still need to shrink so the
+   content column is not 8px wide. */
+@media (max-width: 480px) {
+  .app-shell-root {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .app-topbar {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+
+  .topbar-subtitle {
+    display: none;
   }
 }

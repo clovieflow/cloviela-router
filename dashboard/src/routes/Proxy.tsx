@@ -29,6 +29,7 @@ import { Select } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
 import { Inline } from "../components/ui/inline";
 import { Stack } from "../components/ui/stack";
+import { PageHead } from "../components/PageHead";
 import {
   SPEED_TEST_DEFAULT_BYTES,
   SPEED_TEST_MAX_BYTES,
@@ -1683,6 +1684,13 @@ export default function Proxy(): ReactNode {
   return (
     <ProxyLiveProvider>
       <Stack gap="16px">
+      {/* Compact vignette, not a hero: this page is a dense pool table and the
+          illustration must not push the first row below the fold. */}
+      <PageHead
+        title="Proxy & Requests"
+        description="Outbound pools, health probes, throughput, and cooldowns"
+        art="networks"
+      />
       <Dialog
         open={showProxyForm}
         onClose={() => setShowProxyForm(false)}

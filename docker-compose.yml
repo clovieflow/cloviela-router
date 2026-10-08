@@ -3,9 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: cartethyia:local
+    image: rikka-router:local
     ports:
-      - "${PORT:-12800}:12800"
+      - "127.0.0.1:${PORT:-12800}:12800"
     # Keep credentials and URLs in .env; do not bake
     # database secrets or a database service into this application stack.
     # Docker defaults to full capabilities (external PostgreSQL + bundled
@@ -16,6 +16,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "12800"
+      CARTETHYIA_BIND_HOST: "0.0.0.0"
       DASHBOARD_DIST: /app/dist/dashboard
       CARTETHYIA_DATA_DIR: /app/data
       CARTETHYIA_DB_MODE: ${CARTETHYIA_DB_MODE:-full}

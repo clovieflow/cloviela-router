@@ -1,7 +1,7 @@
-# Getting started
+# Getting started — Rikka Router
 
 This guide is the source of truth for installing, configuring, running, and
-checking Cartethyia.
+checking Rikka Router.
 
 ## 1. Requirements
 
@@ -15,16 +15,16 @@ The database requirement depends on the selected mode:
 
 | Mode | Required database infrastructure |
 |---|---|
-| **Lite** | None. Cartethyia runs embedded PGlite locally. |
+| **Lite** | None. Rikka Router runs embedded PGlite locally. |
 | **Full** | A reachable PostgreSQL database configured with `DATABASE_URL`. |
 
 Redis is optional in both modes. Set `REDIS_URL` when coordination must be
-shared between processes or instances. If it is unset, Cartethyia uses the
+shared between processes or instances. If it is unset, the gateway uses the
 in-memory coordination backend.
 
 ## 2. Choose a database mode
 
-Cartethyia exposes the same application features in both modes. Only the
+Rikka Router exposes the same application features in both modes. Only the
 persistence backend and deployment profile change.
 
 | | Lite | Full |
@@ -53,6 +53,11 @@ When `CARTETHYIA_DATA_DIR` is unset, the default is:
 | macOS | `~/Library/Application Support/Cartethyia` |
 | Linux | `$XDG_DATA_HOME/Cartethyia`, or `~/.local/share/Cartethyia` |
 
+The `Cartethyia` directory name is deliberately retained. It is a persisted
+compatibility contract inherited from upstream: an installation created before
+the Rikka Router rename keeps reading and writing the same Lite database. Set
+`CARTETHYIA_DATA_DIR` to relocate it.
+
 ### Full
 
 Full is recommended for VPS deployments, sharing, selling, and higher workloads.
@@ -63,7 +68,7 @@ CARTETHYIA_DB_MODE=full
 DATABASE_URL=postgres://user:password@host:5432/cartethyia
 ```
 
-The PostgreSQL server must be reachable from the Cartethyia process. Redis is
+The PostgreSQL server must be reachable from the Rikka Router process. Redis is
 still optional for a single process; set `REDIS_URL` for shared coordination or
 multiple app instances.
 
@@ -80,7 +85,7 @@ bun install
 ```
 
 `bun install` installs packages only. It does not create the database, generate
-`.env`, or start Cartethyia.
+`.env`, or start Rikka Router.
 
 ## 4. Configure and validate the installation
 
@@ -147,7 +152,7 @@ bun -e "import { randomBytes } from 'node:crypto'; console.log(randomBytes(32).t
 Either a 64-character hexadecimal value or Base64 encoding of 32 bytes is
 accepted.
 
-## 6. Start Cartethyia
+## 6. Start Rikka Router
 
 After setup succeeds, start the development stack:
 

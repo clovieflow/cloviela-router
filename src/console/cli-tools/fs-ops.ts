@@ -8,14 +8,67 @@
  */
 
 import { homedir, platform } from "node:os";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { lstatSync, readlinkSync, realpathSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 
-/** Home directory — shared contract used by all injectors. */
-export { homedir as homeDir };
+/** Resolve lazily: Bun can cache os.homedir() before a fixture redirects HOME. */
+export function homeDir(): string {
+  const configured = platform() === "win32"
+    ? process.env.USERPROFILE ?? process.env.HOME
+    : process.env.HOME;
+  return configured?.trim() || homedir();
+}
 export { join };
 
 const IS_WIN: boolean = platform() === "win32";
+
+/**
+ * Canonical path with every symlink — including a dangling one — resolved.
+ *
+ * `realpathSync` fails on a dangling link, and resolving only the nearest
+ * *existing* ancestor then leaves the link itself unresolved: the containment
+ * check passes against the link's own directory while `open()` follows the
+ * link outside. Each component is therefore lstat'ed and readlink'ed here, so a
+ * missing final target is still canonicalized through its real parent chain.
+ */
+function canonicalizeThroughSymlinks(target: string): string {
+  const missing: string[] = [];
+  let current = resolve(target);
+  for (;;) {
+    try {
+      if (lstatSync(current).isSymbolicLink()) {
+        const linkTarget = readlinkSync(current);
+        current = isAbsolute(linkTarget) ? linkTarget : resolve(dirname(current), linkTarget);
+        continue;
+      }
+      let resolvedPath = realpathSync(current);
+      for (let index = missing.length - 1; index >= 0; index -= 1)
+        resolvedPath = join(resolvedPath, missing[index] as string);
+      return resolvedPath;
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return resolve(current, ...missing.reverse());
+      missing.push(relative(parent, current));
+      current = parent;
+    }
+  }
+}
+
+/** Test injectors must never write outside the runner's disposable sandbox. */
+function assertTestWritePath(path: string): void {
+  const sandbox = process.env.CARTETHYIA_TEST_HOME_ROOT;
+  if (!sandbox) {
+    if (process.env.NODE_ENV === "test")
+      throw new Error("CLI test writes require the isolated bun run test harness");
+    return;
+  }
+  const root = canonicalizeThroughSymlinks(sandbox);
+  const canonical = canonicalizeThroughSymlinks(path);
+  const within = relative(root, canonical);
+  if (within === ".." || within.startsWith(`..${sep}`) || isAbsolute(within))
+    throw new Error("Refusing CLI test write outside the disposable home sandbox");
+}
 
 /** Check if a file exists. */
 export async function fileExists(path: string): Promise<boolean> {
@@ -35,6 +88,7 @@ export async function readJsonFile(path: string): Promise<unknown | null> {
 
 /** Write JSON to a file with 2-space indentation. */
 export async function writeJsonFile(path: string, data: unknown): Promise<void> {
+  assertTestWritePath(path);
   await Bun.write(path, JSON.stringify(data, null, 2));
 }
 
@@ -49,16 +103,19 @@ export async function readTextFile(path: string): Promise<string | null> {
 
 /** Write text to a file. */
 export async function writeTextFile(path: string, content: string): Promise<void> {
+  assertTestWritePath(path);
   await Bun.write(path, content);
 }
 
 /** Remove a file if it exists. */
 export async function removeFile(path: string): Promise<void> {
+  assertTestWritePath(path);
   await rm(path, { force: true });
 }
 
 /** Create a directory recursively (like mkdir -p). */
 export async function ensureDir(path: string): Promise<void> {
+  assertTestWritePath(path);
   await mkdir(path, { recursive: true });
 }
 
