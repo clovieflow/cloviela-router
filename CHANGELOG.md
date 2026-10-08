@@ -1,5 +1,22 @@
 ## Rikka Router fork
 
+- **A long stream could grow the retained transcript without bound.** The
+  canonical event history appended every event for the whole stream regardless
+  of the capture policy, independent of the cap applied later, and the client
+  transcript accumulated up to 512 KiB even with capture off. Retention is now
+  resolved once per stream from the existing capture policy: `none`/`metadata`
+  keeps nothing, `full` keeps a prefix bounded by the configured capture depth.
+  A truncated transcript is stored as the retained prefix plus an explicit
+  `{_truncated, _retained_bytes, _dropped_events}` trailer, so a partial trace
+  can never be read as a complete one. The client SSE path, backpressure, and
+  abort behaviour are unchanged, and terminal/usage frames are always retained.
+- **The cancellation test proved nothing.** The test harness built its own
+  `ProxyRequestStateStore` that the application never saw — the app constructs
+  its own — so asserting on it read zeroes from an orphan object. The harness now
+  exposes the owners the app actually uses, and the rewritten test asserts a
+  held stream through the authenticated in-flight endpoint, the pool selector,
+  and the admission counter, then asserts all three release and that the
+  upstream abort signal fired.
 - **Route simulator (`POST /console/api/routing/simulate`).** The dashboard's
   simulator screen had no backend, so it honestly showed "not available". It now
   answers from the same `RoutingEngine` the dispatcher uses — same alias

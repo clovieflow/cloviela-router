@@ -23,19 +23,28 @@
  *    or the client believes a truncated answer was complete.
  * 2. **Every outcome releases.** The lease, reservation, and pool slot are
  *    held by the stream's async lifetime, so a path that returns without
- *    releasing leaks capacity for the life of the process. The gauge is the
- *    detector: `inFlightCount()` is decremented only by `state.cleanup()`,
- *    which only `releaseStreamResources` reaches.
+ *    releasing leaks capacity for the life of the process. The detector is the
+ *    real, app-owned state: the authenticated `/console/api/live/in-flight`
+ *    gauge (which reads the composition root's own request-state store), the
+ *    pool selector's per-pool inflight, and the admission store's concurrency
+ *    counter — never a harness-local store the app never saw.
  *
  * The stub adapter is driven through its real `dispatch()` seam, so the router,
  * admission, routing, and the streaming branch all run for real; only the
  * upstream bytes are synthetic.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { desc, eq } from "drizzle-orm";
 import { createTestGateway, type TestGateway } from "../helpers/gateway";
 import { createWorld, type GatewayWorld } from "../helpers/fixtures";
 import { dbDescribe } from "../helpers/database";
 import type { CanonicalEvent } from "../../src/transport/canonical-model";
+import { consoleSettings, telemetryPayloads } from "../../src/persistence/schema";
+import { payloadReferenceFromRow, readPayloadFrame } from "../../src/observability/payload-store";
+import { clearConsoleSettingsCacheForTests } from "../../src/transport/dispatch/attempt-finalize";
 
 const USAGE = {
   input_tokens: 12,
@@ -156,6 +165,21 @@ dbDescribe("streaming dispatch contract", () => {
     return { status: response.status, frames: sseFrames(body), body };
   }
 
+  /**
+   * Reads the live in-flight gauge the way an operator does: through the
+   * authenticated console boundary, which reads the composition root's own
+   * request-state store. A harness-local store would assert on a different
+   * instance's zero.
+   */
+  async function liveInFlight(): Promise<number> {
+    const response = await gateway.request("/console/api/live/in-flight", {
+      headers: { authorization: `Bearer ${world.token}` },
+    });
+    expect(response.status).toBe(200);
+    const snapshot = (await response.json()) as { inFlight: number };
+    return snapshot.inFlight;
+  }
+
   describe("a stream that completes", () => {
     test("ends with [DONE] after a stop finish reason", async () => {
       gateway.adapter(world.providerId, { events: () => [START, DELTA, COMPLETE] });
@@ -233,11 +257,11 @@ dbDescribe("streaming dispatch contract", () => {
   describe("resource release", () => {
     /** Waits for the gauge to settle; release is not synchronous with the body. */
     async function settle(): Promise<number> {
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (gateway.stateStore.inFlightCount() === 0) return 0;
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        if ((await liveInFlight()) === 0) return 0;
         await Bun.sleep(25);
       }
-      return gateway.stateStore.inFlightCount();
+      return liveInFlight();
     }
 
     test("a completed stream returns the in-flight gauge to zero", async () => {
@@ -269,7 +293,25 @@ dbDescribe("streaming dispatch contract", () => {
       // leaves no pending `pull()`, so the abort listener — not the pull's own
       // error handler — has to release. Without it the flight stayed on the
       // gauge for the life of the process.
-      gateway.adapter(world.providerId, {
+      //
+      // Every claim here is read from a real owner: the gauge is the app-owned
+      // store through the authenticated console boundary, the pool slot is the
+      // selector the dispatch path acquired it from, the concurrency counter is
+      // the admission store the key was admitted against, and the abort is the
+      // signal the stub adapter itself observed. The old version of this test
+      // asserted a store the app never saw, so its zeros proved nothing.
+      const poolId = `pool-${world.runId}`;
+      gateway.setRoutes([
+        {
+          providerId: world.providerId,
+          modelId: world.modelId,
+          accountId: world.accountId,
+          networkPoolIds: [poolId],
+          networkPoolLimits: { [poolId]: 2 },
+        },
+      ]);
+      const key = await world.createKey({ maxConcurrentRequests: 1 });
+      const adapter = gateway.adapter(world.providerId, {
         events: () => [
           START,
           ...Array.from({ length: 40 }, (_, index) => ({
@@ -288,15 +330,25 @@ dbDescribe("streaming dispatch contract", () => {
           stream: true,
           messages: [{ role: "user", content: "hello" }],
         },
-        { token: world.token, signal: controller.signal },
+        { token: key.token, signal: controller.signal },
       );
       expect(response.status).toBe(200);
       const reader = response.body?.getReader();
       expect(reader).toBeDefined();
       await reader?.read();
+      // While the client holds the stream open: one real flight, one real pool
+      // slot, one real admission concurrency reservation.
+      expect(await liveInFlight()).toBeGreaterThan(0);
+      expect(gateway.poolSelector.getInflight(poolId)).toBe(1);
+      expect(await gateway.admissionStore.getConcurrent(key.id)).toBe(1);
       controller.abort();
       await reader?.cancel().catch(() => undefined);
       expect(await settle()).toBe(0);
+      // ...and all three are back to zero, with the upstream really aborted.
+      expect(gateway.poolSelector.getInflight(poolId)).toBe(0);
+      expect(await gateway.admissionStore.getConcurrent(key.id)).toBe(0);
+      expect(adapter.dispatches.length).toBeGreaterThan(0);
+      expect(adapter.dispatches[0]?.context.abort_signal.aborted).toBe(true);
     });
 
     test("sequential streams do not accumulate flights", async () => {
@@ -307,6 +359,95 @@ dbDescribe("streaming dispatch contract", () => {
       for (let index = 0; index < 3; index += 1) {
         await streamChat();
         expect(await settle()).toBe(0);
+      }
+    });
+  });
+
+  describe("bounded diagnostic capture", () => {
+    test("a large stream stays complete for the client while the retained transcript is bounded and truthful", async () => {
+      // The canonical transcript used to append every event for the entire
+      // stream regardless of the capture policy, so retained memory scaled
+      // with stream length. With capture opted in at the smallest depth, a
+      // 3000-delta stream must still reach the client in full with exactly
+      // one terminal/usage frame, while the stored transcript is capped and
+      // says so — a bounded capture must not read as a complete trace.
+      const payloadDir = await mkdtemp(join(tmpdir(), "cartethyia-capture-"));
+      const previousDir = process.env["CARTETHYIA_TELEMETRY_PAYLOAD_DIR"];
+      process.env["CARTETHYIA_TELEMETRY_PAYLOAD_DIR"] = payloadDir;
+      try {
+        await gateway.db
+          .insert(consoleSettings)
+          .values({
+            tenantId: world.tenantId,
+            preferences: { telemetryPayloads: "full", telemetryPayloadDepth: "minimum" },
+          })
+          .onConflictDoUpdate({
+            target: consoleSettings.tenantId,
+            set: { preferences: { telemetryPayloads: "full", telemetryPayloadDepth: "minimum" } },
+          });
+        clearConsoleSettingsCacheForTests();
+
+        const DELTA_COUNT = 3000;
+        const filler = "x".repeat(200);
+        gateway.adapter(world.providerId, {
+          events: () => [
+            START,
+            ...Array.from({ length: DELTA_COUNT }, (_, index) => ({
+              type: "content_delta" as const,
+              sequence_number: index + 1,
+              content: { kind: "text" as const, text: `chunk-${index}-${filler}` },
+            })),
+            { ...COMPLETE, sequence_number: DELTA_COUNT + 1 },
+          ],
+        });
+        const { status, frames, body } = await streamChat();
+        // Client delivery is untouched by the retention bound.
+        expect(status).toBe(200);
+        expect(body).toContain(`chunk-${DELTA_COUNT - 1}-`);
+        expect(frames[frames.length - 1]).toBe("[DONE]");
+        expect(body.split('"finish_reason":"stop"').length - 1).toBe(1);
+        expect(frames.filter((frame) => frame.includes('"usage":{')).length).toBe(1);
+
+        // The stored capture, read back through the same frame contract the
+        // console uses, must be the bounded prefix plus truncation metadata.
+        const rows = await gateway.db
+          .select()
+          .from(telemetryPayloads)
+          .where(eq(telemetryPayloads.tenantId, world.tenantId))
+          .orderBy(desc(telemetryPayloads.capturedAt))
+          .limit(1);
+        const reference = rows[0] === undefined ? undefined : payloadReferenceFromRow(rows[0]);
+        expect(reference).toBeDefined();
+        if (reference === undefined) return;
+        const stored = (await readPayloadFrame(reference)) as {
+          response_body: readonly Record<string, unknown>[];
+          client_response_body: string;
+        };
+        const transcript = stored.response_body;
+        expect(Array.isArray(transcript)).toBe(true);
+        const marker = transcript[transcript.length - 1];
+        expect(marker?.["_truncated"]).toBe(true);
+        expect(marker?.["_dropped_events"]).toBeGreaterThan(0);
+        // Bounded by the configured cap: the retained prefix must sit inside
+        // the smallest depth's budget, not the stream's length.
+        const retained = transcript.slice(0, -1);
+        expect(retained.length).toBeGreaterThan(0);
+        expect(retained.length).toBeLessThan(DELTA_COUNT);
+        expect(JSON.stringify(retained).length).toBeLessThan(1 * 1024 * 1024);
+        expect(stored.client_response_body.length).toBeLessThanOrEqual(512 * 1024);
+        // Usage/terminal state survives the bound: the terminal frame is
+        // retained even after the transcript budget is spent, so the stored
+        // transcript still carries the real outcome, and the marker after it
+        // states exactly what was dropped.
+        const storedTerminal = retained.find((event) => event["type"] === "terminal");
+        expect(storedTerminal).toBeDefined();
+        expect(storedTerminal?.["state"]).toBe("complete");
+      } finally {
+        if (previousDir === undefined) delete process.env["CARTETHYIA_TELEMETRY_PAYLOAD_DIR"];
+        else process.env["CARTETHYIA_TELEMETRY_PAYLOAD_DIR"] = previousDir;
+        await gateway.db.delete(consoleSettings).where(eq(consoleSettings.tenantId, world.tenantId));
+        clearConsoleSettingsCacheForTests();
+        await rm(payloadDir, { recursive: true, force: true });
       }
     });
   });

@@ -43,7 +43,6 @@ import { ProxyRequestPreparer } from "../../src/transport/request/preparer";
 import { RoutingEngine } from "../../src/transport/routing/router";
 import { ApiKeyAdmissionService } from "../../src/security/admission/service";
 import { InMemoryAdmissionCounterStore } from "../../src/security/admission/in-memory-store";
-import { ProxyRequestStateStore } from "../../src/transport/request/state";
 import { InMemoryRouteSnapshotService } from "../../src/transport/routing/route-model";
 import type { RouteCandidate, RouteSnapshot } from "../../src/transport/routing/route-model";
 import { TelemetryBatchBuffer } from "../../src/observability/telemetry-buffer";
@@ -75,6 +74,14 @@ export interface TestRoute {
   readonly endpoint?: string;
   readonly capabilities?: Readonly<Record<string, boolean>>;
   readonly maxInflight?: number;
+  /**
+   * Proxy-pool ids the catalog would attach to this candidate, plus their
+   * configured concurrency. A suite that asserts on pool-slot release sets
+   * these so dispatch acquires a real slot through `NetworkPoolSelector`
+   * instead of bypassing the pool.
+   */
+  readonly networkPoolIds?: readonly string[];
+  readonly networkPoolLimits?: Readonly<Record<string, number>>;
   /** Service kind the catalog row carries; `websearch` models a search route. */
   readonly serviceKind?: "llm" | "systemone" | "websearch";
   /**
@@ -278,7 +285,15 @@ const TEST_PEER_ADDRESS = "127.0.0.1";
 export interface TestGateway {
   readonly app: App;
   readonly db: CartethyiaDatabase;
-  readonly stateStore: ProxyRequestStateStore;
+  /**
+   * The app-owned pool selector the dispatch path really acquires slots from.
+   * The harness used to expose an orphan `ProxyRequestStateStore` that the app
+   * never saw, so gauge assertions read a different store's zero. Everything
+   * exposed here is the same instance the composition root injected.
+   */
+  readonly poolSelector: NetworkPoolSelector;
+  /** The app-owned admission store, for concurrency-release evidence. */
+  readonly admissionStore: InMemoryAdmissionCounterStore;
   readonly snapshotService: InMemoryRouteSnapshotService;
   readonly telemetryBuffer: TelemetryBatchBuffer;
   readonly adapters: Map<string, ReturnType<typeof createStubAdapter>>;
@@ -343,9 +358,12 @@ export async function createTestGateway(
   await getTestPool();
 
   const adapters = new Map<string, ReturnType<typeof createStubAdapter>>();
-  const stateStore = new ProxyRequestStateStore(undefined);
   const telemetryBuffer = new TelemetryBatchBuffer(db, { flushIntervalMs: 50 });
   const shutdownCoordinator = new ShutdownCoordinator({}, { drainWindowMs: 0 });
+  // One pool selector and one admission store, injected into the app so the
+  // suites observe the instances dispatch actually holds slots in.
+  const poolSelector = new NetworkPoolSelector(undefined);
+  const admissionStore = new InMemoryAdmissionCounterStore();
 
   const routeSnapshot: { current: RouteSnapshot } = { current: emptySnapshot() };
   // The real snapshot service, over an in-memory catalog. Routing, alias
@@ -353,7 +371,7 @@ export async function createTestGateway(
   // catalog's origin is a fixture.
   const snapshotService = new InMemoryRouteSnapshotService(async () => routeSnapshot.current);
   const routingEngine = new RoutingEngine();
-  const admissionService = new ApiKeyAdmissionService(new InMemoryAdmissionCounterStore());
+  const admissionService = new ApiKeyAdmissionService(admissionStore);
   const proxyPreparer = new ProxyRequestPreparer({
     snapshotService,
     routingEngine,
@@ -400,7 +418,7 @@ export async function createTestGateway(
     networkBindingFactory,
     ipAbuseProtection,
     trustedProxyBoundary: TEST_TRUSTED_PROXY_BOUNDARY,
-    poolSelector: new NetworkPoolSelector(undefined),
+    poolSelector,
     snapshotService,
     readiness:
       options.readiness ??
@@ -422,7 +440,7 @@ export async function createTestGateway(
             db,
             accessResolver: () => undefined,
             routeSnapshotService: snapshotService,
-            poolSelector: new NetworkPoolSelector(undefined),
+            poolSelector,
             telemetryBuffer,
             providerRegistry: createDefaultProviderRegistry(),
             bundledModelCatalog: { modelsByProvider: new Map() },
@@ -441,7 +459,8 @@ export async function createTestGateway(
   const gateway: TestGateway = {
     app,
     db,
-    stateStore,
+    poolSelector,
+    admissionStore,
     snapshotService,
     telemetryBuffer,
     adapters,
@@ -518,6 +537,10 @@ export function buildSnapshot(routes: readonly TestRoute[]): RouteSnapshot {
     provider_account_id: route.accountId,
     ...(route.accountLabel === undefined ? {} : { provider_account_label: route.accountLabel }),
     ...(route.maxInflight === undefined ? {} : { max_inflight: route.maxInflight }),
+    ...(route.networkPoolIds === undefined ? {} : { network_pool_ids: route.networkPoolIds }),
+    ...(route.networkPoolLimits === undefined
+      ? {}
+      : { network_pool_limits: route.networkPoolLimits }),
     // The catalog attaches the health marker onto the candidate; the router's
     // `EligibilityEvaluator` reads it from there, so the fixture sets it there.
     ...(route.healthStatus === undefined ? {} : { health_status: route.healthStatus }),
