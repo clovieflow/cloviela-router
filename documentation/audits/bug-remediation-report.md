@@ -37,7 +37,7 @@ implements it with five real queries. The four gating steps decide `ready` —
 a gateway with a key issued is usable even if no client has called it yet —
 and every count is measured, never inferred from configuration.
 
-**Regression test.** `test/console/readiness-endpoint.test.ts` (9 tests). It
+**Regression test.** `test/console/readiness-endpoint.test.ts` (10 tests). It
 builds its own PGlite database in the OS temp dir rather than calling
 `bootDatabase()`, which resolves the operator's real data directory when
 `CARTETHYIA_DATA_DIR` is unset — a plain `bun test <file>` would otherwise
@@ -192,6 +192,36 @@ credential to rename the repository, the keychain entry printed the token
 itself. It should be rotated.
 
 ---
+
+## P2 — the memory breakdown added numbers that overlap
+
+**Feature:** Overview "System Overview" panel and Health page.
+
+**Reproduction.** Live read of `/console/api/system/health` on the running
+gateway: `heap_used_bytes` 438 MB against `heap_total_bytes` 25 MB, with
+`memory_bytes` (RSS) 162 MB. `heapUsed > heapTotal` is impossible for a
+process, and the UI rendered **819 MB of memory for a 162 MB process**, with
+"Bun runtime 0.0 MB".
+
+**Root cause, isolated.** Reproduced directly by loading PGlite: after the
+WebAssembly module opens its data directory Bun reports `rss 264.7 MB,
+heapUsed 1599.2 MB, heapTotal 89.1 MB, external 1591.6 MB`. The counters
+overlap and exceed the process. The Overview breakdown computes
+`rss - heapUsed - external` to derive the runtime slice, so that term went to
+**-2926 MB**.
+
+**Fix.** `src/console/observability/store.ts` clamps the published counters so
+no field can exceed the RSS it is part of; `dashboard/src/routes/Overview.tsx`
+guards the subtraction so a figure from an older build cannot render negative.
+
+**Regression test.** Added to `test/console/readiness-endpoint.test.ts`. It
+lives in the PGlite-backed suite deliberately — PGlite is what makes the
+counters inconsistent, so a mock would not reproduce the condition. Verified
+the test has teeth by reverting the clamp: it fails with
+`Received: 1143547209` against a 121 MB RSS.
+
+**Verified.** After the fix: heap used 23.4 MB / total 23.4 MB, RSS 165.2 MB —
+a breakdown that adds up.
 
 ## Unresolved
 

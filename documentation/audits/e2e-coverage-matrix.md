@@ -116,6 +116,17 @@ Breakdown: GW 395, SEC 131, DB 132, CLI 120.
 **801 NA.** Combinations the planner decided do not apply to this deployment
 (for example a share-link journey on an instance with no share links).
 
+## Unit and component coverage added this session
+
+| Suite | Tests | What it pins |
+|---|---:|---|
+| `test/console/readiness-endpoint.test.ts` | 10 | Route mount, the five-step read model, tenant scoping, and the health memory-counter consistency |
+| `test/console/restore-account-state.test.ts` | 2 | An active account survives export → delete → import with its status intact |
+
+Both build their own PGlite database in the OS temp directory rather than
+calling the process-wide `bootDatabase()`, which resolves the operator's real
+data directory when `CARTETHYIA_DATA_DIR` is unset.
+
 ## Reproducing
 
 ```bash
