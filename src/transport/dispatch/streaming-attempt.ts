@@ -60,6 +60,7 @@ import {
   completeAttempt,
   completionContext,
   estimatedUsage,
+  resolveStreamTranscriptBudgetBytes,
   terminalFailure,
 } from "./attempt-finalize";
 import { drainAbortReason } from "../shutdown-notice";
@@ -223,6 +224,16 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
   // the zero point for time-to-first-token.
   state.upstreamDispatchStartedAtMs = Date.now();
   const first: IteratorResult<CanonicalEvent> = await iterator.next();
+  // Retained-diagnostic budget, from the tenant's capture policy. `0` means
+  // the policy stores no response body at all, so the transcript below must
+  // not accumulate one; a non-zero budget bounds what a long stream may
+  // retain. Resolved after the first event is primed so a candidate that
+  // cannot produce even one event still fails before this read, and it never
+  // throws: a preference read failure inside the resolver yields `0`.
+  const streamTranscriptBudgetBytes = await resolveStreamTranscriptBudgetBytes(
+    deps.db,
+    prepared.authorization.tenantId,
+  );
   // Shared streaming state and helpers lifted into the closure so
   // `start` seeds the primed event and `pull` demand-drives the rest:
   // the runtime only calls `pull` when the consumer has drained its
@@ -239,7 +250,59 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
   let sawUpstreamActivity = false;
   // Canonical events streamed to the client; captured as the response
   // body for telemetry so streaming tool calls/text are traceable.
+  //
+  // Retention is bounded by the tenant's capture policy rather than by
+  // stream length: every event used to be appended for the whole body
+  // lifetime even when capture was disabled, so a long stream grew memory
+  // with nothing an operator had configured. With no response-body policy
+  // (`streamTranscriptBudgetBytes === 0`) nothing is retained at all;
+  // otherwise events are retained up to the budget and the count of events
+  // dropped past it is reported as truncation metadata, so a bounded
+  // transcript is never presented as a complete trace.
   const streamedEvents: CanonicalEvent[] = [];
+  let retainedTranscriptBytes = 0;
+  let droppedTranscriptEvents = 0;
+  let streamedEventCount = 0;
+  const retainStreamedEvent = (event: CanonicalEvent & { timestamp: number }): void => {
+    if (streamTranscriptBudgetBytes === 0) return;
+    // Terminal and usage frames carry the outcome a truncated transcript is
+    // read for, so they are retained even once the budget is spent; every
+    // other event is kept as a prefix. Once one does not fit, later ones are
+    // not kept either — a sparse transcript would read as the stream's shape
+    // while silently omitting its middle — and they skip the serialization
+    // cost of being measured against a full budget.
+    const essential = event.type === "terminal" || event.type === "usage";
+    if (!essential && droppedTranscriptEvents > 0) {
+      droppedTranscriptEvents += 1;
+      return;
+    }
+    const size = Buffer.byteLength(JSON.stringify(event), "utf8");
+    if (!essential && retainedTranscriptBytes + size > streamTranscriptBudgetBytes) {
+      droppedTranscriptEvents += 1;
+      return;
+    }
+    streamedEvents.push(event);
+    retainedTranscriptBytes += size;
+  };
+  /**
+   * The stored response transcript: the retained prefix, the terminal/usage
+   * frames the bound always keeps, and honest truncation metadata when the
+   * budget dropped events. The marker is a trailer, so a bounded capture can
+   * never read as a complete trace of a stream it only partly kept.
+   */
+  const retainedResponseBody = (): unknown => {
+    if (streamedEvents.length === 0) return null;
+    if (droppedTranscriptEvents === 0) return streamedEvents;
+    return [
+      ...streamedEvents,
+      {
+        _truncated: true,
+        _retained_bytes: retainedTranscriptBytes,
+        _dropped_events: droppedTranscriptEvents,
+        _hint: "Diagnostic transcript truncated at the configured capture cap — the client received the full stream; raise Settings → Telemetry payloads → Capture depth to retain more.",
+      },
+    ];
+  };
   // The actual client-facing response transcript (decoded SSE/JSON) —
   // distinct from the provider-side canonical events above.
   let clientResponseText = "";
@@ -252,6 +315,10 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
   // on every upstream event for the telemetry transcript copy.
   const clientResponseDecoder = new TextDecoder();
   const appendClientResponse = (bytes: Uint8Array): void => {
+    // No stored body means no client transcript: decoding every chunk into a
+    // string the capture policy would discard is exactly the accumulation the
+    // retention budget exists to prevent.
+    if (streamTranscriptBudgetBytes === 0) return;
     if (clientResponseText.length >= CLIENT_RESPONSE_CAP) return;
     clientResponseText += clientResponseDecoder.decode(bytes, { stream: true });
     if (clientResponseText.length > CLIENT_RESPONSE_CAP)
@@ -303,7 +370,8 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
     controller: ReadableStreamDefaultController<Uint8Array>,
   ): boolean => {
     const timestampedEvent = { ...event, timestamp: Date.now() };
-    streamedEvents.push(timestampedEvent);
+    streamedEventCount += 1;
+    retainStreamedEvent(timestampedEvent);
     lastEventAtMs = timestampedEvent.timestamp;
 
     if (event.type === "content_delta" && firstContentDeltaAtMs === undefined) {
@@ -351,6 +419,9 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
     // Only prelude events can be buffered here: the retry guard requires
     // `!clientVisibleEvent`, so nothing client-visible is discarded.
     streamedEvents.length = 0;
+    retainedTranscriptBytes = 0;
+    droppedTranscriptEvents = 0;
+    streamedEventCount = 0;
     terminal = undefined;
     usage = undefined;
     lastEventAtMs = undefined;
@@ -645,7 +716,7 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
         enqueueEvent(
           {
             type: "terminal",
-            sequence_number: streamedEvents.length + 1,
+            sequence_number: streamedEventCount + 1,
             state: "aborted",
             stop_reason: "error",
           },
@@ -683,7 +754,7 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
           : {}),
         usage: finalUsage,
         commitUsage: finalUsage,
-        responseBody: streamedEvents,
+        responseBody: retainedResponseBody(),
         ...(clientResponseText ? { clientResponseText } : {}),
         ...(firstContentDeltaAtMs !== undefined ? { firstContentDeltaAtMs } : {}),
         ...(lastEventAtMs !== undefined ? { lastEventAtMs } : {}),
@@ -753,7 +824,7 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
       // after content was delivered is diagnosed from the transcript,
       // and `null` here made the drawer's panels read "no payload" for
       // exactly the requests an operator most needs to inspect.
-      responseBody: streamedEvents.length > 0 ? streamedEvents : null,
+      responseBody: retainedResponseBody(),
       ...(clientResponseText.length > 0 ? { clientResponseText } : {}),
     });
     streamSettled = true;

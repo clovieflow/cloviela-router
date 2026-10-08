@@ -86,6 +86,41 @@ function captureDepthMaxBytes(depth: TelemetryPayloadDepth): number {
 }
 
 /**
+ * Byte budget the streaming path may retain as its diagnostic transcript, or
+ * `0` when this tenant's capture policy stores no response body at all.
+ *
+ * The streaming branch appends canonical events to a capture buffer for the
+ * whole body lifetime, and without a bound that buffer is sized by stream
+ * length rather than by anything an operator configured — a long stream
+ * retained its entire history even when capture was off. The capture policy
+ * already states how much a stored exchange may occupy, so the stream derives
+ * its bound from the same source. `metadata` and `none` store no response
+ * body, so the stream retains nothing. Never throws: a preference read failure
+ * is handled inside `resolvePayloadCapture` and yields `0`, i.e. no retention.
+ */
+export async function resolveStreamTranscriptBudgetBytes(
+  db: CartethyiaDatabase,
+  tenantId: string | null,
+): Promise<number> {
+  const { mode, depth } = await resolvePayloadCapture(db, tenantId);
+  if (mode !== "full") return 0;
+  // The stored cap covers every captured body of one exchange at once (client
+  // request, provider request, provider response, final client response, and
+  // this transcript), so the transcript cannot claim the whole cap: it leaves
+  // room for the client transcript the stream also captures, plus a fixed
+  // headroom for the provider bodies. Without that split a full transcript
+  // would push the combined size over the cap and the store would replace all
+  // five bodies with its own marker, so the per-event truncation metadata
+  // would never be visible.
+  const CLIENT_TRANSCRIPT_CAP_BYTES = 512 * 1024;
+  const CAPTURE_HEADROOM_BYTES = 128 * 1024;
+  return Math.max(
+    0,
+    captureDepthMaxBytes(depth) - CLIENT_TRANSCRIPT_CAP_BYTES - CAPTURE_HEADROOM_BYTES,
+  );
+}
+
+/**
  * What the client received for a failed terminal attempt, in the same public
  * envelope the error middleware sends on the wire (`{ error: { origin, code,
  * message, details } }`). Stored so Request Detail's "Client Response"
