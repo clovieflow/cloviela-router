@@ -16,7 +16,7 @@ this session against the running application; none is inferred.
 | Routing and failover tested | **PASS** | E2E GW, 2718 cases, 0 failed |
 | Provider operations tested to the boundary | **PASS** | E2E DB account lifecycle + E2E provider/connection cases |
 | API key security tested | **PASS** | E2E SEC, 288 cases, 0 failed |
-| Database migrations and persistence tested | **PARTIAL** | Lite (PGlite) verified; **Full (PostgreSQL) blocked** |
+| Database migrations and persistence tested | **PARTIAL** | Lite (PGlite) verified end to end, including restart persistence; **Full (PostgreSQL) blocked** |
 | Backup/restore verified in isolation | **PASS** | E2E DB 8/8, including account status and post-restore dispatch |
 | Mobile layouts inspected in a real browser | **PASS** | 320/375/390/430/768/1024/1440/1920 sweeps; 0 uncontained overflow |
 | Accessibility checks | **PASS** | WCAG AA contrast measured per rendered element, 14 routes × 2 themes, 0 violations |
@@ -80,6 +80,26 @@ figures are recorded against the actual hardware.
 | `/combos` | 26 ms | 533 KB | 93 KB | 10 MB |
 | `/settings` | 18 ms | 517 KB | 93 KB | 10 MB |
 | `/about` | 12 ms | 416 KB | 93 KB | 10 MB |
+
+## Startup, persistence and shutdown
+
+Verified on a production-mode instance with its own data directory:
+
+1. **Clean boot.** Empty data dir → PGlite opens and migrates → `Cloviela
+   Router listening on 127.0.0.1:12877 (Bun 1.4.0)` → `/console` 200,
+   `/health/ready` 200.
+2. **Setup.** `POST /console/api/auth/setup` → `{"status":"success"}`;
+   `first-boot` flips to `{"requires_setup":false}`.
+3. **Restart persistence.** Process stopped, restarted against the same data
+   dir and the same encryption key → `first-boot` still `false`, and the
+   account created before the restart logs in successfully
+   (`{"status":"success","user_id":"0a1bb536-…"}`).
+
+One caveat worth recording: restarting with a **different**
+`CARTETHYIA_ENCRYPTION_KEY` makes the instance report `requires_setup: true`
+again, because the stored credentials can no longer be decrypted. That is
+correct behaviour for an encryption-key change, not a persistence defect, but
+an operator who rotates the key without re-provisioning will see it.
 
 ## Blocked and unverified — stated, not hidden
 
