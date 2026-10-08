@@ -1028,7 +1028,11 @@ export async function runCancellation(
       method: "POST",
       path: "/v1/chat/completions",
       body: {
-        model: `${world.providers.chat}/${world.models.chat}-slow`,
+        // The slow model lives on the chat fault provider, so the request must
+        // name that provider. Addressing it through the healthy provider found
+        // no candidate at all, the gateway answered 503 without ever
+        // dispatching, and the case failed with "0 upstream call(s)".
+        model: `${world.providers.chat}-fault/${world.models.chat}-slow`,
         messages: [{ role: "user", content: "ping" }],
         max_tokens: 16,
         stream: true,
