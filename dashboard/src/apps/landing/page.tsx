@@ -346,7 +346,7 @@ export function LandingPage(): ReactElement {
                   setShowAll(false);
                   requestAnimationFrame(() => scrollToChapter(idx));
                 }}
-                className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-[18px] border bg-[#0b1220] text-left transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 story-theme-${entry.theme}`}
+                className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-[18px] border bg-[#211d1b] text-left transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 story-theme-${entry.theme}`}
                 tabIndex={0}
                 role="button"
                 aria-label={`Open ${entry.label}`}
@@ -360,9 +360,9 @@ export function LandingPage(): ReactElement {
               >
                 <div className="relative h-[190px] overflow-hidden">
                   <img src={entry.image} alt={entry.imageAlt} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" loading="lazy" decoding="async" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#05070d]/85 via-[#05070d]/10 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d0b]/85 via-[#0f0d0b]/10 to-transparent" />
                   <div className="absolute left-3 top-3 flex items-center gap-1.5">
-                    <span className="rounded-full bg-white px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#05070d]">{entry.number}</span>
+                    <span className="rounded-full bg-white px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#0f0d0b]">{entry.number}</span>
                     <span className="rounded-full border border-white/20 bg-black/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">{entry.theme}</span>
                   </div>
                   <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.14em] text-white/75">

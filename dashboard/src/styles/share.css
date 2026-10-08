@@ -798,7 +798,7 @@ html[data-app="share"] .share-hud-card {
   place-items: center;
   overflow-y: auto;
   padding: 20px;
-  background: rgb(5 7 12 / 72%);
+  background: rgb(15 13 11 / 72%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
