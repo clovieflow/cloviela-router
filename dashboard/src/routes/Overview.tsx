@@ -60,8 +60,11 @@ function SystemOverviewPanel({
     .reduce((sum, p) => sum + (p.maxInflight || 10), 0);
 
   const rawBytes = health?.memory_bytes ?? 0;
-  const heapUsed = health?.heap_used_bytes ?? 0;
-  const external = health?.external_bytes ?? 0;
+  // `Math.max(0, …)` guards the subtraction as well: the gateway now clamps its
+  // counters so they cannot exceed RSS, but a figure from an older build must
+  // not render as a negative runtime slice.
+  const heapUsed = Math.max(0, health?.heap_used_bytes ?? 0);
+  const external = Math.max(0, health?.external_bytes ?? 0);
   // Caps Bun engine runtime at 20 MB when Low stress is on; JS heap & buffers stay real
   const nativeBytes = Math.max(0, rawBytes - heapUsed - external);
   const displayNativeBytes = lowStress ? Math.min(20 * 1024 * 1024, nativeBytes) : nativeBytes;
