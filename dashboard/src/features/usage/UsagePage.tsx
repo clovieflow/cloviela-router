@@ -63,6 +63,7 @@ import {
   RAW_TOKEN_SCALE,
   TOKEN_SCALE_AUTO,
   TOKEN_SCALES,
+  formatAgo,
   formatBytes,
   formatChartTick,
   formatChartTooltip,
@@ -207,34 +208,6 @@ export function surfaceFamilyLabel(surface: string | undefined): string {
   }
 }
 
-/**
- * Relative age of a request start for the time cell's second line:
- * minutes below an hour, hours below a day, days below a week, weeks above.
- * Pure display — the absolute clock stays on the first line.
- */
-export function formatAgo(value: string, nowMs: number = Date.now()): string {
-  const started = new Date(value).getTime();
-  if (Number.isNaN(started)) return "—";
-  const diffMs = Math.max(0, nowMs - started);
-  const minute = 60_000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  const week = 7 * day;
-  if (diffMs < hour) {
-    const minutes = Math.max(0, Math.floor(diffMs / minute));
-    return minutes <= 1 ? "just now" : `${minutes}m ago`;
-  }
-  if (diffMs < day) {
-    const hours = Math.floor(diffMs / hour);
-    return hours <= 1 ? "1h ago" : `${hours}h ago`;
-  }
-  if (diffMs < week) {
-    const days = Math.floor(diffMs / day);
-    return days <= 1 ? "1d ago" : `${days}d ago`;
-  }
-  const weeks = Math.floor(diffMs / week);
-  return weeks <= 1 ? "1w ago" : `${weeks}w ago`;
-}
 
 /**
  * Lifecycle status mapped to an HTTP-style code label for the compact table cell.

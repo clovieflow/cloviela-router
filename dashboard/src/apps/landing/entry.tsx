@@ -7,7 +7,7 @@ import "../../styles/landing.css";
 
 /** Mounts the public landing story into the shared dashboard document. */
 export function mountLanding(root: HTMLElement): void {
-  document.title = "Cartethyia — The One-Stop AI Proxy Router";
+  document.title = "Rikka Router — Personal AI Gateway";
   createRoot(root).render(
     <StrictMode>
       <LandingPage />

@@ -9,7 +9,6 @@ export async function startBinary(): Promise<number> {
   }
 
   process.env.NODE_ENV ??= "production";
-  process.env.CARTETHYIA_SERVER_MAX_BODY_BYTES ??= String(8 * 1024 * 1024 * 1024);
 
   const child = Bun.spawn([binary], {
     env: process.env,

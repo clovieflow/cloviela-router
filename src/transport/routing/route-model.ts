@@ -31,6 +31,17 @@ export interface RouteCandidate {
   readonly provider_account_id?: string;
   /** Cooldown class: `hard` = excluded until the deadline; `soft` = deprioritized. */
   readonly cooldown_kind?: "hard" | "soft";
+  /**
+   * Deadline of the unexpired account-wide cooldown stamped on this candidate,
+   * as an ISO string. Present exactly when `health_status === "cooldown"` —
+   * an expired cooldown is never stamped, so a present value is always in the
+   * future relative to the snapshot build. Read-only surfaces (route
+   * simulation) report it instead of re-deriving it from the account row.
+   */
+  readonly cooldown_until?: string;
+  /** Deadline of the unexpired per-model cooldown stamped on this candidate.
+   * Present exactly when `health_status === "model_cooldown"`. */
+  readonly model_cooldown_until?: string;
   /** Minimum-balance toggle for this candidate's provider/tenant. */
   readonly credit_limit_enabled?: boolean;
   /** Minimum remaining balance; candidate excluded when balance ≤ it — credits

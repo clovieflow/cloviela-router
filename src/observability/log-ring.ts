@@ -4,6 +4,7 @@
  * snapshot and then subscribes over SSE (`console/observability/logs.ts`); nothing
  * here touches the database — restarts clear the tail by design.
  */
+import { redactTelemetryValue } from "./redaction";
 
 export const CONSOLE_LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
 
@@ -75,10 +76,16 @@ const listeners = new Set<(event: ConsoleLogEvent) => void>();
 
 /** Single append path: truncate, bound the ring, then fan out to subscribers. */
 function appendLine(line: Omit<ConsoleLogLine, "ts" | "msg"> & { readonly msg: string }): void {
+  const safe = redactTelemetryValue(line);
+  if (safe === null || typeof safe !== "object" || Array.isArray(safe)) return;
+  const message = "msg" in safe && typeof safe.msg === "string"
+    ? safe.msg
+    : "[unserializable message]";
   const stored: ConsoleLogLine = {
     ts: new Date().toISOString(),
     ...line,
-    msg: line.msg.length > MAX_MSG ? `${line.msg.slice(0, MAX_MSG)}…` : line.msg,
+    ...safe,
+    msg: message.length > MAX_MSG ? `${message.slice(0, MAX_MSG)}…` : message,
   };
   lines.push(stored);
   if (lines.length > CAPACITY) lines.splice(0, lines.length - CAPACITY);

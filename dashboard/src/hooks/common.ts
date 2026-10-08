@@ -6,6 +6,7 @@ import type {
   AuditEntry,
   AuditListPage,
 
+  FlatModelCatalogEntry,
   ModelAliasRow,
   ModelAbuseBan,
   ModelCatalogEntry,
@@ -247,6 +248,42 @@ export function assertModels(value: unknown): ModelCatalogEntry[] {
       throw invalidResponse("Invalid model response");
     }
     return model as unknown as ModelCatalogEntry;
+  });
+}
+
+/**
+ * Validates the flattened catalog envelope from `/providers/models/flat`.
+ *
+ * This is NOT the same shape as {@link assertModels}: the flat endpoint wraps
+ * each row as `{providerId, providerLabel, modelId, qualified, entry, kind}`
+ * where `entry` is the nested catalog entry. Running the nested validator over
+ * the envelope would pass only by accident (the envelope happens to carry a
+ * `modelId`) and would then hand consumers an object with no `route`,
+ * `contextLimit`, or capability flags — which is exactly how a capability
+ * filter silently matches nothing. Validating the real shape here makes the
+ * difference explicit instead of a runtime surprise.
+ */
+export function assertFlatModelCatalog(value: unknown): FlatModelCatalogEntry[] {
+  if (!Array.isArray(value)) throw invalidResponse("Invalid model catalog response");
+  return value.map((row) => {
+    if (
+      !isRecord(row) ||
+      typeof row.providerId !== "string" ||
+      typeof row.providerLabel !== "string" ||
+      typeof row.modelId !== "string" ||
+      typeof row.qualified !== "string" ||
+      !isRecord(row.entry) ||
+      typeof row.entry.modelId !== "string" ||
+      typeof row.entry.route !== "string" ||
+      typeof row.entry.provider !== "string"
+    ) {
+      throw invalidResponse("Invalid model catalog response");
+    }
+    const kind = row.kind;
+    if (kind !== "model" && kind !== "alias" && kind !== "combo") {
+      throw invalidResponse("Invalid model catalog response");
+    }
+    return { ...row, kind } as unknown as FlatModelCatalogEntry;
   });
 }
 

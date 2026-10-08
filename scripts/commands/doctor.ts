@@ -11,6 +11,10 @@ import {
 } from "../internal/env";
 import type { ProbeResult } from "../internal/env";
 import { resolveDataDir, resolveDbMode } from "../../src/persistence/db-mode";
+import { resolveBindHost, resolvePort } from "../../src/config";
+import { bootDatabase, closeDb } from "../../src/persistence/postgres";
+import { consoleLockouts } from "../../src/persistence/schema";
+import { eq, or } from "drizzle-orm";
 
 interface DoctorConfig {
   envPath: string;
@@ -44,19 +48,13 @@ async function resetLockout(args: readonly string[]): Promise<void> {
     process.exit(1);
   }
 
-  const env = await readEnvFile(ENV_PATH);
-  const databaseUrl = env.DATABASE_URL ?? process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    console.error("✗ DATABASE_URL is not set; cannot reach the lockout table.");
-    process.exit(1);
+  const env = { ...(await readEnvFile(ENV_PATH)), ...process.env };
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== undefined && process.env[key] === undefined) process.env[key] = value;
   }
-  process.env.DATABASE_URL = databaseUrl;
 
-  const { getDb, closeDb } = await import("../../src/persistence/postgres");
-  const { consoleLockouts } = await import("../../src/persistence/schema");
-  const { eq, or } = await import("drizzle-orm");
 
-  const db = getDb();
+  const db = (await bootDatabase()).db;
   try {
     if (all) {
       const cleared = await db.delete(consoleLockouts).returning({ ip: consoleLockouts.ip });
@@ -84,10 +82,12 @@ async function resetLockout(args: readonly string[]): Promise<void> {
 
 async function probeReadiness(port: number, timeoutMs: number): Promise<ProbeResult> {
   const controller = new AbortController();
+  const bindHost = resolveBindHost();
+  const host = bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost === "::" ? "[::1]" : bindHost.includes(":") ? `[${bindHost}]` : bindHost;
   const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(`http://localhost:${port}/health/ready`, {
+    const response = await fetch(`http://${host}:${port}/health/ready`, {
       signal: controller.signal,
     });
 
@@ -112,7 +112,7 @@ async function doctor(): Promise<void> {
     return;
   }
 
-  console.log("🩺 Cartethyia Health Check\n");
+  console.log("🩺 Rikka Router Health Check\n");
   console.log(`🖥️  Host platform: ${getLocalPlatform()}`);
 
   // Step 1: Check .env exists
@@ -127,8 +127,8 @@ async function doctor(): Promise<void> {
   // Step 2: Check required environment variables. DATABASE_URL is required in
   // full mode only; lite keeps its database in the data dir. Redis is never
   // required — unset means the in-memory backend.
-  const envVars = await readEnvFile(config.envPath);
-  const dbMode = resolveDbMode({ ...process.env, ...envVars });
+  const envVars = { ...(await readEnvFile(config.envPath)), ...process.env };
+  const dbMode = resolveDbMode(envVars);
   const required =
     dbMode === "lite"
       ? ["CARTETHYIA_ENCRYPTION_KEY"]
@@ -159,7 +159,7 @@ async function doctor(): Promise<void> {
   // Step 3: Check database. Full mode probes the TCP service; lite verifies
   // the data dir is writable (the PGlite driver creates it at boot too).
   if (dbMode === "lite") {
-    const pgliteDir = join(resolveDataDir({ ...process.env, ...envVars }), "pglite");
+    const pgliteDir = join(resolveDataDir(envVars), "pglite");
     try {
       mkdirSync(pgliteDir, { recursive: true });
       accessSync(pgliteDir, constants.W_OK);
@@ -222,8 +222,8 @@ async function doctor(): Promise<void> {
   // Step 5: Check application readiness
   console.log("🏥 Application Readiness");
   // Use the same explicit PORT resolution as the application.
-  const port = Number(envVars.PORT ?? process.env.PORT ?? "12800");
-  console.log(`  Checking http://localhost:${port}/health/ready...`);
+  const port = resolvePort();
+  console.log(`  Checking local listener on port ${port}/health/ready...`);
 
   const readinessResult = await probeReadiness(port, config.probeTimeoutMs);
   if (readinessResult.success) {

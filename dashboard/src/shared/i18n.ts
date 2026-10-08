@@ -1,0 +1,911 @@
+/**
+ * Console localization: Indonesian is the primary operational language.
+ *
+ * ── Why a key catalogue instead of DOM translation ─────────────────────────
+ * Every string a component renders comes from `t("key")`, so a missing
+ * translation is a TypeScript error rather than a silent English fallback
+ * discovered in production, and nothing rewrites the DOM after render (a
+ * MutationObserver approach would break React's reconciliation, leak the
+ * observer, and translate operator data as well as chrome).
+ *
+ * ── Scope, stated honestly ─────────────────────────────────────────────────
+ * This catalogue covers the Rikka surfaces this change introduces: navigation,
+ * page headers, the new screens (onboarding, route simulator, health, help,
+ * about, not-found, system error), and the shared state/action vocabulary.
+ *
+ * The pre-existing Cartethyia pages (Providers, Usage, Quota, Proxy, Model Lab,
+ * Combos, CLI Tools, Settings internals, and every dialog inside them) still
+ * render their original English copy. They are functional and unchanged; their
+ * strings are NOT translated yet. `LOCALIZATION_STATUS` below reports that gap
+ * as data so the About screen can state it to the operator instead of implying
+ * full coverage.
+ *
+ * Adding a language: extend `MESSAGES` with the same keys. `MessageKey` is
+ * derived from the Indonesian table, so a new table that misses a key fails to
+ * typecheck.
+ */
+
+export const LOCALES = ["id", "en"] as const;
+export type ConsoleLocale = (typeof LOCALES)[number];
+
+/** localStorage key for the operator's language preference. */
+export const CONSOLE_LOCALE_KEY = "console-locale";
+
+export const LOCALE_LABELS: Readonly<Record<ConsoleLocale, string>> = {
+  id: "Bahasa Indonesia",
+  en: "English",
+};
+
+const ID_MESSAGES = {
+  // ── Shell / navigation ────────────────────────────────────────────────────
+  "nav.group.main": "Utama",
+  "nav.group.control": "Kendali",
+  "nav.group.system": "Sistem",
+  "nav.overview": "Ringkasan",
+  "nav.onboarding": "Panduan Awal",
+  "nav.usage": "Penggunaan",
+  "nav.providers": "Provider",
+  "nav.models": "Model",
+  "nav.routing": "Routing",
+  "nav.simulator": "Simulator Rute",
+  "nav.quota": "Kuota",
+  "nav.apiKeys": "Kunci API",
+  "nav.logs": "Log",
+  "nav.health": "Kesehatan",
+  "nav.networks": "Jaringan",
+  "nav.studio": "Studio Model",
+  "nav.settings": "Pengaturan",
+  "nav.help": "Bantuan",
+  "nav.about": "Tentang",
+  "nav.more": "Lainnya",
+  "nav.open": "Buka navigasi",
+  "nav.close": "Tutup navigasi",
+  "nav.commandPalette": "Palet perintah",
+  "nav.searchPages": "Cari halaman…",
+  "nav.noMatches": "Tidak ada halaman yang cocok.",
+  "nav.signOut": "Keluar",
+  "nav.signedInAs": "Masuk sebagai",
+
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  "theme.label": "Tema",
+  "theme.night": "Rikka Night",
+  "theme.day": "Rikka Day",
+  "theme.system": "Ikuti Sistem",
+  "theme.systemHint": "Mengikuti preferensi gelap/terang sistem operasi",
+  "theme.choose": "Pilih tema",
+  "theme.applied": "Tema {name} diterapkan",
+
+  // ── Language ──────────────────────────────────────────────────────────────
+  "language.label": "Bahasa",
+  "language.choose": "Pilih bahasa antarmuka",
+  "language.applied": "Bahasa antarmuka diubah ke {name}",
+
+  // ── Shared actions ────────────────────────────────────────────────────────
+  "action.save": "Simpan",
+  "action.saving": "Menyimpan…",
+  "action.cancel": "Batal",
+  "action.close": "Tutup",
+  "action.retry": "Coba lagi",
+  "action.retrying": "Mencoba ulang…",
+  "action.refresh": "Muat ulang",
+  "action.refreshing": "Memuat ulang…",
+  "action.copy": "Salin",
+  "action.copied": "Tersalin",
+  "action.copyFailed": "Gagal menyalin",
+  "action.delete": "Hapus",
+  "action.edit": "Ubah",
+  "action.create": "Buat",
+  "action.back": "Kembali",
+  "action.next": "Lanjut",
+  "action.skip": "Lewati",
+  "action.done": "Selesai",
+  "action.continue": "Lanjutkan",
+  "action.open": "Buka",
+  "action.view": "Lihat",
+  "action.search": "Cari",
+  "action.filter": "Filter",
+  "action.clear": "Bersihkan",
+  "action.reset": "Setel ulang",
+
+  // ── Shared state vocabulary ───────────────────────────────────────────────
+  "state.loading": "Memuat data…",
+  "state.error.title": "Gagal memuat data",
+  "state.error.retryHint": "Periksa koneksi ke gateway lalu coba lagi.",
+  "state.empty.title": "Belum ada data",
+  "state.empty.message": "Belum ada yang bisa ditampilkan di sini.",
+  "state.offline": "Gateway tidak dapat dihubungi",
+  "state.forbidden": "Sesi ini tidak memiliki izin untuk data tersebut.",
+  "state.notFound": "Data yang diminta tidak ditemukan.",
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  "login.title": "Konsol Rikka",
+  "login.subtitle": "Masuk untuk mengelola routing dan provider gateway AI",
+  "login.username": "Nama pengguna",
+  "login.password": "Kata sandi",
+  "login.showPassword": "Tampilkan kata sandi",
+  "login.hidePassword": "Sembunyikan kata sandi",
+  "login.submit": "Masuk",
+  "login.pending": "Mengautentikasi…",
+  "login.failed": "Autentikasi gagal. Periksa kembali kredensial Anda.",
+  "login.networkError": "Terjadi gangguan jaringan. Periksa koneksi lalu coba lagi.",
+  "login.lockedOut":
+    "Terlalu banyak percobaan gagal. Akses dari alamat ini dikunci sementara.",
+  "login.rateLimited": "Terlalu banyak percobaan masuk. Tunggu sebentar lalu coba lagi.",
+  "login.checkingSetup": "Memeriksa penyiapan konsol…",
+  "login.artAlt": "Ilustrasi Rikka di lingkungan senja yang tenang",
+
+  // ── Onboarding ────────────────────────────────────────────────────────────
+  "onboarding.title": "Panduan Awal",
+  "onboarding.subtitle":
+    "Langkah berurutan sampai gateway siap menerima permintaan nyata",
+  "onboarding.progress": "{done} dari {total} langkah selesai",
+  "onboarding.complete": "Gateway siap dipakai",
+  "onboarding.completeHint":
+    "Semua langkah wajib sudah terpenuhi. Uji klien di bawah untuk membuktikan permintaan nyata.",
+  "onboarding.step.admin": "Akun administrator",
+  "onboarding.step.admin.done": "Administrator konsol sudah dibuat.",
+  "onboarding.step.admin.todo": "Belum ada administrator konsol.",
+  "onboarding.step.provider": "Provider terhubung",
+  "onboarding.step.provider.done": "Provider aktif dengan akun terdaftar sudah ada.",
+  "onboarding.step.provider.todo": "Hubungkan minimal satu provider beserta akunnya.",
+  "onboarding.step.model": "Model tersedia",
+  "onboarding.step.model.done": "Model siap dirutekan sudah terdaftar.",
+  "onboarding.step.model.todo": "Daftarkan minimal satu model yang bisa dirutekan.",
+  "onboarding.step.key": "Kunci API diterbitkan",
+  "onboarding.step.key.done": "Kunci API aktif sudah diterbitkan.",
+  "onboarding.step.key.todo": "Terbitkan minimal satu kunci API untuk klien.",
+  "onboarding.step.request": "Permintaan pertama tercatat",
+  "onboarding.step.request.done": "Permintaan sudah tercatat pada periode ini.",
+  "onboarding.step.request.todo": "Kirim satu permintaan uji untuk membuktikan alur end-to-end.",
+  "onboarding.readinessCaveat":
+    "Hijau berarti konfigurasi lengkap, bukan janji setiap permintaan berhasil. Model yang tidak mendukung kapabilitas yang diminta (tool, gambar, audio) tetap bisa ditolak saat dispatch — itu keputusan routing, bukan kegagalan kesiapan.",
+  "onboarding.blocked": "Menunggu langkah sebelumnya",
+  "onboarding.go": "Buka",
+  "onboarding.artAlt": "Rikka menyambut di depan gerbang",
+  "onboarding.testClient": "Uji dari klien Anda",
+  "onboarding.testClientHint":
+    "Jalankan perintah ini dari mesin Anda. Kunci hanya ditampilkan sekali saat dibuat, jadi ganti {key} dengan kunci milik Anda.",
+  "onboarding.usingFallback":
+    "Gateway ini belum menyediakan endpoint kesiapan; kemajuan dihitung sementara dari endpoint yang ada.",
+  "onboarding.refresh": "Periksa ulang kemajuan",
+  "onboarding.lastChecked": "Terakhir diperiksa {time}",
+
+  // ── Overview ──────────────────────────────────────────────────────────────
+  "overview.title": "Ringkasan",
+  "overview.subtitle": "Kesiapan gateway, kapasitas, dan metrik langsung",
+  "overview.readiness": "Kesiapan Gateway",
+  "overview.quickActions": "Aksi cepat",
+  "overview.recentRequests": "Permintaan terbaru",
+  "overview.artAlt": "Rikka berdiri di depan gerbang gateway",
+
+  // ── Health ────────────────────────────────────────────────────────────────
+  "health.title": "Kesehatan",
+  "health.subtitle": "Proses, penyimpanan, gateway, konektivitas, dan runtime",
+  "health.overall": "Status keseluruhan",
+  "health.status.healthy": "Sehat",
+  "health.status.degraded": "Terdegradasi",
+  "health.status.unhealthy": "Tidak sehat",
+  "health.process": "Proses",
+  "health.storage": "Penyimpanan",
+  "health.gateway": "Gateway",
+  "health.connectivity": "Konektivitas",
+  "health.runtime": "Runtime",
+  "health.database": "Basis data",
+  "health.redis": "Redis",
+  "health.connected": "Terhubung",
+  "health.disconnected": "Terputus",
+  "health.uptime": "Waktu aktif",
+  "health.version": "Versi gateway",
+  "health.pid": "PID",
+  "health.platform": "Platform",
+  "health.cpuCores": "Inti CPU",
+  "health.requests": "Permintaan diproses",
+  "health.errors": "Kesalahan",
+  "health.latency": "Latensi rata-rata",
+  "health.latencyP95": "Latensi p95",
+  "health.memory": "Memori",
+  "health.tokensPerSec": "Token per detik",
+  "health.cacheHit": "Rasio cache",
+  "health.readinessProbe": "Probe kesiapan publik",
+  "health.readinessReady": "Siap menerima lalu lintas",
+  "health.readinessNotReady": "Belum siap: {reason}",
+  "health.remediation": "Tindakan yang disarankan",
+  "health.remediation.db":
+    "Basis data tidak menjawab. Periksa DATABASE_URL dan status server PostgreSQL, lalu muat ulang halaman ini.",
+  "health.remediation.redis":
+    "Redis terputus. Mode Lite tetap berjalan tanpa Redis; untuk mode Full, jalankan kembali layanan Redis.",
+  "health.remediation.degraded":
+    "Gateway berjalan dengan kapasitas terbatas. Periksa koneksi provider dan log konsol.",
+  "health.remediation.unhealthy":
+    "Gateway tidak dapat melayani permintaan. Periksa log konsol dan status basis data sebelum melanjutkan.",
+  "health.remediation.none": "Tidak ada tindakan yang diperlukan.",
+  "health.artAlt": "Rikka memeriksa kondisi gateway",
+  "health.artUnavailable":
+    "Sebagian ilustrasi tidak tersedia di build ini. Antarmuka tetap berfungsi penuh.",
+
+  // ── Models ────────────────────────────────────────────────────────────────
+  "models.title": "Model",
+  "models.subtitle": "Katalog, filter kapabilitas, dan kelola alias",
+  "models.search": "Cari model…",
+  "models.searchHint": "Cari berdasarkan nama model, provider, atau alias",
+  "models.count": "{count} model",
+  "models.countFiltered": "{shown} dari {total} model",
+  "models.noResults": "Tidak ada model yang cocok dengan filter ini.",
+  "models.clearFilters": "Bersihkan filter",
+  "models.aliasSection": "Alias Model",
+  "models.aliasSectionHint":
+    "Nama pendek yang dipetakan ke model nyata. Klien mengirim alias, gateway meneruskan model target.",
+  "models.aliasNew": "Alias baru",
+  "models.aliasEdit": "Ubah alias",
+  "models.aliasName": "Nama alias",
+  "models.aliasTarget": "Model target",
+  "models.aliasEmpty": "Belum ada alias",
+  "models.aliasEmptyHint":
+    "Alias memudahkan pergantian model tanpa mengubah konfigurasi klien.",
+  "models.aliasCreated": "Alias dibuat",
+  "models.aliasUpdated": "Alias diperbarui",
+  "models.aliasDeleted": "Alias dihapus",
+  "models.aliasDeleteConfirm": "Hapus alias \"{name}\"? Klien yang memakainya akan gagal sampai diperbarui.",
+  "models.aliasValidation.name": "Nama alias wajib diisi.",
+  "models.aliasValidation.target": "Model target wajib dipilih.",
+  "models.aliasValidation.duplicate": "Alias \"{name}\" sudah ada.",
+  "models.capability": "Kapabilitas",
+  "models.capability.reasoning": "Reasoning",
+  "models.capability.toolCall": "Tool call",
+  "models.capability.vision": "Vision",
+  "models.capability.document": "Dokumen",
+  "models.capability.audio": "Audio",
+  "models.capability.media": "Media",
+  "models.column.model": "Model",
+  "models.column.provider": "Provider",
+  "models.column.route": "Rute",
+  "models.column.limits": "Batas konteks",
+  "models.column.capabilities": "Kapabilitas",
+  "models.column.status": "Status",
+  "models.enabled": "Aktif",
+  "models.disabled": "Nonaktif",
+  "models.artAlt": "Rikka menyusun buku-buku model",
+  "models.combosLink": "Kelola combo dan urutan rute",
+
+  // ── Routing ───────────────────────────────────────────────────────────────
+  "routing.title": "Routing",
+  "routing.subtitle": "Kebijakan per provider, failover, dan batas penerimaan",
+  "routing.artAlt": "Rikka memetakan jalur routing bercabang",
+  "routing.openSimulator": "Buka simulator rute",
+
+  // ── Route simulator ───────────────────────────────────────────────────────
+  "simulator.title": "Simulator Rute",
+  "simulator.subtitle":
+    "Evaluasi kebijakan secara read-only — tidak mengirim permintaan ke provider",
+  "simulator.readOnlyBadge": "Read-only",
+  "simulator.readOnlyNotice":
+    "Simulator tidak mengirim permintaan ke provider, tidak memesan slot konkurensi, dan tidak mengubah kuota, cooldown, atau status akun.",
+  "simulator.model": "Model atau alias",
+  "simulator.modelHint": "Contoh: claude-opus-5 atau alias yang Anda buat",
+  "simulator.endpoint": "Keluarga endpoint",
+  "simulator.run": "Jalankan simulasi",
+  "simulator.running": "Mengevaluasi…",
+  "simulator.result": "Hasil evaluasi",
+  "simulator.selected": "Kandidat terpilih",
+  "simulator.selectedNone": "Tidak ada kandidat yang memenuhi syarat",
+  "simulator.notDeterministic":
+    "Pemilihan tidak deterministik pada kebijakan ini: kandidat terpilih adalah hasil evaluasi saat ini, bukan jaminan dispatch berikutnya.",
+  "simulator.candidates": "Kandidat akun",
+  "simulator.candidatesCount": "{eligible} dari {total} kandidat memenuhi syarat",
+  "simulator.column.account": "Akun",
+  "simulator.column.provider": "Provider",
+  "simulator.column.eligible": "Memenuhi syarat",
+  "simulator.column.reason": "Alasan",
+  "simulator.column.cooldown": "Cooldown",
+  "simulator.eligible": "Ya",
+  "simulator.ineligible": "Tidak",
+  "simulator.reason.none": "—",
+  "simulator.notes": "Catatan",
+  "simulator.validation.model": "Masukkan nama model atau alias terlebih dahulu.",
+  "simulator.outcome.dispatchable": "Siap didispatch",
+  "simulator.outcome.accounts_unavailable": "Tidak ada akun yang memenuhi syarat",
+  "simulator.outcome.accounts_rate_limited":
+    "Semua akun sedang cooldown — permintaan langsung akan dijawab 429",
+  "simulator.outcome.service_kind_unsupported":
+    "Tidak ada model yang melayani keluarga endpoint ini",
+  "simulator.rotation.title": "Pemilihan tidak deterministik",
+  "simulator.rotation.body":
+    "Kebijakan ini memakai rotasi, jadi kandidat pertama ditentukan saat dispatch. Daftar di bawah adalah urutan kandidat, bukan jaminan penerima berikutnya.",
+  "simulator.rotation.active": "Rotasi aktif",
+  "simulator.fusion.title": "Panel fusion",
+  "simulator.fusion.body":
+    "Semua anggota panel berjalan paralel lalu dinilai oleh judge. Tidak ada satu kandidat tunggal.",
+  "simulator.fusion.judge": "Judge",
+  "simulator.fusion.panel": "Panel",
+  "simulator.unmatched.title": "Anggota combo tanpa kandidat",
+  "simulator.unmatched.body":
+    "Anggota berikut tidak menghasilkan kandidat apa pun, jadi tidak akan pernah dipilih:",
+  "simulator.resolved": "Resolusi",
+  "simulator.resolutionChain": "Rantai alias",
+  "simulator.revision": "Revisi snapshot",
+  "simulator.surface": "Surface",
+  "simulator.strategy": "Strategi",
+  "simulator.strategySource.combo": "dari combo",
+  "simulator.strategySource.provider": "dari provider",
+  "simulator.strategySource.default": "default",
+  "simulator.column.model": "Model",
+  "simulator.column.wire": "Protokol",
+  "simulator.column.priority": "Urutan",
+  "simulator.column.quota": "Kuota",
+  "simulator.column.inflight": "Inflight",
+  "simulator.quota.ok": "Cukup",
+  "simulator.quota.below_floor": "Di bawah batas",
+  "simulator.quota.unknown": "Tidak diketahui",
+  "simulator.quota.disabled": "Batas nonaktif",
+  "simulator.reason.healthy": "Aktif dan memenuhi syarat",
+  "simulator.reason.cooldown": "Cooldown sementara",
+  "simulator.reason.cooldown_hard": "Cooldown keras",
+  "simulator.reason.model_cooldown": "Cooldown per model",
+  "simulator.reason.credit_floor_reached": "Mencapai batas kredit",
+  "simulator.reason.locked": "Terkunci",
+  "simulator.reason.disabled": "Dinonaktifkan",
+  "simulator.reason.service_kind_mismatch": "Tidak melayani endpoint ini",
+  "simulator.cooldownUntil": "Sampai {time}",
+  "simulator.modelCooldownUntil": "Model sampai {time}",
+  "simulator.readOnlyConfirmed": "Evaluasi read-only terkonfirmasi",
+  "simulator.unavailable.title": "Simulator belum tersedia",
+  "simulator.unavailable.message":
+    "Gateway ini belum menyediakan endpoint simulasi. UI sudah siap dan akan aktif begitu endpoint terpasang.",
+  "simulator.unavailable.endpoint": "Endpoint yang dipanggil: {path}",
+  "simulator.empty": "Jalankan simulasi untuk melihat kandidat dan alasan eksklusinya.",
+  "simulator.artAlt": "Rikka menelusuri peta rute",
+
+  // ── Not found ─────────────────────────────────────────────────────────────
+  "notFound.title": "Halaman tidak ditemukan",
+  "notFound.message":
+    "Alamat {path} tidak ada di konsol ini. Periksa kembali tautannya atau kembali ke halaman ringkasan.",
+  "notFound.goHome": "Kembali ke Ringkasan",
+  "notFound.goBack": "Kembali ke halaman sebelumnya",
+  "notFound.publicHint": "Halaman publik: kembali ke beranda atau masuk ke konsol.",
+  "notFound.artAlt": "Rikka menunjuk jalan yang belum ada",
+
+  // ── System error ──────────────────────────────────────────────────────────
+  "systemError.title": "Terjadi kesalahan pada konsol",
+  "systemError.message":
+    "Tampilan ini gagal dirender. Tidak ada data Anda yang hilang — halaman lain tetap dapat dipakai.",
+  "systemError.diagnosticId": "ID diagnostik",
+  "systemError.copyId": "Salin ID diagnostik",
+  "systemError.reload": "Muat ulang konsol",
+  "systemError.goHome": "Kembali ke Ringkasan",
+  "systemError.details": "Detail teknis (untuk laporan)",
+  "systemError.artAlt": "Rikka menenangkan keadaan setelah gangguan",
+  "systemError.leakNotice":
+    "Detail di bawah hanya berisi pesan kesalahan antarmuka, bukan kredensial atau data permintaan.",
+
+  // ── Help ──────────────────────────────────────────────────────────────────
+  "help.title": "Bantuan",
+  "help.subtitle": "Panduan penyiapan, contoh klien, dan penanganan masalah",
+  "help.quickstart": "Mulai cepat",
+  "help.quickstartHint":
+    "Urutan yang terbukti: buat provider, daftarkan model, terbitkan kunci, lalu uji permintaan.",
+  "help.endpoints": "Endpoint gateway",
+  "help.endpointsHint":
+    "Semua endpoint memakai kunci API yang sama. Ganti {key} dengan kunci Anda.",
+  "help.clients": "Contoh klien",
+  "help.troubleshooting": "Penanganan masalah",
+  "help.trouble.auth": "401 Unauthorized",
+  "help.trouble.auth.fix":
+    "Kunci salah, sudah dicabut, atau kedaluwarsa. Buat kunci baru di halaman Kunci API lalu ulangi.",
+  "help.trouble.noProvider": "429 atau 503 tanpa provider tersedia",
+  "help.trouble.noProvider.fix":
+    "Semua akun sedang cooldown, kehabisan kuota, atau dinonaktifkan. Periksa halaman Kuota dan Kesehatan.",
+  "help.trouble.model": "Model tidak ditemukan",
+  "help.trouble.model.fix":
+    "Model belum terdaftar atau dinonaktifkan pada provider mana pun. Daftarkan di halaman Model atau tambahkan alias.",
+  "help.trouble.stream": "Streaming terputus di tengah",
+  "help.trouble.stream.fix":
+    "Provider menutup koneksi sebelum selesai. Lihat detail permintaan di halaman Penggunaan untuk status akhir dan kategori kesalahan.",
+  "help.copyCommand": "Salin perintah",
+  "help.copyEndpoint": "Salin endpoint",
+  "help.artAlt": "Rikka menyiapkan panduan di meja kerja",
+  "help.docsLink": "Dokumentasi proyek",
+
+  // ── About ─────────────────────────────────────────────────────────────────
+  "about.title": "Tentang",
+  "about.subtitle": "Lisensi, atribusi, versi, dan catatan fan",
+  "about.version": "Versi konsol",
+  "about.gatewayVersion": "Versi gateway",
+  "about.runtime": "Runtime",
+  "about.license": "Lisensi",
+  "about.licenseBody":
+    "Kode sumber proyek ini dilisensikan di bawah GNU General Public License v3.0 (GPL-3.0-only). Anda berhak memakai, mempelajari, mengubah, dan menyebarkan ulang kode ini dengan syarat yang sama.",
+  "about.upstream": "Proyek hulu",
+  "about.upstreamBody":
+    "Proyek ini adalah fork. Kode asli berasal dari {repo}, dan hak cipta serta atribusi hulu dipertahankan.",
+  "about.derivative": "Catatan perubahan fork",
+  "about.derivativeBody":
+    "Fork ini menambahkan tema Rikka, alur panduan awal, simulator rute, dan halaman operasional tambahan. Perilaku protokol, autentikasi, dan penyimpanan tetap mengikuti hulu.",
+  "about.fanNotice": "Catatan penggemar — tidak resmi",
+  "about.fanNoticeBody":
+    "Tema visual ini adalah karya penggemar tidak resmi. Karakter Rikka Takarada berasal dari SSSS.GRIDMAN dan haknya dipegang oleh pemegang hak masing-masing. Proyek ini tidak berafiliasi dengan, disponsori oleh, atau didukung oleh pemegang hak mana pun, dan tidak mengklaim hak komersial atas karakter tersebut.",
+  "about.localization": "Cakupan lokalisasi",
+  "about.localizationBody":
+    "Antarmuka ini berbahasa Indonesia sebagai bahasa utama, dengan dukungan bahasa Inggris penuh. Halaman operasional lama yang diwarisi dari hulu masih berbahasa Inggris dan belum diterjemahkan; lihat daftar di bawah agar tidak ada klaim cakupan yang berlebihan.",
+  "about.localizationGap": "Belum diterjemahkan: {pages}",
+  "about.artCredit": "Ilustrasi dibuat dengan GPT-Image-2 melalui OMP.",
+  "about.artManifest": "Manifest aset",
+  "about.artMissing": "{count} ilustrasi tidak ada di build ini dan tidak ditampilkan.",
+  "about.artAlt": "Rikka berdiri tenang di tepi sungai",
+
+  // ── Share (public) ────────────────────────────────────────────────────────
+  "share.enrollTitle": "Pendaftaran akses bersama",
+  "share.artAlt": "Rikka menyerahkan kunci akses",
+
+  // ── Banned / lockout ──────────────────────────────────────────────────────
+  "banned.title": "Akses dibatasi",
+  "banned.desc": "Kunci keamanan atau alamat asal tidak tepercaya",
+  "banned.body":
+    "Alamat ini dikunci sementara karena percobaan kredensial yang berulang atau header proxy yang tidak tepercaya.",
+  "banned.retryHint":
+    "Tunggu sampai kunci berakhir, lalu muat ulang halaman ini. Jangan ulangi percobaan masuk dari alamat yang sama.",
+  "banned.reload": "Muat ulang",
+
+  // ── Setup ─────────────────────────────────────────────────────────────────
+  "setup.title": "Penyiapan Konsol Rikka",
+  "setup.subtitle": "Buat akun administrator untuk gateway AI",
+  "setup.artAlt": "Rikka menyiapkan gerbang untuk pertama kali",
+} as const;
+
+export type MessageKey = keyof typeof ID_MESSAGES;
+
+const EN_MESSAGES: Readonly<Record<MessageKey, string>> = {
+  "nav.group.main": "Main",
+  "nav.group.control": "Control",
+  "nav.group.system": "System",
+  "nav.overview": "Overview",
+  "nav.onboarding": "Getting Started",
+  "nav.usage": "Usage",
+  "nav.providers": "Providers",
+  "nav.models": "Models",
+  "nav.routing": "Routing",
+  "nav.simulator": "Route Simulator",
+  "nav.quota": "Quota",
+  "nav.apiKeys": "API Keys",
+  "nav.logs": "Logs",
+  "nav.health": "Health",
+  "nav.networks": "Networks",
+  "nav.studio": "Model Studio",
+  "nav.settings": "Settings",
+  "nav.help": "Help",
+  "nav.about": "About",
+  "nav.more": "More",
+  "nav.open": "Open navigation",
+  "nav.close": "Close navigation",
+  "nav.commandPalette": "Command palette",
+  "nav.searchPages": "Search pages…",
+  "nav.noMatches": "No matching pages found.",
+  "nav.signOut": "Sign out",
+  "nav.signedInAs": "Signed in as",
+
+  "theme.label": "Theme",
+  "theme.night": "Rikka Night",
+  "theme.day": "Rikka Day",
+  "theme.system": "Follow System",
+  "theme.systemHint": "Follows the operating system's dark/light preference",
+  "theme.choose": "Choose theme",
+  "theme.applied": "{name} theme applied",
+
+  "language.label": "Language",
+  "language.choose": "Choose interface language",
+  "language.applied": "Interface language changed to {name}",
+
+  "action.save": "Save",
+  "action.saving": "Saving…",
+  "action.cancel": "Cancel",
+  "action.close": "Close",
+  "action.retry": "Retry",
+  "action.retrying": "Retrying…",
+  "action.refresh": "Refresh",
+  "action.refreshing": "Refreshing…",
+  "action.copy": "Copy",
+  "action.copied": "Copied",
+  "action.copyFailed": "Copy failed",
+  "action.delete": "Delete",
+  "action.edit": "Edit",
+  "action.create": "Create",
+  "action.back": "Back",
+  "action.next": "Next",
+  "action.skip": "Skip",
+  "action.done": "Done",
+  "action.continue": "Continue",
+  "action.open": "Open",
+  "action.view": "View",
+  "action.search": "Search",
+  "action.filter": "Filter",
+  "action.clear": "Clear",
+  "action.reset": "Reset",
+
+  "state.loading": "Loading data…",
+  "state.error.title": "Unable to load data",
+  "state.error.retryHint": "Check the connection to the gateway and try again.",
+  "state.empty.title": "Nothing here yet",
+  "state.empty.message": "There is nothing to show here yet.",
+  "state.offline": "The gateway could not be reached",
+  "state.forbidden": "This session is not permitted to read that data.",
+  "state.notFound": "The requested data was not found.",
+
+  "login.title": "Rikka Console",
+  "login.subtitle": "Sign in to manage AI gateway routing and providers",
+  "login.username": "Username",
+  "login.password": "Password",
+  "login.showPassword": "Show password",
+  "login.hidePassword": "Hide password",
+  "login.submit": "Sign in",
+  "login.pending": "Authenticating…",
+  "login.failed": "Authentication failed. Please check your credentials.",
+  "login.networkError": "A network error occurred. Check your connection and try again.",
+  "login.lockedOut": "Too many failed attempts. Access from this address is temporarily locked.",
+  "login.rateLimited": "Too many sign-in attempts. Wait a moment and try again.",
+  "login.checkingSetup": "Checking console setup…",
+  "login.artAlt": "Rikka illustration in a calm evening setting",
+
+  "onboarding.title": "Getting Started",
+  "onboarding.subtitle": "Step-by-step until the gateway serves real requests",
+  "onboarding.progress": "{done} of {total} steps complete",
+  "onboarding.complete": "Gateway ready",
+  "onboarding.completeHint":
+    "Every required step is satisfied. Test a client below to prove a real request.",
+  "onboarding.step.admin": "Administrator account",
+  "onboarding.step.admin.done": "The console administrator exists.",
+  "onboarding.step.admin.todo": "No console administrator exists yet.",
+  "onboarding.step.provider": "Provider connected",
+  "onboarding.step.provider.done": "Active providers with registered accounts exist.",
+  "onboarding.step.provider.todo": "Connect at least one provider with an account.",
+  "onboarding.step.model": "Models available",
+  "onboarding.step.model.done": "Models ready to route are registered.",
+  "onboarding.step.model.todo": "Register at least one routable model.",
+  "onboarding.step.key": "API key issued",
+  "onboarding.step.key.done": "An active API key has been issued.",
+  "onboarding.step.key.todo": "Issue at least one API key for a client.",
+  "onboarding.step.request": "First request recorded",
+  "onboarding.step.request.done": "Requests have been recorded this period.",
+  "onboarding.step.request.todo": "Send one test request to prove the end-to-end path.",
+  "onboarding.readinessCaveat":
+    "Green means the configuration is complete, not that every request will succeed. A model without the requested capability (tools, image, audio) can still be refused at dispatch — that is a routing decision, not a readiness failure.",
+  "onboarding.blocked": "Waiting on the previous step",
+  "onboarding.go": "Open",
+  "onboarding.artAlt": "Rikka welcoming at the gate",
+  "onboarding.testClient": "Test from your client",
+  "onboarding.testClientHint":
+    "Run this from your machine. A key is shown only once at creation, so replace {key} with your own.",
+  "onboarding.usingFallback":
+    "This gateway does not expose the readiness endpoint yet; progress is computed from existing endpoints as a stopgap.",
+  "onboarding.refresh": "Re-check progress",
+  "onboarding.lastChecked": "Last checked {time}",
+
+  "overview.title": "Overview",
+  "overview.subtitle": "Gateway readiness, capacity, and live metrics",
+  "overview.readiness": "Gateway Readiness",
+  "overview.quickActions": "Quick actions",
+  "overview.recentRequests": "Recent requests",
+  "overview.artAlt": "Rikka standing at the gateway",
+
+  "health.title": "Health",
+  "health.subtitle": "Process, storage, gateway, connectivity, and runtime",
+  "health.overall": "Overall status",
+  "health.status.healthy": "Healthy",
+  "health.status.degraded": "Degraded",
+  "health.status.unhealthy": "Unhealthy",
+  "health.process": "Process",
+  "health.storage": "Storage",
+  "health.gateway": "Gateway",
+  "health.connectivity": "Connectivity",
+  "health.runtime": "Runtime",
+  "health.database": "Database",
+  "health.redis": "Redis",
+  "health.connected": "Connected",
+  "health.disconnected": "Disconnected",
+  "health.uptime": "Uptime",
+  "health.version": "Gateway version",
+  "health.pid": "PID",
+  "health.platform": "Platform",
+  "health.cpuCores": "CPU cores",
+  "health.requests": "Requests handled",
+  "health.errors": "Errors",
+  "health.latency": "Average latency",
+  "health.latencyP95": "p95 latency",
+  "health.memory": "Memory",
+  "health.tokensPerSec": "Tokens per second",
+  "health.cacheHit": "Cache hit rate",
+  "health.readinessProbe": "Public readiness probe",
+  "health.readinessReady": "Ready to accept traffic",
+  "health.readinessNotReady": "Not ready: {reason}",
+  "health.remediation": "Recommended action",
+  "health.remediation.db":
+    "The database is not answering. Check DATABASE_URL and the PostgreSQL server, then reload this page.",
+  "health.remediation.redis":
+    "Redis is disconnected. Lite mode keeps running without Redis; in Full mode, restart the Redis service.",
+  "health.remediation.degraded":
+    "The gateway is running at reduced capacity. Check provider connectivity and the console log.",
+  "health.remediation.unhealthy":
+    "The gateway cannot serve requests. Check the console log and database status before continuing.",
+  "health.remediation.none": "No action required.",
+  "health.artAlt": "Rikka checking gateway condition",
+  "health.artUnavailable":
+    "Some illustrations are missing from this build. The interface remains fully functional.",
+
+  "models.title": "Models",
+  "models.subtitle": "Catalog, capability filters, and alias management",
+  "models.search": "Search models…",
+  "models.searchHint": "Search by model name, provider, or alias",
+  "models.count": "{count} models",
+  "models.countFiltered": "{shown} of {total} models",
+  "models.noResults": "No models match this filter.",
+  "models.clearFilters": "Clear filters",
+  "models.aliasSection": "Model Aliases",
+  "models.aliasSectionHint":
+    "Short names mapped to real models. Clients send the alias; the gateway forwards the target.",
+  "models.aliasNew": "New alias",
+  "models.aliasEdit": "Edit alias",
+  "models.aliasName": "Alias name",
+  "models.aliasTarget": "Target model",
+  "models.aliasEmpty": "No aliases yet",
+  "models.aliasEmptyHint": "Aliases let you swap models without changing client configuration.",
+  "models.aliasCreated": "Alias created",
+  "models.aliasUpdated": "Alias updated",
+  "models.aliasDeleted": "Alias deleted",
+  "models.aliasDeleteConfirm":
+    "Delete alias \"{name}\"? Clients using it will fail until they are updated.",
+  "models.aliasValidation.name": "Alias name is required.",
+  "models.aliasValidation.target": "A target model must be selected.",
+  "models.aliasValidation.duplicate": "Alias \"{name}\" already exists.",
+  "models.capability": "Capabilities",
+  "models.capability.reasoning": "Reasoning",
+  "models.capability.toolCall": "Tool call",
+  "models.capability.vision": "Vision",
+  "models.capability.document": "Document",
+  "models.capability.audio": "Audio",
+  "models.capability.media": "Media",
+  "models.column.model": "Model",
+  "models.column.provider": "Provider",
+  "models.column.route": "Route",
+  "models.column.limits": "Context limit",
+  "models.column.capabilities": "Capabilities",
+  "models.column.status": "Status",
+  "models.enabled": "Enabled",
+  "models.disabled": "Disabled",
+  "models.artAlt": "Rikka arranging model books",
+  "models.combosLink": "Manage combos and route order",
+
+  "routing.title": "Routing",
+  "routing.subtitle": "Per-provider policy, failover, and admission limits",
+  "routing.artAlt": "Rikka mapping branching routes",
+  "routing.openSimulator": "Open route simulator",
+
+  "simulator.title": "Route Simulator",
+  "simulator.subtitle": "Read-only policy evaluation — sends nothing to providers",
+  "simulator.readOnlyBadge": "Read-only",
+  "simulator.readOnlyNotice":
+    "The simulator dispatches nothing upstream, reserves no concurrency slot, and changes no quota, cooldown, or account state.",
+  "simulator.model": "Model or alias",
+  "simulator.modelHint": "For example: claude-opus-5, or an alias you created",
+  "simulator.endpoint": "Endpoint family",
+  "simulator.run": "Run simulation",
+  "simulator.running": "Evaluating…",
+  "simulator.result": "Evaluation result",
+  "simulator.selected": "Selected candidate",
+  "simulator.selectedNone": "No candidate is eligible",
+  "simulator.notDeterministic":
+    "Selection is not deterministic under this policy: the selected candidate reflects the current evaluation, not a guarantee for the next dispatch.",
+  "simulator.candidates": "Account candidates",
+  "simulator.candidatesCount": "{eligible} of {total} candidates eligible",
+  "simulator.column.account": "Account",
+  "simulator.column.provider": "Provider",
+  "simulator.column.eligible": "Eligible",
+  "simulator.column.reason": "Reason",
+  "simulator.column.cooldown": "Cooldown",
+  "simulator.eligible": "Yes",
+  "simulator.ineligible": "No",
+  "simulator.reason.none": "—",
+  "simulator.notes": "Notes",
+  "simulator.validation.model": "Enter a model or alias first.",
+  "simulator.outcome.dispatchable": "Ready to dispatch",
+  "simulator.outcome.accounts_unavailable": "No account is eligible",
+  "simulator.outcome.accounts_rate_limited":
+    "Every account is cooling down — a live request would answer 429",
+  "simulator.outcome.service_kind_unsupported": "No model serves this endpoint family",
+  "simulator.rotation.title": "Selection is not deterministic",
+  "simulator.rotation.body":
+    "This policy rotates, so the first candidate is decided at dispatch time. The list below is the candidate order, not a promise about the next recipient.",
+  "simulator.rotation.active": "Rotation active",
+  "simulator.fusion.title": "Fusion panel",
+  "simulator.fusion.body":
+    "Every panel member runs in parallel and a judge scores them. There is no single candidate.",
+  "simulator.fusion.judge": "Judge",
+  "simulator.fusion.panel": "Panel",
+  "simulator.unmatched.title": "Combo members with no candidates",
+  "simulator.unmatched.body":
+    "These members produced no candidate row at all, so they can never be selected:",
+  "simulator.resolved": "Resolved",
+  "simulator.resolutionChain": "Alias chain",
+  "simulator.revision": "Snapshot revision",
+  "simulator.surface": "Surface",
+  "simulator.strategy": "Strategy",
+  "simulator.strategySource.combo": "from combo",
+  "simulator.strategySource.provider": "from provider",
+  "simulator.strategySource.default": "default",
+  "simulator.column.model": "Model",
+  "simulator.column.wire": "Protocol",
+  "simulator.column.priority": "Order",
+  "simulator.column.quota": "Quota",
+  "simulator.column.inflight": "Inflight",
+  "simulator.quota.ok": "Sufficient",
+  "simulator.quota.below_floor": "Below floor",
+  "simulator.quota.unknown": "Unknown",
+  "simulator.quota.disabled": "Limit disabled",
+  "simulator.reason.healthy": "Active and eligible",
+  "simulator.reason.cooldown": "Soft cooldown",
+  "simulator.reason.cooldown_hard": "Hard cooldown",
+  "simulator.reason.model_cooldown": "Per-model cooldown",
+  "simulator.reason.credit_floor_reached": "Credit floor reached",
+  "simulator.reason.locked": "Locked",
+  "simulator.reason.disabled": "Disabled",
+  "simulator.reason.service_kind_mismatch": "Does not serve this endpoint",
+  "simulator.cooldownUntil": "Until {time}",
+  "simulator.modelCooldownUntil": "Model until {time}",
+  "simulator.readOnlyConfirmed": "Read-only evaluation confirmed",
+  "simulator.unavailable.title": "Simulator not available yet",
+  "simulator.unavailable.message":
+    "This gateway does not expose a simulation endpoint. The UI is ready and activates as soon as the endpoint is mounted.",
+  "simulator.unavailable.endpoint": "Endpoint called: {path}",
+  "simulator.empty": "Run a simulation to see candidates and their exclusion reasons.",
+  "simulator.artAlt": "Rikka tracing a route map",
+
+  "notFound.title": "Page not found",
+  "notFound.message":
+    "The address {path} does not exist in this console. Check the link or return to the overview.",
+  "notFound.goHome": "Back to Overview",
+  "notFound.goBack": "Go back",
+  "notFound.publicHint": "Public page: return to the landing page or sign in to the console.",
+  "notFound.artAlt": "Rikka pointing at a path that does not exist",
+
+  "systemError.title": "The console hit an error",
+  "systemError.message":
+    "This view failed to render. None of your data is lost — the other pages keep working.",
+  "systemError.diagnosticId": "Diagnostic ID",
+  "systemError.copyId": "Copy diagnostic ID",
+  "systemError.reload": "Reload console",
+  "systemError.goHome": "Back to Overview",
+  "systemError.details": "Technical details (for a report)",
+  "systemError.artAlt": "Rikka steady after a disruption",
+  "systemError.leakNotice":
+    "The details below contain only interface error messages — never credentials or request data.",
+
+  "help.title": "Help",
+  "help.subtitle": "Setup guide, client examples, and troubleshooting",
+  "help.quickstart": "Quick start",
+  "help.quickstartHint":
+    "The proven order: create a provider, register models, issue a key, then test a request.",
+  "help.endpoints": "Gateway endpoints",
+  "help.endpointsHint":
+    "Every endpoint uses the same API key. Replace {key} with your own.",
+  "help.clients": "Client examples",
+  "help.troubleshooting": "Troubleshooting",
+  "help.trouble.auth": "401 Unauthorized",
+  "help.trouble.auth.fix":
+    "The key is wrong, revoked, or expired. Create a new one on the API Keys page and retry.",
+  "help.trouble.noProvider": "429 or 503 with no provider available",
+  "help.trouble.noProvider.fix":
+    "Every account is cooling down, out of quota, or disabled. Check the Quota and Health pages.",
+  "help.trouble.model": "Model not found",
+  "help.trouble.model.fix":
+    "The model is not registered or enabled on any provider. Register it on the Models page or add an alias.",
+  "help.trouble.stream": "Stream cut off mid-response",
+  "help.trouble.stream.fix":
+    "The provider closed the connection before finishing. Open the request detail on the Usage page for the final status and error category.",
+  "help.copyCommand": "Copy command",
+  "help.copyEndpoint": "Copy endpoint",
+  "help.artAlt": "Rikka preparing a guide at a desk",
+  "help.docsLink": "Project documentation",
+
+  "about.title": "About",
+  "about.subtitle": "License, attribution, versions, and the fan notice",
+  "about.version": "Console version",
+  "about.gatewayVersion": "Gateway version",
+  "about.runtime": "Runtime",
+  "about.license": "License",
+  "about.licenseBody":
+    "This project's source code is licensed under the GNU General Public License v3.0 (GPL-3.0-only). You may use, study, modify, and redistribute it under the same terms.",
+  "about.upstream": "Upstream project",
+  "about.upstreamBody":
+    "This project is a fork. The original code comes from {repo}; upstream copyright and attribution are preserved.",
+  "about.derivative": "Fork change notice",
+  "about.derivativeBody":
+    "This fork adds the Rikka theme, a getting-started flow, a route simulator, and additional operational pages. Protocol, authentication, and storage behavior stay aligned with upstream.",
+  "about.fanNotice": "Unofficial fan theme",
+  "about.fanNoticeBody":
+    "This visual theme is unofficial fan work. Rikka Takarada is a character from SSSS.GRIDMAN, and her rights belong to the respective rightsholders. This project is not affiliated with, sponsored by, or endorsed by any rightsholder, and claims no commercial rights to the character.",
+  "about.localization": "Localization coverage",
+  "about.localizationBody":
+    "This interface is Indonesian-first with full English support. Legacy operational pages inherited from upstream still render English copy and are not translated yet; the list below keeps the claim honest.",
+  "about.localizationGap": "Not translated yet: {pages}",
+  "about.artCredit": "Artwork generated with GPT-Image-2 through OMP.",
+  "about.artManifest": "Asset manifest",
+  "about.artMissing": "{count} illustrations are missing from this build and are not displayed.",
+  "about.artAlt": "Rikka standing quietly by the river",
+
+  "share.enrollTitle": "Shared access enrollment",
+  "share.artAlt": "Rikka handing over an access key",
+
+  "banned.title": "Access Restricted",
+  "banned.desc": "Security policy lockout or untrusted origin address",
+  "banned.body":
+    "This address is temporarily locked out after repeated invalid credential attempts or untrusted proxy headers.",
+  "banned.retryHint":
+    "Wait for the lockout to expire, then reload this page. Do not keep retrying sign-in from the same address.",
+  "banned.reload": "Reload",
+
+  "setup.title": "Rikka Console Setup",
+  "setup.subtitle": "Create the administrator account for the AI gateway",
+  "setup.artAlt": "Rikka preparing the gateway for the first time",
+};
+
+const MESSAGES: Readonly<Record<ConsoleLocale, Readonly<Record<MessageKey, string>>>> = {
+  id: ID_MESSAGES,
+  en: EN_MESSAGES,
+};
+
+export function parseConsoleLocale(value: unknown): ConsoleLocale {
+  return value === "id" || value === "en" ? value : "id";
+}
+
+export function readConsoleLocale(fallback: ConsoleLocale = "id"): ConsoleLocale {
+  if (typeof window === "undefined" || !window.localStorage) return fallback;
+  try {
+    return parseConsoleLocale(window.localStorage.getItem(CONSOLE_LOCALE_KEY) ?? fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeConsoleLocale(locale: ConsoleLocale): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CONSOLE_LOCALE_KEY, locale);
+  } catch {
+    // Storage write error ignored — the in-memory choice still takes effect.
+  }
+}
+
+/**
+ * Renders one message, substituting `{name}` placeholders.
+ *
+ * An unknown placeholder is left literal rather than replaced with "undefined":
+ * a visible `{key}` in the UI is a bug report, while a silent empty string is
+ * a missing instruction an operator would never notice.
+ */
+export function translate(
+  locale: ConsoleLocale,
+  key: MessageKey,
+  params?: Readonly<Record<string, string | number>>,
+): string {
+  const template = MESSAGES[locale][key];
+  if (params === undefined) return template;
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    Object.hasOwn(params, name) ? String(params[name]) : match,
+  );
+}
+
+/**
+ * Pages that still render upstream English copy.
+ *
+ * Reported on the About screen so the localization gap is stated rather than
+ * implied away. Keys are route paths; values are the operator-facing names.
+ */
+export const UNTRANSLATED_SURFACES: readonly { readonly path: string; readonly name: string }[] = [
+  { path: "/providers", name: "Providers" },
+  { path: "/providers/:providerId", name: "Provider detail" },
+  { path: "/usage", name: "Usage" },
+  { path: "/quota", name: "Quota" },
+  { path: "/proxy", name: "Proxy & Requests" },
+  { path: "/combos", name: "Combos & Routes" },
+  { path: "/model-lab", name: "Model Lab" },
+  { path: "/cli-tools", name: "CLI Tools" },
+  { path: "/settings", name: "Settings internals" },
+  { path: "/console-log", name: "Console Log" },
+];

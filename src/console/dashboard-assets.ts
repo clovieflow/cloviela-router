@@ -52,13 +52,13 @@ export interface SocialMeta {
 
 /** Social card for the public enrollment page (`/share/*`). */
 export const SHARE_SOCIAL_META: SocialMeta = {
-  title: "Cartethyia — Bansos Token",
+  title: "Rikka Router — Akses bersama",
   description:
-    "Come and save your tokens 💖 Shared Cartethyia API key — Bansos Token with live quota, usage and model allowlist.",
-  image: "/og_bansos.webp",
-  imageWidth: 1760,
-  imageHeight: 576,
-  imageAlt: "Cartethyia Bansos Token — Come and save your tokens",
+    "Akses gateway pribadi dengan kuota, penggunaan nyata, dan model yang diizinkan. Tema penggemar tidak resmi SSSS.GRIDMAN.",
+  image: "/rikka/social.webp",
+  imageWidth: 1200,
+  imageHeight: 630,
+  imageAlt: "Rikka Router — gateway AI pribadi",
 };
 
 /** Sentinel-delimited block in the shared index document that carries the card. */

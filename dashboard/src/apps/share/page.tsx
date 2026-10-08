@@ -384,13 +384,22 @@ export function SharePage(): ReactElement {
           <a className="share-brand" href="/">
             <span className="share-brand-mark" aria-hidden="true">
               <img
-                src={`${import.meta.env.BASE_URL}favicon_love.webp`}
+                src={`${import.meta.env.BASE_URL}rikka/app-icon.webp`}
                 alt=""
                 width={34}
                 height={34}
+                loading="eager"
+                decoding="async"
+                onError={(event) => {
+                  // The mark is decorative: drop it rather than leave a broken
+                  // image frame. The brand text beside it still identifies the
+                  // page, and the generator's own file is the only acceptable
+                  // source for this slot.
+                  event.currentTarget.style.display = "none";
+                }}
               />
             </span>
-            <b>Cartethyia</b>
+            <b>Rikka Router</b>
           </a>
           <div className="share-topbar-actions">
             <GithubBadge className="share-github-badge" />
@@ -402,9 +411,9 @@ export function SharePage(): ReactElement {
                 setTheme(next);
                 writeConsoleTheme(next);
               }}
-              aria-label="Toggle theme"
+              aria-label="Ganti tema"
               aria-pressed={isDarkEffective(theme)}
-              title={isDarkEffective(theme) ? "Switch to light mode" : "Switch to dark mode"}
+              title={isDarkEffective(theme) ? "Ganti ke tema terang" : "Ganti ke tema gelap"}
             >
               {isDarkEffective(theme) ? <Sun size={15} /> : <Moon size={15} />}
             </button>
@@ -434,10 +443,27 @@ export function SharePage(): ReactElement {
         ) : data ? (
           <>
             <Card className="share-hud-card share-hero">
+              {/* Portrait column: the enrollment page is the one public surface
+                  where a recipient meets the product, so it carries the
+                  character art the console keeps behind auth. Decorative and
+                  aria-hidden — the policy below is the actual content. */}
+              <span className="share-hero-art" aria-hidden="true">
+                <img
+                  src={`${import.meta.env.BASE_URL}rikka/share.webp`}
+                  alt=""
+                  width={480}
+                  height={640}
+                  loading="lazy"
+                  decoding="async"
+                  onError={(event) => {
+                    event.currentTarget.parentElement?.remove();
+                  }}
+                />
+              </span>
               <p className="share-eyebrow">
-                {data.kind === "handoff" ? "SHARED ACCESS / KEY" : "SHARED ACCESS / ENROLLMENT"}
+                {data.kind === "handoff" ? "AKSES BERSAMA / KUNCI" : "AKSES BERSAMA / PENDAFTARAN"}
               </p>
-              <h1>{data.name || "Shared API access"}</h1>
+              <h1>{data.name || "Akses API bersama"}</h1>
               {data.kind === "handoff" ? (
                 <p className="share-hero-description">
                   The API key for this gateway, provided through a share link. It is subject to the

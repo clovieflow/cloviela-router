@@ -7,32 +7,32 @@
     <meta name="theme-color" content="#05070d" />
     <meta
       name="description"
-      content="One self-hosted gateway for OpenAI, Anthropic and 40 provider adapters. Route providers through one gateway with translation, failover and quotas."
+      content="Self-hosted Bun + Elysia gateway for OpenAI and Anthropic clients: one endpoint, protocol translation, failover, quotas, and an operator console."
     />
-    <link rel="icon" type="image/webp" href="/favicon.webp" />
+    <link rel="icon" type="image/webp" href="/rikka/favicon.webp" />
     <!-- cartethyia:social-meta:start -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Cartethyia — One Stop OpenAI &amp; Anthropic Proxy Router" />
+    <meta property="og:title" content="Rikka Router — Personal AI Gateway Console" />
     <meta
       property="og:description"
-      content="Self-hosted Bun + Elysia proxy router for OpenAI &amp; Anthropic clients. Route 40 providers through one gateway with translation, failover and quotas."
+      content="Self-hosted Bun + Elysia gateway for OpenAI and Anthropic clients: one endpoint, protocol translation, failover, quotas, and an operator console."
     />
-    <meta property="og:image" content="/og_image.webp" />
+    <meta property="og:image" content="/rikka/social.webp" />
     <meta property="og:image:type" content="image/webp" />
-    <meta property="og:image:width" content="1568" />
-    <meta property="og:image:height" content="513" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="Cartethyia — One Stop OpenAI &amp; Anthropic Proxy Router, Powered by Bun"
+      content="Rikka Router — a personal AI gateway console"
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Cartethyia — One Stop OpenAI &amp; Anthropic Proxy Router" />
+    <meta name="twitter:title" content="Rikka Router — Personal AI Gateway Console" />
     <meta
       name="twitter:description"
-      content="One self-hosted gateway for OpenAI, Anthropic and 40 provider adapters. Powered by Elysia + Bun."
+      content="One self-hosted gateway for OpenAI, Anthropic and the configured provider adapters. Powered by Elysia + Bun."
     />
-    <meta name="twitter:image" content="/og_image.webp" />
-    <meta name="twitter:image:alt" content="Cartethyia — One Stop OpenAI &amp; Anthropic Proxy Router" />
+    <meta name="twitter:image" content="/rikka/social.webp" />
+    <meta name="twitter:image:alt" content="Rikka Router — a personal AI gateway console" />
     <!-- cartethyia:social-meta:end -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,20 +41,24 @@
       href="https://fonts.googleapis.com/css2?family=Geist+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     />
     <style>
-      html { background: #05070d; }
+      html { background: #0b0f1a; }
       html[data-app="console"],
-      html[data-app="share"] { background: #fffdf8; }
+      html[data-app="share"] { background: #f7f5f2; }
       html[data-app="console"][data-theme="dark"],
-      html[data-app="share"][data-theme="dark"] { background: #08080b; }
-      @media (prefers-color-scheme: dark) {
-        html[data-app="console"][data-theme="system"],
-        html[data-app="share"][data-theme="system"] { background: #08080b; }
-      }
+      html[data-app="share"][data-theme="dark"] { background: #0b0f1a; }
     </style>
     <script>
-      // This bootstrap mirrors dashboard/src/lib/theme.ts because it must run
+      // This bootstrap mirrors dashboard/src/shared/theme.ts because it must run
       // before the selected app chunk loads. Keep the /console and /share
-      // predicates, storage keys, and accepted values in sync with TypeScript.
+      // predicates, storage keys, accepted values, and the system-resolution
+      // rule in sync with TypeScript.
+      //
+      // `data-theme` receives the RESOLVED palette (light|dark) so the
+      // stylesheet needs no prefers-color-scheme branch; `data-theme-choice`
+      // mirrors the operator's raw preference (system|light|dark) for the
+      // chooser. Resolving here is what prevents the first-paint flash: the
+      // old bootstrap wrote the literal "system", which no token block
+      // matched, so a dark-OS operator got a light palette until React mounted.
       (() => {
         const pathname = window.location.pathname;
         const isShare = pathname === "/share" || pathname.startsWith("/share/");
@@ -70,25 +74,43 @@
         colorSchemeMeta.content = isConsole || isShare ? "light dark" : "dark";
         document.head.appendChild(colorSchemeMeta);
         document.title = isShare
-          ? "Cartethyia — Shared access"
+          ? "Rikka Router — Shared access"
           : isConsole
-            ? "Cartethyia Console"
-            : "Cartethyia — One Stop OpenAI & Anthropic Proxy Router";
-        if (themeMeta) themeMeta.setAttribute("content", isConsole || isShare ? "#09090b" : "#05070d");
+            ? "Rikka Router Console"
+            : "Rikka Router — Personal AI Gateway";
+        // Both palettes are dark-led for the browser chrome; the console and
+        // share page share the Night page background so the address bar does
+        // not flash cream before the first paint of a dark theme.
+        if (themeMeta) themeMeta.setAttribute("content", "#0b0f1a");
         if (!isConsole && !isShare) return;
+        const osPrefersDark =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const resolve = (choice) =>
+          choice === "dark" ? "dark" : choice === "light" ? "light" : osPrefersDark ? "dark" : "light";
+        let choice;
         try {
-          const storedTheme = window.localStorage.getItem("console-theme");
-          const theme =
-            storedTheme === "light" || storedTheme === "dark" || storedTheme === "system"
-              ? storedTheme
+          const stored = window.localStorage.getItem("console-theme");
+          choice =
+            stored === "light" || stored === "dark" || stored === "system"
+              ? stored
               : // The public share page presents dark by default; the console
                 // keeps following the OS until the operator chooses.
                 isShare
                 ? "dark"
                 : "system";
-          root.dataset.theme = theme;
         } catch {
-          root.dataset.theme = isShare ? "dark" : "system";
+          choice = isShare ? "dark" : "system";
+        }
+        root.dataset.theme = resolve(choice);
+        root.dataset.themeChoice = choice;
+        // Language is applied here too so `<html lang>` is right before the
+        // bundle loads; the LocaleProvider keeps it in sync afterwards.
+        try {
+          const storedLocale = window.localStorage.getItem("console-locale");
+          root.lang = storedLocale === "en" ? "en" : "id";
+        } catch {
+          root.lang = "id";
         }
         try {
           if (window.localStorage.getItem("console-ambient-glow") === "off") {
@@ -99,7 +121,7 @@
         }
       })();
     </script>
-    <title>Cartethyia</title>
+    <title>Rikka Router</title>
   </head>
   <body>
     <div id="root"></div>

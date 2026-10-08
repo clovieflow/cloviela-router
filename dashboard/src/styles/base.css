@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
-/* Shared Tailwind layer, theme tokens, resets, and base elements. */
+/* Shared Tailwind layer, theme tokens, resets, and base elements.
+ *
+ * ── Rikka palette ownership ─────────────────────────────────────────────────
+ * This file is the single owner of the console/share palette. The two theme
+ * blocks below are Rikka Day (default, warm cream + indigo) and Rikka Night
+ * (deep indigo-slate + lavender). They are designed independently — Night is
+ * not a colour inversion of Day — and share only the structural tokens
+ * (radii, type, motion, z-order).
+ *
+ * `data-theme` is always the RESOLVED theme (`light` | `dark`), never
+ * `system`: `shared/theme.ts` resolves the operator's stored preference and
+ * writes the effective value, so this stylesheet needs no
+ * `prefers-color-scheme` branch and the OS switch is handled in one place.
+ * The raw preference is mirrored onto `data-theme-choice` for the UI.
+ *
+ * Contrast must be checked on rendered glass surfaces, not just token pairs.
+ * Live axe-core evidence belongs in the release report.
+ */
 :root {
-  --page-bg: #f7f3ed;
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
   --dur-micro: 150ms;
   --dur-macro: 250ms;
@@ -18,115 +34,161 @@
   /* App topbar height (38px control + 8px padding ×2 + 1px border ×2). Pages
      that pin a toolbar below it offset by this value. */
   --topbar-height: 56px;
-  --surface-1: #fffdf8;
-  --surface-2: #fffefc;
-  --surface-muted: #f3eee8;
-  --surface-hover: #ece6de;
-  --surface-active: #e4ddd4;
 
-  --text-primary: #2d2926;
-  --text-secondary: #746b65;
-  --text-tertiary: #a49a92;
+  /* Type scale (structural, theme-independent). Consumers may still write
+     literal sizes; these exist so new surfaces do not invent a fourth scale. */
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
 
-  --border-subtle: #e4d7cb;
-  --border-strong: #d8c7b8;
+  /* Spacing scale (structural). */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+
+  /* ── Rikka Day (light) ─────────────────────────────────────────────────── */
+  --page-bg: #f7f5f2;
+  --surface-1: #fffefb;
+  --surface-2: #fffdf9;
+  --surface-muted: #f1eee9;
+  --surface-hover: #eae6e0;
+  --surface-active: #e2ddd6;
+
+  --text-primary: #23262f;
+  --text-secondary: #5f6472;
+  --text-tertiary: #656c7a;
+
+  --border-subtle: #e2ddd4;
+  --border-strong: #d3ccc1;
   --inner-border: var(--border-subtle);
   --glass-border: var(--border-strong);
 
-  --accent: #2e2e32;
-  --accent-soft: #eeebe7;
+  --accent: #4f46c8;
+  --accent-soft: #eae8fa;
   --accent-foreground: #ffffff;
-  --accent-hover: #1c1c1f;
+  --accent-hover: #3f37ae;
 
-  --status-success: #4c9368;
-  --status-danger: #c95145;
-  --status-warning: #d97706;
-  --status-info: #3b82f6;
+  /* Day status palette. Values are the smallest darkening that clears 4.5:1 on
+     both surface-1 and page-bg, measured with the WCAG relative-luminance
+     formula: success 5.28:1, danger 5.84:1, warning 5.58:1, info 5.30:1.
+     Live axe-core found the previous success (#2f8a5f, 4.23:1) and warning
+     (#b4700f, 3.95:1) below the AA floor on rendered surfaces. */
+  --status-success: #1e7a4b;
+  --status-danger: #a8443f;
+  --status-warning: #96590a;
+  --status-info: #3568c4;
 
   --green: var(--status-success);
   --red: var(--status-danger);
-  --orange: #e67e22;
-  --teal: #0d9488;
-  --purple: #8b5cf6;
+  --orange: var(--status-warning);
+  --teal: #1f6b72;
+  --purple: #6d4fc4;
+  /* Terminal-surface colors. The console log renders on a fixed dark surface
+     (#050606) in BOTH themes, so these must not follow the theme: the Day
+     accent (#453cc4) measured 2.6:1 and the Day warning 3.6:1 there. Values
+     are measured against #050606: info 10.2:1, warn 11.0:1, error 8.4:1,
+     debug 7.7:1. */
+  --terminal-info: #b5b0fa;
+  --terminal-warn: #f0b455;
+  --terminal-error: #ff8080;
+  --terminal-debug: #98a29e;
+  /* Rikka brand rose. Decorative/identity only — never the sole carrier of a
+     status meaning, and always paired with a label where it is informative. */
+  --rose: #c2517a;
+  --indigo: #4f46c8;
 
-  --green-soft: #edf5ef;
-  --red-soft: #f7ebe8;
-  --orange-soft: #fbf0e4;
-  --teal-soft: #e6f6f5;
-  --purple-soft: #f3effc;
+  --green-soft: #e9f4ee;
+  --red-soft: #f9ecea;
+  --orange-soft: #faf0e0;
+  --teal-soft: #e6f2f3;
+  --purple-soft: #efeafa;
+  --rose-soft: #fbeef3;
 
-  --focus-ring: #2e2e32;
-  --track: #e5d8c9;
-  --code-surface: #f9f5ee;
+  --focus-ring: #4f46c8;
+  --track: #e2ddd4;
+  --code-surface: #faf8f4;
   --popover-bg: #fffefb;
   --hover: var(--surface-muted);
   --active-pill: var(--surface-hover);
-  --kbd-bg: #f2e9de;
+  --kbd-bg: #f0ece6;
   --input-bg: var(--surface-2);
   --border-soft: var(--border-subtle);
 
-  --glass-bg: rgba(255, 253, 248, 0.88);
-  --glass-bg-2: rgba(255, 254, 252, 0.94);
-  --glass-border-2: rgba(255, 255, 255, 0.78);
-  --shadow-card: 0 1px 2px rgba(83, 56, 36, 0.04), 0 10px 28px -4px rgba(83, 56, 36, 0.08);
-  --shadow-popout: 0 20px 50px -10px rgba(83, 56, 36, 0.18), 0 0 0 1px var(--inner-border);
+  --glass-bg: rgba(255, 254, 251, 0.82);
+  --glass-bg-2: rgba(255, 254, 251, 0.93);
+  --glass-border-2: rgba(255, 255, 255, 0.72);
+  --shadow-card: 0 1px 2px rgba(38, 33, 66, 0.05), 0 10px 28px -6px rgba(38, 33, 66, 0.09);
+  --shadow-popout: 0 20px 50px -12px rgba(38, 33, 66, 0.2), 0 0 0 1px var(--inner-border);
 
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  /* Dark Theme (Cartethyia 21 Deep Obsidian Palette) */
-  --page-bg: #08080b;
-  --surface-1: #1c1c20;
-  --surface-2: #222228;
-  --surface-muted: #2a2a30;
-  --surface-hover: #313137;
-  --surface-active: #38383f;
+  /* ── Rikka Night (dark) ────────────────────────────────────────────────── */
+  --page-bg: #0b0f1a;
+  --surface-1: #131826;
+  --surface-2: #181e2e;
+  --surface-muted: #1e2536;
+  --surface-hover: #252d40;
+  --surface-active: #2c3549;
 
-  --text-primary: #f5f5f7;
-  --text-secondary: #a1a1a6;
-  --text-tertiary: #6e6e73;
+  --text-primary: #eef1f8;
+  --text-secondary: #a7b0c4;
+  --text-tertiary: #939fb8;
 
-  --border-subtle: #2f2f36;
-  --border-strong: #3a3a42;
+  --border-subtle: #232b3d;
+  --border-strong: #2f3850;
   --inner-border: var(--border-subtle);
   --glass-border: var(--border-strong);
 
-  --accent: #f5f5f7;
-  --accent-soft: #2a2a2f;
-  --accent-foreground: #0b0b0f;
-  --accent-hover: #ffffff;
+  --accent: #8b93f8;
+  --accent-soft: #1d2340;
+  --accent-foreground: #0b0f1a;
+  --accent-hover: #a5abfa;
 
-  --status-success: #34d399;
-  --status-danger: #f87171;
-  --status-warning: #fbbf24;
-  --status-info: #60a5fa;
+  --status-success: #5fd39a;
+  --status-danger: #f58a8a;
+  --status-warning: #f0c15c;
+  --status-info: #7fb0f5;
 
   --green: var(--status-success);
   --red: var(--status-danger);
-  --orange: #fb923c;
-  --teal: #2dd4bf;
-  --purple: #c084fc;
+  --orange: #f0c15c;
+  --teal: #6fd3d8;
+  --purple: #b9a6fb;
+  --rose: #f2a8bd;
+  --indigo: #8b93f8;
 
-  --green-soft: #223228;
-  --red-soft: #332625;
-  --orange-soft: #2f2f34;
-  --teal-soft: #243234;
-  --purple-soft: #2c2634;
+  --green-soft: #16302a;
+  --red-soft: #33232a;
+  --orange-soft: #322c1e;
+  --teal-soft: #16302f;
+  --purple-soft: #241f3a;
+  --rose-soft: #33222c;
 
-  --focus-ring: #f5f5f7;
-  --track: #2d2d34;
-  --code-surface: #202026;
-  --popover-bg: #1c1c20;
+  --focus-ring: #a5abfa;
+  --track: #232b3d;
+  --code-surface: #151b29;
+  --popover-bg: #131826;
   --hover: var(--surface-muted);
   --active-pill: var(--surface-hover);
-  --kbd-bg: #23232a;
+  --kbd-bg: #1b2233;
 
-  --glass-bg: rgba(28, 28, 32, 0.75);
-  --glass-bg-2: rgba(34, 34, 40, 0.88);
-  --glass-border-2: rgba(255, 255, 255, 0.16);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.45);
-  --shadow-popout: 0 24px 60px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--inner-border);
+  --glass-bg: rgba(19, 24, 38, 0.72);
+  --glass-bg-2: rgba(24, 30, 46, 0.86);
+  --glass-border-2: rgba(255, 255, 255, 0.14);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.32), 0 16px 40px rgba(0, 0, 0, 0.42);
+  --shadow-popout: 0 24px 60px -12px rgba(0, 0, 0, 0.62), 0 0 0 1px var(--inner-border);
 
   color-scheme: dark;
 }
@@ -330,7 +392,12 @@ html[data-glass-depth="2"] {
 
   button:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
+    /* Dimmed with explicit tokens rather than opacity: a 0.55 composite of
+       text-primary on the hover surface measured 4.31:1 in live axe-core,
+       below the 4.5:1 AA floor. These pairs are contrast-checked. */
+    color: var(--text-secondary);
+    background: var(--surface-muted);
+    border-color: var(--border-subtle);
   }
 }
 
@@ -1154,4 +1221,126 @@ input[type="checkbox"] {
   flex: 0 0 auto;
   accent-color: var(--accent);
   cursor: pointer;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RIKKA ART SURFACES
+   Art is decorative, never interactive, and never occupies a hit target.
+   `RikkaArt` already sets `pointer-events: none` on its frame; these rules
+   only position the layer and reserve responsive space.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Ambient character art behind the whole console.
+   Anchored right (the generated scenes keep the subject there and the left
+   third quiet) and faded toward the content column so a data table never has
+   to compete with it. The opacity band is deliberately narrow: below ~3% it
+   disappears on a cheap panel, above ~8% it starts to reduce text contrast. */
+.rikka-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.06;
+}
+
+.rikka-ambient .rikka-art {
+  width: 100%;
+  height: 100%;
+}
+
+/* A light palette sits at the top of the band, a dark one at the bottom: on
+   cream the art reads weaker for the same alpha, on near-black it reads
+   stronger. Two numbers, chosen per palette rather than one compromise. */
+:root[data-theme="light"] .rikka-ambient {
+  opacity: 0.07;
+}
+
+:root[data-theme="dark"] .rikka-ambient {
+  opacity: 0.05;
+}
+
+@media (max-width: 900px) {
+  /* On a phone the art would sit behind the text column edge-to-edge; drop it
+     rather than let it muddy small type. */
+  .rikka-ambient {
+    display: none;
+  }
+}
+
+/* Compact page-header vignette. */
+.rikka-page-art {
+  flex: 0 0 auto;
+  box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 720px) {
+  .rikka-page-art {
+    width: 56px !important;
+    height: 56px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  /* At 320–420px the header already wraps; the illustration is the first
+     thing that should go, because it carries no information. */
+  .rikka-page-art {
+    display: none;
+  }
+}
+
+/* Wide welcome strip, used only on the onboarding and overview journeys. */
+.rikka-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.rikka-banner figcaption {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 720px) {
+  .rikka-banner {
+    display: none;
+  }
+}
+
+/* Sign-in portrait column. */
+.rikka-auth-art {
+  box-shadow: var(--shadow-popout);
+}
+
+@media (max-width: 900px) {
+  .rikka-auth-art {
+    display: none;
+  }
+}
+
+/* Identity chip. */
+.rikka-avatar {
+  flex: 0 0 auto;
+  border: 1px solid var(--inner-border);
+}
+
+.rikka-avatar-fallback {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex: 0 0 auto;
+}
+
+/* An art frame whose asset is absent keeps its reserved box (no layout shift)
+   but draws nothing and shows no border, so the gap reads as intentional
+   whitespace rather than a broken image. */
+.rikka-art[data-rikka-art-state="unavailable"] {
+  background: transparent;
+  box-shadow: none;
 }

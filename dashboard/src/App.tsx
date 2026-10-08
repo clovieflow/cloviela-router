@@ -9,9 +9,18 @@ import { lazyWithRetry } from "./shared/lazy-retry";
 import { consoleRequest, fetchSessionUser, setSessionTransitionListener } from "./data/api";
 import { queryClient } from "./data/query-client";
 import { queryKeys } from "./data/query-keys";
+import { LocaleProvider } from "./shared/locale-context";
 import type { SessionUser } from "./data/contracts";
 
-/** Compact loading shell for lazy-route Suspense: never a blank viewport. */
+/**
+ * Compact loading shell for lazy-route Suspense: never a blank viewport.
+ *
+ * The label is deliberately bilingual-neutral ("Loading console") rather than
+ * routed through `useT`: this component renders inside `Suspense` above the
+ * route tree, and a suspended boundary cannot consume a context that its own
+ * fallback might be mounted outside of. It is one line, shown for a few
+ * milliseconds, and reads correctly to both audiences.
+ */
 function RouteLoadingShell(): ReactNode {
   return (
     <div
@@ -40,17 +49,25 @@ const Login = lazyWithRetry(() => import("./routes/Login"), "login");
 const Setup = lazyWithRetry(() => import("./routes/Setup"), "setup");
 const Banned = lazyWithRetry(() => import("./routes/Banned"), "banned");
 const Overview = lazyWithRetry(() => import("./routes/Overview"), "overview");
+const Onboarding = lazyWithRetry(() => import("./routes/Onboarding"), "onboarding");
+const Health = lazyWithRetry(() => import("./routes/Health"), "health");
 const Usage = lazyWithRetry(() => import("./features/usage/UsagePage"), "usage");
 const ProviderDetail = lazyWithRetry(() => import("./routes/ProviderDetail"), "provider-detail");
 const Providers = lazyWithRetry(() => import("./features/providers/ProvidersPage"), "providers");
+const Models = lazyWithRetry(() => import("./routes/Models"), "models");
 const Combos = lazyWithRetry(() => import("./routes/Combos"), "combos");
+const RouteSimulator = lazyWithRetry(() => import("./routes/RouteSimulator"), "route-simulator");
 const Quota = lazyWithRetry(() => import("./features/quota/QuotaPage"), "quota");
 const Proxy = lazyWithRetry(() => import("./routes/Proxy"), "proxy");
+const ApiKeys = lazyWithRetry(() => import("./routes/ApiKeys"), "api-keys");
 const Settings = lazyWithRetry(() => import("./routes/Settings"), "settings");
+const Help = lazyWithRetry(() => import("./routes/Help"), "help");
+const About = lazyWithRetry(() => import("./routes/About"), "about");
 const CliTools = lazyWithRetry(() => import("./routes/CliTools"), "cli-tools");
 const CliToolDetail = lazyWithRetry(() => import("./routes/CliToolDetail"), "cli-tool-detail");
 const ConsoleLogPage = lazyWithRetry(() => import("./features/logs/ConsoleLogPage"), "console-log");
 const Studio = lazyWithRetry(() => import("./routes/Studio"), "studio");
+const NotFound = lazyWithRetry(() => import("./routes/NotFound"), "not-found");
 
 /**
  * Forwards shell-wide session transitions into router navigation. A 401 means
@@ -87,6 +104,10 @@ function RouteErrorBoundary(): ReactNode {
           <Route path="/login" element={<Login />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/banned" element={<Banned />} />
+          {/* Public 404: this document is served for `/console/*` deep links,
+              so an unknown path must render the public variant rather than
+              bouncing an anonymous reader through the auth guard. */}
+          <Route path="/not-found" element={<NotFound />} />
           <Route path="/*" element={<ProtectedRoutes />} />
         </Routes>
       </Suspense>
@@ -174,18 +195,27 @@ function ProtectedRoutes(): ReactNode {
       <ErrorBoundary resetKey={location.pathname}>
         <Routes>
           <Route path="/" element={<Overview />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/health" element={<Health />} />
           <Route path="/usage" element={<Usage />} />
           <Route path="/providers" element={<Providers />} />
           <Route path="/providers/:providerId" element={<ProviderDetail />} />
+          <Route path="/models" element={<Models />} />
           <Route path="/combos" element={<Combos />} />
+          <Route path="/simulator" element={<RouteSimulator />} />
           <Route path="/quota" element={<Quota />} />
           <Route path="/proxy" element={<Proxy />} />
+          <Route path="/api-keys" element={<ApiKeys />} />
           <Route path="/console-log" element={<ConsoleLogPage />} />
           <Route path="/model-lab" element={<Studio />} />
           <Route path="/cli-tools" element={<CliTools />} />
           <Route path="/cli-tools/:toolId" element={<CliToolDetail />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/about" element={<About />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Authenticated 404 inside the shell: the operator keeps their
+              navigation instead of being thrown to a bare page. */}
+          <Route path="*" element={<NotFound authenticated />} />
         </Routes>
       </ErrorBoundary>
     </DashboardShell>
@@ -195,40 +225,42 @@ function ProtectedRoutes(): ReactNode {
 export function App(): ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter basename="/console">
-        <SessionTransitionBridge />
-        <RouteErrorBoundary />
-        <Toaster
-          position="top-right"
-          offset={{ top: "6rem", right: "1rem" }}
-          mobileOffset={{ top: "6rem", left: "1rem", right: "1rem" }}
-          visibleToasts={2}
-          richColors
-          duration={5_000}
-          toastOptions={{
-            className: "toast-surface select-text",
-            descriptionClassName: "select-text",
-            classNames: {
-              title: "select-text",
-            },
-            style: {
-              background: "var(--glass-bg-2)",
-              border: "1px solid var(--glass-border-2)",
-              color: "var(--text-primary)",
-              fontSize: "12.5px",
-              userSelect: "text",
-            },
-            actionButtonStyle: {
-              background: "var(--accent)",
-              color: "var(--accent-foreground)",
-            },
-            cancelButtonStyle: {
-              background: "var(--surface-muted)",
-              color: "var(--text-primary)",
-            },
-          }}
-        />
-      </BrowserRouter>
+      <LocaleProvider>
+        <BrowserRouter basename="/console">
+          <SessionTransitionBridge />
+          <RouteErrorBoundary />
+          <Toaster
+            position="top-right"
+            offset={{ top: "6rem", right: "1rem" }}
+            mobileOffset={{ top: "6rem", left: "1rem", right: "1rem" }}
+            visibleToasts={2}
+            richColors
+            duration={5_000}
+            toastOptions={{
+              className: "toast-surface select-text",
+              descriptionClassName: "select-text",
+              classNames: {
+                title: "select-text",
+              },
+              style: {
+                background: "var(--glass-bg-2)",
+                border: "1px solid var(--glass-border-2)",
+                color: "var(--text-primary)",
+                fontSize: "12.5px",
+                userSelect: "text",
+              },
+              actionButtonStyle: {
+                background: "var(--accent)",
+                color: "var(--accent-foreground)",
+              },
+              cancelButtonStyle: {
+                background: "var(--surface-muted)",
+                color: "var(--text-primary)",
+              },
+            }}
+          />
+        </BrowserRouter>
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }

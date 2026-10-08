@@ -395,6 +395,21 @@ export function createProviderCatalogOperations(config: ProviderCatalogConfig) {
         request: CreateProviderAccountRequest,
       ): Promise<ProviderAccountResponse> {
         const a = requireTenantAnyScope(access, PROVIDER_WRITE_SCOPES);
+        // The account row carries a foreign key to `providers`, so an unknown
+        // provider id used to surface as a generic 500 from the constraint
+        // violation instead of telling the operator the provider does not
+        // exist. Check first: bundled ids are always valid, custom ids must
+        // have a persisted row.
+        if (!isBundledProviderId(providerId)) {
+          const known = await config.store.list(a.tenantId);
+          if (!known.some((record) => record.providerId === providerId)) {
+            throw new ConsoleDomainError(
+              "provider_not_found",
+              404,
+              `Provider ${providerId} not found`,
+            );
+          }
+        }
         if (
           request.credentialKind !== "api_key" &&
           request.credentialKind !== "oauth" &&

@@ -160,3 +160,34 @@ export function formatChartTooltip(value: string, locale?: string, timeZone: str
   return `${parts.year ?? ""}-${parts.month ?? ""}-${parts.day ?? ""} ${parts.hour ?? ""}:${parts.minute ?? ""} ${parts.timeZoneName ?? ""}`;
 }
 
+/**
+ * Coarse "how long ago" label for freshness markers.
+ *
+ * Canonical owner: Usage and the onboarding checklist previously disagreed
+ * (one inline copy here, one there). Minutes/hours/days/weeks is deliberately
+ * coarse — a precise timestamp belongs next to this in a tooltip, not in a
+ * label whose job is "is this stale?".
+ */
+export function formatAgo(value: string | Date, nowMs: number = Date.now()): string {
+  const started = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  if (Number.isNaN(started)) return "—";
+  const diffMs = Math.max(0, nowMs - started);
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const week = 7 * day;
+  if (diffMs < hour) {
+    const minutes = Math.max(0, Math.floor(diffMs / minute));
+    return minutes <= 1 ? "just now" : `${minutes}m ago`;
+  }
+  if (diffMs < day) {
+    const hours = Math.floor(diffMs / hour);
+    return hours <= 1 ? "1h ago" : `${hours}h ago`;
+  }
+  if (diffMs < week) {
+    const days = Math.floor(diffMs / day);
+    return days <= 1 ? "1d ago" : `${days}d ago`;
+  }
+  const weeks = Math.floor(diffMs / week);
+  return weeks <= 1 ? "1w ago" : `${weeks}w ago`;
+}

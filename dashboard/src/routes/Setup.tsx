@@ -3,6 +3,8 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { RikkaArt } from "../components/rikka/RikkaArt";
+import { useT } from "../shared/locale-context";
 import { consoleRequest } from "../data/api";
 import { queryClient } from "../data/query-client";
 import { queryKeys } from "../data/query-keys";
@@ -13,6 +15,7 @@ interface SetupResult {
 }
 
 export default function Setup(): ReactNode {
+  const t = useT();
   const navigate = useNavigate();
   const [username, setUsername] = useState("admin");
   const [displayName, setDisplayName] = useState("");
@@ -72,11 +75,11 @@ export default function Setup(): ReactNode {
     <main className="auth-viewport">
       <div className="card-solid auth-window">
         <div className="auth-header">
-          <div className="auth-logo" aria-hidden="true">
-            C
+          <div className="auth-logo" aria-hidden="true" style={{ overflow: "hidden", padding: 0 }}>
+            <RikkaArt name="app-icon" width="100%" height="100%" radius="0" priority />
           </div>
-          <h1 className="auth-title">Cartethyia Console Setup</h1>
-          <p className="auth-desc">Configure the administrator account for Cartethyia AI Gateway</p>
+          <h1 className="auth-title">{t("setup.title")}</h1>
+          <p className="auth-desc">{t("setup.subtitle")}</p>
         </div>
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>

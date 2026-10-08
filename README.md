@@ -1,69 +1,29 @@
-# ![](orca-paste-1790786723417-099ae9d3-f3a2-4dac-9c24-74887febf6fa.png) Cartethyia
+# Rikka Router
 
-<img width="1760" height="576" alt="Cartethyia banner" src="https://github.com/user-attachments/assets/666f3a3d-136e-49d7-8bec-ff967f93b78f" />
+**A private-first, self-hosted multi-provider AI gateway — an unofficial Rikka Takarada (SSSS.GRIDMAN) fan theme built on the Cartethyia routing core.**
 
-**A self-hosted multi-provider AI gateway.**
+Rikka Router gives your AI clients one stable, OpenAI- and Anthropic-compatible endpoint while the gateway does the operational work behind it: provider-aware translation, account selection, health-aware failover, quota and cooldown enforcement, usage accounting, telemetry, and optional proxy pools. The dashboard is an original Rikka-themed console with its own artwork, Indonesian-first copy with full English support, and Rikka Night / Rikka Day / Follow-system themes.
 
-Cartethyia gives AI clients one stable, OpenAI- and Anthropic-compatible endpoint
-while the gateway handles the operational work behind it: provider-aware
-translation, account selection, health-aware failover, quota and cooldown
-enforcement, usage accounting, telemetry, and optional proxy pools.
-
-Configure provider accounts once, issue an API key, and point OpenCode, Droid,
-Cline, Claude Code, Codex, or any compatible client at Cartethyia. The client
-keeps its native protocol; Cartethyia normalizes the request, selects a viable
-route, dispatches upstream, and returns the response in the contract the client
-expects.
-
-Built with Bun, TypeScript, Elysia, embedded PGlite or external PostgreSQL, and
-optional Redis coordination.
+> **This is an unofficial personal fan theme.** The anime character identity belongs to its respective rightsholders; nothing here implies endorsement or grants commercial character rights. The **source code** is a derivative of Cartethyia and remains licensed **GPL-3.0-only** — see [License and attribution](#license-and-attribution).
 
 > [!WARNING]
-> **Development version.** This branch is under active development, so APIs,
-> configuration, database behavior, and provider integrations may change without
-> notice. Before reporting an error or opening an issue, update to the latest
-> version of the upstream `dev` branch and verify that the problem still occurs.
-> The stable release will be published on `main` once the current development
-> cycle is considered ready.
+> **Development version.** APIs, configuration, database behavior, and provider integrations may change without notice. Verify against the current source before depending on a detail.
 
-## Why Cartethyia?
+## What it is for
+
+One installation, several devices and tools, one gateway:
 
 | Capability | Operational value |
 |---|---|
-| **Protocol normalization** | Connect heterogeneous OpenAI- and Anthropic-compatible clients without making each client understand every provider. |
-| **Health-aware routing** | Select by model, alias, capability, account state, cooldown, quota, and provider availability. |
+| **Protocol normalization** | Point OpenAI- and Anthropic-compatible clients at one endpoint without teaching each client every provider. |
+| **Health-aware routing** | Select by model, alias, capability, account state, cooldown, quota, balance, and provider availability. |
 | **Failover with accounting** | Retry viable candidates while preserving admission, usage, quota, and telemetry invariants. |
 | **Provider-aware dispatch** | Keep authentication, headers, endpoint behavior, quota semantics, and streaming rules specific to each provider. |
-| **End-to-end visibility** | Inspect Client Request → Provider Request → Provider Response → Client Response instead of debugging a black box. |
-| **Explicit health semantics** | Keep healthy, cooling, cooldown, exhausted, disabled, and unavailable states distinct. |
-| **Deployment flexibility** | Run self-contained with PGlite, use external PostgreSQL for higher workloads, and add Redis when coordination must be shared. |
+| **Four-stage visibility** | Inspect Client Request → Provider Request → Provider Response → Client Response with bounded, credential-redacted capture. |
+| **Private by default** | The listener binds `127.0.0.1` unless you explicitly opt into `0.0.0.0`; container and reverse-proxy exposure is a deliberate step. |
+| **Deployment flexibility** | Run self-contained with embedded PGlite (Lite), use external PostgreSQL (Full), and add Redis only when coordination must be shared. |
 
-Cartethyia is more than a router. It gives the gateway a consistent operational
-model for provider accounts, routing policy, quotas, proxies, security, telemetry,
-and backups.
-
-> **One endpoint. Any client. Any provider. Operable by design.**
-
-## What makes Cartethyia different?
-
-Most gateways stop at “send the request to another provider”. Cartethyia focuses
-on the details that make a multi-provider setup dependable in daily use:
-
-| Distinctive capability | What it means in practice |
-|---|---|
-| **Client-faithful upstream identity** | Provider adapters can reproduce the client identity, headers, billing signals, and wire behavior expected by the upstream service instead of treating every request as a generic API call. |
-| **Legitimate request impersonation boundaries** | OAuth/client-specific request behavior is isolated to the matching adapter and credential path; ordinary API-key traffic is not silently mixed with an OAuth client profile. |
-| **Continuously refreshed client versions** | Client-version metadata is discovered in the background and reflected in provider-specific headers when required, instead of pinning an old version forever. |
-| **Provider-aware routing** | Routing understands model capability, endpoint family, account health, cooldown, quota, minimum balance, aliases, combos, and proxy-pool availability. |
-| **Failover that preserves state** | Retries do not bypass admission, usage accounting, quota metering, telemetry, or terminal error semantics. |
-| **Four-stage request visibility** | Inspect the client request, translated provider request, raw provider response, and final client response with bounded, redacted capture. |
-| **Honest failure semantics** | A disabled account, exhausted quota, unavailable provider, missing model, and network/pool failure remain different operational states. |
-| **Portable deployment model** | Start locally with embedded PGlite, move to external PostgreSQL through JSON backup/restore, and add Redis only when coordination must be shared. |
-
-These are not cosmetic dashboard features. They exist so an operator can answer
-the questions that usually require reading upstream logs: **what did the client
-send, what did Cartethyia translate, which account and pool were selected, what
-did the provider return, and what did the client finally receive?**
+This is a **personal installation**, not a SaaS: there are no plans, subscriptions, or checkout, and no fabricated usage statistics anywhere in the UI.
 
 ## Supported client routes
 
@@ -77,47 +37,92 @@ did the provider return, and what did the client finally receive?**
 | `/v1/models` | List available models |
 | `/v1/search` | Web search |
 | `/v1/systemone` | System One decision requests |
-Web search uses a stable failover order — **Exa → Gemini → Codex** — for the
-providers that are enabled and have an eligible account. The dashboard's Search
-detail provides a model dropdown and direct search test; there is no drag-and-drop
-ordering preference stored in the database.
+| `/health`, `/health/ready`, `/metrics` | Process liveness, readiness, and Prometheus metrics |
 
-
-The client protocol belongs to the connection, not to the route you configure. Once
-a request is normalized, the same routing, admission, retry, accounting, and telemetry
-rules apply across the supported surfaces.
+The client protocol belongs to the connection, not to the route you configure. Once a request is normalized, the same routing, admission, retry, accounting, and telemetry rules apply across the supported surfaces.
 
 ## Choose your setup
 
-The application features are the same in both modes. Choose based on how you
-intend to run Cartethyia:
+Both modes expose the same application features; only the persistence backend and deployment profile change.
 
-| Recommended setup | Choose this when | Why |
+| | Lite | Full |
 |---|---|---|
-| **Lite** | Personal use, local development, or one casual gateway process | Embedded PGlite; no PostgreSQL server to install or maintain |
-| **Full** | Sharing, selling, VPS deployment, or sustained/high workload | External PostgreSQL is better suited to independent database operations and heavier concurrency |
+| Database | Embedded PGlite | External PostgreSQL |
+| Best for | Personal use, one local process | VPS, sustained or higher-concurrency use |
+| Extra services | None; Redis optional | PostgreSQL required; Redis optional |
 
-Lite is not a reduced feature edition. It changes the database backend and keeps
-coordination in process memory. When the workload grows, export a JSON backup
-from Lite and restore it into Full; the application configuration does not need
-to be rebuilt.
+Lite is the default in `.env.example`. To move to Full later, export a JSON backup from Lite and import it into the Full instance — the configuration does not need to be rebuilt.
 
-`.env.example` defaults to Lite for local installs. Docker Compose defaults to
-Full because Docker deployments generally target VPS or higher-capacity use.
-See the [Getting started guide](documentation/getting-started.md#choose-a-database-mode)
-for the installation details.
+## Install and run
 
-## License
+Requirements: **Bun 1.4.0+**, a terminal, and a writable data directory.
 
-Cartethyia is licensed under the **GNU General Public License v3.0 only**.
-See [`LICENSE`](LICENSE) for the complete terms.
+```bash
+bun install
+bun setup --non-interactive     # creates .env, generates the encryption key, prepares Lite
+bun doctor                      # configuration + readiness check
+bun run dev                     # backend + dashboard dev servers
+```
 
-You may use, copy, modify, and share this software under GPLv3. If you distribute
-Cartethyia or a modified version, you must keep the license and copyright notices,
-provide the corresponding source code, and license the covered work under GPLv3.
-You may not add restrictions that remove the freedoms granted by the license.
+Production build and start:
 
-This software is provided **without warranty**. It is distributed in the hope that
-it will be useful, but there is no guarantee that it is fit for a particular purpose,
-secure, available, or free from defects. See the warranty disclaimer and limitation
-of liability in `LICENSE`.
+```bash
+bun run build                   # dashboard → AOT → standalone binary (dist/rikka-router)
+bun start                       # runs the compiled binary
+```
+
+Configuration is environment-driven; every supported knob is documented in
+[`.env.example`](.env.example) and
+[`documentation/getting-started.md`](documentation/getting-started.md). The
+important defaults:
+
+```dotenv
+CARTETHYIA_DB_MODE=lite          # lite | full
+PORT=12800
+CARTETHYIA_BIND_HOST=127.0.0.1   # private-first; set 0.0.0.0 only inside a container/reverse proxy
+CARTETHYIA_ENCRYPTION_KEY=       # required; encrypts provider credentials and API keys
+```
+
+## Documentation
+
+- [`documentation/getting-started.md`](documentation/getting-started.md) — requirements, setup, OS guidance, Docker, commands, migrations.
+- [`documentation/clients.md`](documentation/clients.md) — connecting real clients (SDKs, curl, CLI tools) with tested snippets.
+- [`documentation/architecture.md`](documentation/architecture.md) — the request lifecycle and where each behavior is owned.
+- [`documentation/security.md`](documentation/security.md) — trust boundaries, credential handling, and what is redacted where.
+- [`documentation/release.md`](documentation/release.md) — release gates, evidence, and known limitations.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution rules.
+
+## Verification
+
+```bash
+bun run typecheck           # backend types
+bun run dashboard:typecheck # dashboard types
+bun run test:backend        # backend suites
+bun run dashboard:test      # dashboard suites
+bun run build               # full release build
+```
+
+The backend suites run against an isolated test database described by
+`.env.test`. The test runner also redirects `HOME`, `TMPDIR`, and the
+platform config directories into a disposable sandbox, and the CLI-tool
+injectors refuse any write outside it — a regression guard, because these
+helpers edit real client configuration files in normal operation.
+
+## License and attribution
+
+Rikka Router is a derivative work of **[Cartethyia](https://github.com/risunCode/Cartethyia)**
+(branch `dev`, commit `382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`), licensed
+**GNU General Public License v3.0 only**. This fork keeps that license:
+see [`LICENSE`](LICENSE). If you distribute this software or a modified
+version, keep the license and copyright notices, provide the corresponding
+source, and license covered work under GPLv3.
+
+Character artwork in `assets/` and `dashboard/public/rikka/` was generated for
+this fork with OpenAI GPT-Image-2 through OMP and is an original derivative
+illustration of the Rikka Takarada character design; provenance, prompts, and
+hashes are recorded in [`assets/manifest.json`](assets/manifest.json). The
+character identity itself is not licensed by the GPL and remains the property
+of its rightsholders. The project is an unofficial personal fan theme and does
+not claim endorsement by or affiliation with the character's rightsholders.
+
+This software is provided **without warranty**, as stated in the GPLv3.

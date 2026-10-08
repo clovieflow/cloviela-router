@@ -1,5 +1,6 @@
-import { ArrowRight, Copy, CopyPlus, GripVertical, Layers, Pencil, Plus, Route, Search, Trash2, X } from "lucide-react";
+import { ArrowRight, Copy, CopyPlus, Eye, GripVertical, Layers, Pencil, Plus, Route, Search, Trash2, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Card, CardBody, CardHeader } from "../components/ui/card";
 import { Dialog } from "../components/ui/dialog";
@@ -10,6 +11,8 @@ import { Inline } from "../components/ui/inline";
 import { ModelPickerModal } from "../components/ModelPicker";
 import { SortableList } from "../components/SortableList";
 import { Stack } from "../components/ui/stack";
+import { PageHead } from "../components/PageHead";
+import { useT } from "../shared/locale-context";
 import { getErrorMessage } from "../shared/helpers";
 import { useTrackedTimeout } from "../hooks/use-timeout";
 import { useClipboard } from "../hooks/use-clipboard";
@@ -832,8 +835,25 @@ function CombosSection(): ReactNode {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function Combos(): ReactNode {
+  const t = useT();
   return (
     <Stack gap="16px">
+      {/* This page is the canonical owner of combo and alias CRUD; the Models
+          page links here, and the route simulator evaluates the policy these
+          combos feed. The header states that relationship so an operator can
+          find the simulator from the editor. */}
+      <PageHead
+        title={t("routing.title")}
+        description={t("routing.subtitle")}
+        art="routing"
+        actions={
+          <Link to="/simulator">
+            <Button variant="secondary" size="sm" icon={<Eye size={13} />}>
+              {t("routing.openSimulator")}
+            </Button>
+          </Link>
+        }
+      />
       <CombosSection />
       <AliasesSection />
     </Stack>

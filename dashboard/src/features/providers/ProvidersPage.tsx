@@ -16,6 +16,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { Select } from "../../components/ui/select";
 import { EmptyState, ErrorState, LoadingState } from "../../components/ui/state";
+import { PageHead } from "../../components/PageHead";
 import { Switch } from "../../components/ui/switch";
 import { Inline } from "../../components/ui/inline";
 import { Stack } from "../../components/ui/stack";
@@ -1068,6 +1069,13 @@ export default function Providers(): ReactNode {
 
   return (
     <Stack gap="24px">
+      {/* Compact vignette: this page's own catalog sections are the content, so
+          the art stays a header detail rather than a hero. */}
+      <PageHead
+        title="Provider Catalog"
+        description="Upstream credentials, accounts, and model registration"
+        art="providers"
+      />
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: "4px" }}>
           {(["llm", "search"] as const).map((t) => (

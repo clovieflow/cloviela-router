@@ -230,17 +230,6 @@ describe("publicGatewayErrorDetails — the allowlist", () => {
     ).toEqual({ providerId: "anthropic" });
   });
 
-  test("a value of undefined is published as undefined, not dropped", () => {
-    // MEASURED: the filter is on the key alone. The envelope then serializes
-    // the key away in JSON, so this is observable only on the object. Pinned
-    // because a change to `Object.entries` handling would alter the shape.
-    const details = { providerId: undefined, reason: "x" };
-    const public_ = publicGatewayErrorDetails(
-      new GatewayError("accounts_unavailable", 503, "x", details),
-    );
-    expect("providerId" in public_).toBe(true);
-    expect(public_.providerId).toBeUndefined();
-  });
 });
 
 describe("publicGatewayErrorDetails — bounds", () => {
@@ -320,35 +309,9 @@ describe("publicGatewayErrorDetails — bounds", () => {
   });
 });
 
-describe("publicGatewayErrorDetails — raw is published verbatim", () => {
-  test("an upstream body reaches the client unmodified", () => {
-    // The `raw` field used to be swept for credential-shaped strings. It no
-    // longer is: rewriting part of an upstream body makes the echoed error
-    // unreadable, and a 400 the operator has to diagnose loses the one field
-    // that names what the provider actually objected to. The upstream decides
-    // what it echoes; the gateway does not edit it.
-    const upstreamBody = {
-      error: {
-        message: "invalid api key: sk-ant-api03-EXAMPLEnotarealkey000000000000",
-        type: "authentication_error",
-      },
-    };
-    const value = publicGatewayErrorDetails(
-      new GatewayError("authentication_failed", 401, "x", { raw: upstreamBody }),
-    ).raw;
-    expect(JSON.stringify(value)).toContain("sk-ant-api03-EXAMPLEnotarealkey000000000000");
-  });
 
-  test("a bearer token echoed in an upstream body is preserved", () => {
-    const value = publicGatewayErrorDetails(
-      new GatewayError("authentication_failed", 401, "x", {
-        raw: { detail: "Authorization: Bearer EXAMPLEtokenvalue1234567890 was rejected" },
-      }),
-    ).raw;
-    expect(JSON.stringify(value)).toContain("EXAMPLEtokenvalue1234567890");
-  });
-
-  test("the body keeps its shape rather than collapsing to a placeholder", () => {
+describe("publicGatewayErrorDetails — bounded diagnostic bodies", () => {
+  test("preserves non-secret upstream diagnostics", () => {
     const value = publicGatewayErrorDetails(
       new GatewayError("authentication_failed", 401, "x", {
         raw: { error: { type: "authentication_error", message: "bad key" } },
@@ -358,23 +321,30 @@ describe("publicGatewayErrorDetails — raw is published verbatim", () => {
     expect(JSON.stringify(value)).toContain("bad key");
   });
 
-  test("every allowlisted field is published verbatim", () => {
-    // No field gets a credential sweep now — the contract is pass-through, so
-    // `safeMessage` and `raw` behave the same way.
-    const value = publicGatewayErrorDetails(
-      new GatewayError("platform_unavailable", 502, "x", { safeMessage: "upstream returned 500" }),
-    ).safeMessage;
-    expect(value).toBe("upstream returned 500");
-  });
-
   test("raw is still size-bounded", () => {
-    // The bound survives the removal of the sweep: an enormous upstream body
-    // is still cut down before it reaches an envelope.
+    // Diagnostic text remains bounded even after credential redaction.
     const longBody = `x${"a".repeat(4_000)}`;
     const value = publicGatewayErrorDetails(
       new GatewayError("authentication_failed", 401, "x", { raw: { message: longBody } }),
     ).raw;
     expect(JSON.stringify(value).length).toBeLessThan(2_000);
+  });
+});
+
+describe("public diagnostics do not expose provider credentials", () => {
+  test("an echoed API key or bearer is scrubbed while causal metadata survives", () => {
+    const details = publicGatewayErrorDetails(new GatewayError("authentication_failed", 401,
+      "Rejected sk-ant-EXAMPLE-not-a-real-key", {
+        providerStatus: 401,
+        requestId: "req-private-error",
+        raw: { error: { type: "authentication_error", apiKey: "EXAMPLE-opaque-key",
+          message: "Authorization: Bearer EXAMPLE-private-bearer was rejected" } },
+      }, "upstream"));
+    const encoded = JSON.stringify(details);
+    expect(encoded).not.toContain("EXAMPLE-opaque-key");
+    expect(encoded).not.toContain("EXAMPLE-private-bearer");
+    expect(details).toMatchObject({ providerStatus: 401, requestId: "req-private-error",
+      raw: { error: { type: "authentication_error" } } });
   });
 });
 

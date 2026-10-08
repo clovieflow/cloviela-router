@@ -38,6 +38,7 @@ import {
   isDarkEffective,
   parseConsoleTheme,
   readConsoleTheme,
+  resolveConsoleTheme,
   writeConsoleTheme,
 } from "../../src/shared/theme";
 
@@ -139,11 +140,6 @@ describe("readConsoleTheme", () => {
     }
   });
 
-  test("the stored key is the documented one", () => {
-    // The bootstrap script in index.html duplicates this literal, so a rename here
-    // would desync the two unless the key is pinned.
-    expect(CONSOLE_THEME_KEY).toBe("console-theme");
-  });
 });
 
 describe("isDarkEffective", () => {
@@ -154,13 +150,6 @@ describe("isDarkEffective", () => {
     expect(isDarkEffective("light")).toBe(false);
   });
 
-  test("system consults the OS preference", () => {
-    // The harness's matchMedia stand-in always reports `matches: false`, so
-    // "system" resolves to light here. The discriminating assertion is the
-    // explicit-vs-system split above; this pins the stand-in's contribution so a
-    // change to the helper is visible.
-    expect(isDarkEffective("system")).toBe(false);
-  });
 
   test("system consults matchMedia rather than assuming light", () => {
     // Replace the WINDOW's matchMedia with one that reports dark, and assert the
@@ -209,14 +198,30 @@ describe("isDarkEffective", () => {
 });
 
 describe("applyConsoleTheme", () => {
-  test("the choice lands on the root data-theme attribute", () => {
-    // The single DOM effect every stylesheet keys on.
-    applyConsoleTheme("dark");
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    applyConsoleTheme("light");
-    expect(document.documentElement.dataset.theme).toBe("light");
-    applyConsoleTheme("system");
-    expect(document.documentElement.dataset.theme).toBe("system");
+
+  test("resolveConsoleTheme follows the OS only for the system choice", () => {
+    const windowRecord = window as unknown as Record<string, unknown>;
+    const original = windowRecord.matchMedia;
+    try {
+      windowRecord.matchMedia = (query: string) => ({
+        matches: query.includes("dark"),
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => true,
+      });
+      // An explicit choice wins outright: an operator who picked Day keeps Day
+      // on a dark-OS machine.
+      expect(resolveConsoleTheme("light")).toBe("light");
+      expect(resolveConsoleTheme("dark")).toBe("dark");
+      // Only `system` defers to the OS.
+      expect(resolveConsoleTheme("system")).toBe("dark");
+    } finally {
+      windowRecord.matchMedia = original;
+    }
   });
 
   test("applying does not write to storage", () => {

@@ -1,4 +1,9 @@
-# Cartethyia Agent Guide
+# Rikka Router Agent Guide
+
+Rikka Router is the GPLv3 Rikka-themed derivative of Cartethyia. Persisted
+contracts keep upstream names (`CARTETHYIA_*` environment variables, the
+`Cartethyia` data directory, `/console/api` paths, `cartethyia:*` storage
+keys); only presentation is Rikka-branded. Keep it that way when renaming.
 
 The goal is to leave the repository trustworthy for the next reader. Keep this
 file concise; detailed subsystem guidance lives in

@@ -20,20 +20,26 @@
  *   this very injector had just written reported `currentEndpoint: null` — the
  *   dashboard's endpoint field went blank while the status said "configured".
  *
- * `HOME`/`USERPROFILE` are redirected to a fresh temp directory per test, which
- * is the seam `fs-ops.ts` documents for exactly this purpose ("tests can point
- * injectors at temp dirs by stubbing `HOME` rather than mocking `fs`"). The
- * spec objects resolve their paths lazily through `homeDir()`, so the redirect
- * takes effect as long as it happens before the first call.
+ * `HOME`/`USERPROFILE` — and every platform directory the injectors resolve
+ * directly (XDG_CONFIG_HOME for jcode, APPDATA/LOCALAPPDATA for kilo, copilot
+ * and cowork) — are redirected to a fresh temp directory per test, and the
+ * fs-ops write guard is narrowed to that same directory. Each `beforeEach`
+ * asserts the redirect actually took effect (`homeDir()` must equal the temp
+ * home) *before* any test can seed, apply or reset: with `os.homedir()` cached
+ * at process start, a HOME-only redirect is silently ignored and the
+ * every-tool loop writes into the operator's real home. On top of that, every
+ * spec's resolved settings path, resolveDir and companion file (auth.json,
+ * the Codex helper, .env files, the XDG config dir) is asserted inside the
+ * temp home before the write that would touch it.
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createFileInjector, INJECTORS } from "../../src/console/cli-tools/injectors/driver";
 import { codexSpec } from "../../src/console/cli-tools/injectors/codex";
-import { readTextFile, textGet, textHas, writeTextFile } from "../../src/console/cli-tools/fs-ops";
-import { TOOL_IDS, TOOL_REGISTRY } from "../../src/console/cli-tools/contracts";
+import { homeDir, readTextFile, textGet, textHas, writeTextFile } from "../../src/console/cli-tools/fs-ops";
+import { TOOL_IDS, TOOL_REGISTRY, type InjectorSpec } from "../../src/console/cli-tools/contracts";
 
 /** A config the user has been maintaining by hand, with content to preserve. */
 const USER_CONFIG = `# my codex config
@@ -64,6 +70,114 @@ function hasGluedHeader(text: string): boolean {
 /** True when a value ran into the next header, which TOML forbids. */
 function hasGluedValue(text: string): boolean {
   return /"[ \t]*\[/m.test(text);
+}
+
+/**
+ * The platform directories the injectors resolve directly. They are part of
+ * the fixture: a spec that reads APPDATA while the test redirected only HOME
+ * would resolve into the operator's real profile.
+ */
+const PLATFORM_DIR_KEYS = ["XDG_CONFIG_HOME", "APPDATA", "LOCALAPPDATA"] as const;
+
+/**
+ * True when `path` resolves inside the fixture home.
+ *
+ * `relative` rather than `startsWith`: a sibling directory whose name merely
+ * shares the home's prefix (`/tmp/x-home` vs `/tmp/x-home-evil`) must not pass,
+ * and the empty relative path (the home itself) is not a file the injectors
+ * write.
+ */
+function isInsideHome(home: string, path: string): boolean {
+  const rel = relative(resolve(home), resolve(path));
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+/** Point every directory the injectors read at `home`, and narrow the write guard to it. */
+function redirectHome(home: string): Record<string, string | undefined> {
+  const saved: Record<string, string | undefined> = {};
+  const redirects: Record<string, string> = {
+    HOME: home,
+    USERPROFILE: home,
+    XDG_CONFIG_HOME: join(home, ".config"),
+    APPDATA: join(home, "AppData", "Roaming"),
+    LOCALAPPDATA: join(home, "AppData", "Local"),
+    CARTETHYIA_TEST_HOME_ROOT: home,
+  };
+  for (const [key, value] of Object.entries(redirects)) {
+    saved[key] = process.env[key];
+    process.env[key] = value;
+  }
+  return saved;
+}
+
+/** Put every redirected variable back the way it was. */
+function restoreHome(saved: Record<string, string | undefined>): void {
+  for (const [key, value] of Object.entries(saved)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+}
+
+/**
+ * Fail before any seed, apply or reset if the redirect did not take effect.
+ *
+ * `os.homedir()` caches at process start, so a HOME-only redirect can be
+ * silently ignored — the every-tool loop would then write into the operator's
+ * real home. `homeDir()` resolves lazily, so it must read the fixture back; the
+ * guard root must be the fixture too, or the writes the guard exists to stop
+ * are exactly the ones that escape it.
+ */
+function assertHomeRedirect(home: string): void {
+  expect(homeDir()).toBe(home);
+  expect(process.env.CARTETHYIA_TEST_HOME_ROOT).toBe(home);
+  for (const key of PLATFORM_DIR_KEYS) {
+    const value = process.env[key];
+    expect(`${key}=${value !== undefined && isInsideHome(home, value)}`).toBe(`${key}=true`);
+  }
+}
+
+/** Companion files an injector writes beside its primary config. */
+function companionFiles(toolId: string, home: string): ReadonlyArray<readonly [string, string]> {
+  switch (toolId) {
+    case "codex":
+      return [
+        ["auth", join(home, ".codex", "auth.json")],
+        ["helper", join(home, ".codex", "cartethyia-auth.cjs")],
+      ];
+    case "cline":
+      return [["secrets", join(home, ".cline", "data", "secrets.json")]];
+    case "hermes":
+      return [["env", join(home, ".hermes", ".env")]];
+    case "jcode":
+      return [
+        [
+          "env",
+          join(
+            process.env.XDG_CONFIG_HOME ?? join(home, ".config"),
+            "jcode",
+            "provider-cartethyia.env",
+          ),
+        ],
+      ];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Assert every path a tool's lifecycle will write sits inside the fixture.
+ *
+ * Run before the seed, apply or reset that would touch the file: a path that
+ * resolved outside must fail the test before anything is written, not after
+ * the operator's real config has been rewritten.
+ */
+function assertToolPathsInsideHome(toolId: string, home: string, spec: InjectorSpec): void {
+  const paths: Array<readonly [string, string]> = [["settings", spec.resolvePath()]];
+  if (spec.resolveDir) paths.push(["resolveDir", spec.resolveDir()]);
+  paths.push(...companionFiles(toolId, home));
+  for (const [label, path] of paths) {
+    expect(`${toolId}:${label}=${isInsideHome(home, path)}`).toBe(`${toolId}:${label}=true`);
+  }
 }
 
 describe("the injector registry", () => {
@@ -119,22 +233,21 @@ describe("the injector registry", () => {
 
 describe("the codex injector against a temp HOME", () => {
   let home: string;
-  let originalHome: string | undefined;
-  let originalProfile: string | undefined;
+  let savedEnv: Record<string, string | undefined>;
 
   beforeEach(() => {
     home = mkdtempSync(join(tmpdir(), "cartethyia-codex-"));
-    originalHome = process.env.HOME;
-    originalProfile = process.env.USERPROFILE;
-    process.env.HOME = home;
-    process.env.USERPROFILE = home;
+    savedEnv = redirectHome(home);
+    // Before any seed, apply or reset: if this fails, the redirect was ignored
+    // and the tests below would write into the operator's real home. The
+    // settings file, the resolveDir and the auth.json/helper companions must
+    // all resolve inside the fixture.
+    assertHomeRedirect(home);
+    assertToolPathsInsideHome("codex", home, codexSpec);
   });
 
   afterEach(() => {
-    if (originalHome === undefined) delete process.env.HOME;
-    else process.env.HOME = originalHome;
-    if (originalProfile === undefined) delete process.env.USERPROFILE;
-    else process.env.USERPROFILE = originalProfile;
+    restoreHome(savedEnv);
     rmSync(home, { recursive: true, force: true });
   });
 
@@ -305,22 +418,16 @@ describe("the codex injector against a temp HOME", () => {
 
 describe("the generic driver's status branches", () => {
   let home: string;
-  let originalHome: string | undefined;
-  let originalProfile: string | undefined;
+  let savedEnv: Record<string, string | undefined>;
 
   beforeEach(() => {
     home = mkdtempSync(join(tmpdir(), "cartethyia-driver-"));
-    originalHome = process.env.HOME;
-    originalProfile = process.env.USERPROFILE;
-    process.env.HOME = home;
-    process.env.USERPROFILE = home;
+    savedEnv = redirectHome(home);
+    assertHomeRedirect(home);
   });
 
   afterEach(() => {
-    if (originalHome === undefined) delete process.env.HOME;
-    else process.env.HOME = originalHome;
-    if (originalProfile === undefined) delete process.env.USERPROFILE;
-    else process.env.USERPROFILE = originalProfile;
+    restoreHome(savedEnv);
     rmSync(home, { recursive: true, force: true });
   });
 
@@ -531,8 +638,7 @@ describe("the generic driver's status branches", () => {
  */
 describe("every file injector round-trips apply → status → reset", () => {
   let home: string;
-  let originalHome: string | undefined;
-  let originalProfile: string | undefined;
+  let savedEnv: Record<string, string | undefined>;
 
   /** Tools whose `apply` deliberately does not configure anything. */
   const NOT_CONFIGURED_BY_DESIGN: ReadonlySet<string> = new Set([
@@ -542,17 +648,15 @@ describe("every file injector round-trips apply → status → reset", () => {
 
   beforeEach(() => {
     home = mkdtempSync(join(tmpdir(), "cartethyia-all-tools-"));
-    originalHome = process.env.HOME;
-    originalProfile = process.env.USERPROFILE;
-    process.env.HOME = home;
-    process.env.USERPROFILE = home;
+    savedEnv = redirectHome(home);
+    // Every loop below drives the real injectors against this fixture. If the
+    // redirect were ignored they would rewrite the operator's real configs —
+    // which is exactly what happened before this assertion existed.
+    assertHomeRedirect(home);
   });
 
   afterEach(() => {
-    if (originalHome === undefined) delete process.env.HOME;
-    else process.env.HOME = originalHome;
-    if (originalProfile === undefined) delete process.env.USERPROFILE;
-    else process.env.USERPROFILE = originalProfile;
+    restoreHome(savedEnv);
     rmSync(home, { recursive: true, force: true });
   });
 

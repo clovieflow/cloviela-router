@@ -12,29 +12,6 @@
 
 import { aot } from "elysia/plugin/aot/bun";
 
-const typeboxCompileBridge = {
-  name: "cartethyia-elysia-typebox-compile",
-  setup(build: {
-    onLoad: (
-      options: { filter: RegExp },
-      callback: (args: { path: string }) => Promise<{ contents: string; loader: "js" }>,
-    ) => void;
-  }): void {
-    build.onLoad(
-      { filter: /[\\/]elysia[\\/]dist[\\/]type[\\/]validator[\\/]index\.js$/ },
-      async ({ path }) => {
-        const contents = await Bun.file(path).text();
-        return {
-          contents: contents.replaceAll(
-            "SchemaCompile(this.schema)",
-            "SchemaCompile({}, this.schema)",
-          ),
-          loader: "js",
-        };
-      },
-    );
-  },
-};
 
 /**
  * Bun.build configuration for AOT compilation (Requirement 181.4).
@@ -90,7 +67,7 @@ export async function buildAOT(
       outdir: "dist",
       target: "bun",
       define: { "process.env.NODE_ENV": JSON.stringify("production") },
-      plugins: [typeboxCompileBridge, aot("src/main.ts", { strip: false })],
+      plugins: [aot("src/main.ts", { strip: false })],
       alias: { elysia: "elysia/dist/index.mjs" },
       // `strip: false` keeps the runtime handler JIT reachable. The default
       // `'auto'` stubs it out whenever its frozen replay proves no route needs
@@ -102,18 +79,6 @@ export async function buildAOT(
       // a compiled binary fail on a bare `require("typebox/type")`; keeping the
       // JIT present keeps TypeBox wired the ordinary way.
     });
-    const outputPath = "dist/main.js";
-    const outputFile = Bun.file(outputPath);
-    if (await outputFile.exists()) {
-      const output = await outputFile.text();
-      const patchedOutput = output
-        .replaceAll("Compile2(this.schema)", "Compile2({}, this.schema)")
-        .replaceAll(
-          "this.tb.buildResult.external.variables.some(isAsyncPredicate)",
-          "(this.tb.buildResult?.external?.variables ?? []).some(isAsyncPredicate)",
-        );
-      await Bun.write(outputPath, patchedOutput);
-    }
     // Treat any diagnostics (warnings or errors) as build failures
     if (result.logs.length > 0) {
       for (const log of result.logs) {

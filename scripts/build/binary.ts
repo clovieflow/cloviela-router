@@ -22,15 +22,23 @@
  *    first use. The migrations folder is not part of this decision —
  *    `resolveMigrationsFolder()` resolves `<cwd>/migrations` unconditionally.
  *
- * Usage: `bun run scripts/build/binary.ts [--outfile dist/cartethyia]`
+ * Usage: `bun run scripts/build/binary.ts [--outfile dist/rikka-router]`
  */
-const DEFAULT_OUTFILE = "dist/cartethyia";
+import { join } from "node:path";
+
+const DEFAULT_OUTFILE = "dist/rikka-router";
+
+/**
+ * Where PGlite ships the runtime assets the embedded backend loads by name.
+ * Resolved from the repository root so the build works from any cwd.
+ */
+const PGLITE_DIST = join(import.meta.dir, "..", "..", "node_modules", "@electric-sql", "pglite", "dist");
 
 /**
  * The artifact path `bun build --compile` actually writes for `outfile`.
  *
  * Bun appends `.exe` when it compiles for Windows, so the extensionless
- * `dist/cartethyia` handed to it never exists on that platform. This is the one
+ * `dist/rikka-router` handed to it never exists on that platform. This is the one
  * place that knows where the compiled binary lands; `start-production.ts`
  * resolves its target from here instead of re-deriving the name, because a
  * launcher that probed the requested path reported "run bun run build first"
@@ -68,14 +76,49 @@ export async function buildBinary(
     minify: true,
     target: "bun",
     define: { "process.env.NODE_ENV": JSON.stringify("production") },
-    compile: { outfile },
+    compile: {
+      outfile,
+      // Lite mode runs embedded PGlite, whose WASM and data files are loaded at
+      // runtime through `new URL("pglite.data", import.meta.url)` — a path a
+      // standalone executable cannot resolve on its own. Without embedding them
+      // boot dies with `ENOENT: open '/$bunfs/root/pglite.data'`. Bun preserves
+      // each asset's basename, which is exactly the name PGlite asks for, so the
+      // files are embedded under their own names rather than a nested path.
+      assets: [
+        join(PGLITE_DIST, "pglite.data"),
+        join(PGLITE_DIST, "pglite.wasm"),
+        join(PGLITE_DIST, "initdb.wasm"),
+      ],
+    },
   });
 
   if (result.logs.length > 0) {
     for (const log of result.logs) console.error(`[binary] ${log.message}`);
     throw new Error(`binary build emitted ${result.logs.length} diagnostic(s)`);
   }
+  await signCompiledBinary(compiledBinaryPath(outfile));
   console.log(`[binary] compiled ${compiledBinaryPath(outfile)}`);
+}
+
+/**
+ * Re-signs the compiled executable on macOS.
+ *
+ * `bun build --compile` writes the file in place after the linker has already
+ * ad-hoc signed it, which leaves the signature describing bytes that no longer
+ * match. macOS then kills the process on first execution with
+ * `SIGKILL (Code Signature Invalid)` and no stderr output at all — the binary
+ * looks like it exits silently. Re-signing ad-hoc restores a valid signature.
+ */
+async function signCompiledBinary(path: string): Promise<void> {
+  if (process.platform !== "darwin") return;
+  const proc = Bun.spawn(["codesign", "--force", "--sign", "-", path], {
+    stdout: "ignore",
+    stderr: "pipe",
+  });
+  const stderr = await new Response(proc.stderr).text();
+  if ((await proc.exited) !== 0) {
+    throw new Error(`codesign failed for ${path}: ${stderr.trim()}`);
+  }
 }
 
 if (import.meta.main) {

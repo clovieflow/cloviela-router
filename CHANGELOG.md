@@ -1,3 +1,75 @@
+## Rikka Router fork
+
+- **The compiled release binary could not run.** Two independent defects, both
+  found by executing `dist/rikka-router` rather than trusting the build's exit
+  code. macOS killed it on launch with `SIGKILL (Code Signature Invalid)` and no
+  output, because `bun build --compile` rewrites the file after the linker signs
+  it; the build now re-signs ad-hoc on darwin. And Lite mode died with
+  `ENOENT: open '/$bunfs/root/pglite.data'`, because PGlite resolves its WASM and
+  data files through `import.meta.url` and a standalone executable has no
+  directory to resolve them from; the assets are now embedded, which also
+  required moving the option inside `compile` (Bun ignores a root-level
+  `assets` key without reporting it).
+- **P0: Lite mode deadlocked permanently when a provider account was created.**
+  `createAccount` enriched its response through `accountsWithUsage(...)` while
+  its own transaction was still open, and that helper read through the outer
+  handle. Lite is a single-connection embedded PGlite, so the nested read
+  waited forever on the connection the transaction already held: the process
+  reported `db: disconnected`, readiness stalled for its full 5 s timeout on
+  every call, and every database-touching request hung until a restart. Full
+  mode hid it because a second pool connection served the nested read. The
+  enrichment and listing paths now take the transaction executor, and the
+  runtime in-flight gauge — which is not transaction state — is skipped inside
+  a transaction. Found by driving the real HTTP boundary, not by unit tests.
+- **Account creation for an unknown provider returned 500.** The
+  `provider_accounts.provider_id` foreign key raised a constraint violation
+  that surfaced as a generic `internal_error`. The provider is now validated
+  before the insert, so the caller gets `404 provider_not_found`.
+- **Privacy: upstream credentials can no longer reach a gateway caller or a
+  log.** `publicGatewayErrorDetails` published allowlisted diagnostic strings
+  verbatim, and `raw` is attacker-controlled text — a provider that echoes the
+  API key it rejected (common on 401) published that key to the caller. The
+  same class of leak existed in the console log ring and in payload capture.
+  `src/observability/redaction.ts` now owns a credential redactor applied at
+  every publication/storage boundary; provider requests remain unmodified.
+  Reproduced before the fix (`publicErrorLeaks:true`), verified after
+  (`false`, `upstreamInputUnchanged:true`).
+- **Private-first listener.** The HTTP server bound every interface implicitly.
+  `CARTETHYIA_BIND_HOST` now defaults to `127.0.0.1`; Docker sets `0.0.0.0`
+  explicitly and publishes to the host as `127.0.0.1` only.
+- **Dependency: Elysia and TypeBox pinned together.** TypeBox `1.3.24` removed
+  the `Validator.buildResult` shape that Elysia `2.0.0-beta.16` reads, so a
+  fresh install crashed with `this.tb.buildResult.external` undefined the
+  moment a real listener started compiling `/console/api/auth/login`. Pinned
+  `typebox` to `1.3.23` and removed the AOT build's string-patching bridge that
+  had been masking the mismatch in the bundled path only.
+- **CLI-tool tests can no longer damage real client configuration.** The
+  lifecycle suite redirected `HOME`, but `os.homedir()` was already cached, so
+  injector writes landed in the operator's real `~/.codex`, `~/.claude`,
+  `~/.config/opencode`, and others. `homeDir()` now resolves the environment
+  lazily, the runner launches workers with a disposable home/temp/XDG sandbox,
+  and `fs-ops.ts` refuses any write outside it — including through a symlink or
+  a dangling symlink (both reproduced).
+- **`bun doctor` honors the active environment.** `.env` values overrode an
+  explicitly exported `PORT`/`DATABASE_URL`/`REDIS_URL`, so readiness was
+  probed on the wrong port. Precedence is now process environment first, and
+  the lockout reset boots the database through the same authority the app uses.
+- **Accessibility fixes measured with axe-core, not assumed.** Disabled buttons
+  composited to 4.31:1; Day success/warning status text measured 4.23:1 and
+  3.95:1; the console log's theme-following colors measured 2.6:1 on its fixed
+  dark surface; a progressbar had no accessible name; a password field had no
+  label; state panels skipped a heading level. All 17 console routes now report
+  zero axe-core violations in both themes.
+- **Rikka identity.** Rikka Night / Rikka Day / Follow-system palettes designed
+  independently, original GPT-Image-2 artwork throughout (30 optimized assets
+  with a provenance manifest), Indonesian-first copy with English support, and
+  a new onboarding, health, models, API-keys, simulator, help, about,
+  not-found, and system-error screen.
+- **Truthfulness fixes in the UI.** The Gateway Endpoint card printed a
+  hardcoded `PORT 12800` and the Help samples hardcoded `127.0.0.1:12800`;
+  both now derive from the live origin. The release label no longer names an
+  upstream codename.
+
 ## Unreleased
 
 - A buddy-family channel rejection (`400 · 11128`, "Illegal API invocation

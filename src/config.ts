@@ -88,6 +88,7 @@ export type ConfigEntry =
 export const CONFIG_SPEC = {
   // HTTP listener + dashboard runtime
   PORT: { kind: "int", default: 12_800, min: 1, max: 65_535 },
+  CARTETHYIA_BIND_HOST: { kind: "text", default: "127.0.0.1" },
   DASHBOARD_DIST: { kind: "text", default: DEFAULT_DASHBOARD_DIST },
   CARTETHYIA_API_KEY: { kind: "optional-text" },
   CARTETHYIA_SERVER_MAX_BODY_BYTES: {
@@ -274,6 +275,11 @@ function readList(name: string, entry: ListConfigEntry): readonly string[] | und
 /** Resolves the HTTP listener port from the process environment. */
 export function resolvePort(): number {
   return readInt("PORT", CONFIG_SPEC.PORT);
+}
+
+/** Private-first listener; container/reverse-proxy exposure is explicit. */
+export function resolveBindHost(): string {
+  return readText("CARTETHYIA_BIND_HOST", CONFIG_SPEC.CARTETHYIA_BIND_HOST);
 }
 
 /** Resolves the dashboard static asset directory. */

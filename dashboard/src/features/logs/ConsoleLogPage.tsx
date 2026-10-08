@@ -27,6 +27,7 @@ import { useConsoleLogStream, type ConsoleLogEntry, type ConsoleLogLevel } from 
 import { auditActionLabel } from "../../shared/audit-labels";
 import { getErrorMessage } from "../../shared/helpers";
 import { toast } from "../../shared/toast";
+import { PageArt } from "../../components/rikka/art-surfaces";
 
 type TabKey = "logs" | "audit";
 const PAGE_SIZE = 50;
@@ -40,10 +41,13 @@ const LEVEL_FILTERS: ReadonlyArray<{ id: "all" | ConsoleLogLevel; label: string 
 ];
 
 const LEVEL_COLOR: Record<ConsoleLogLevel, string> = {
-  debug: "var(--text-tertiary)",
-  info: "var(--accent)",
-  warn: "var(--orange)",
-  error: "var(--red)",
+  // The log viewport is a fixed dark terminal surface in both themes, so these
+  // resolve to `--terminal-*` tokens rather than the theme accent/warning,
+  // which measured 2.6:1 and 3.6:1 against it in the Day palette.
+  debug: "var(--terminal-debug)",
+  info: "var(--terminal-info)",
+  warn: "var(--terminal-warn)",
+  error: "var(--terminal-error)",
 };
 
 /** Short level tag, so severity is readable without decoding a colour. */
@@ -100,7 +104,7 @@ export default function ConsoleLogPage(): ReactNode {
         minHeight: "480px",
       }}
     >
-      <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: "8px", flexShrink: 0, alignItems: "center" }}>
         <Button
           variant={activeTab === "logs" ? "primary" : "secondary"}
           size="sm"
@@ -121,6 +125,12 @@ export default function ConsoleLogPage(): ReactNode {
             Admin Audit
           </Button>
         ) : null}
+        {/* This page owns its own fixed-height scroll region, so the vignette
+            rides the tab row instead of a PageHead: a header above the tabs
+            would eat log rows on a 320px viewport, and the log is the point. */}
+        <span style={{ marginLeft: "auto" }}>
+          <PageArt name="logs" size={34} />
+        </span>
       </div>
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
         {activeTab === "logs" ? <LiveLogsPanel /> : <AuditPanel />}
