@@ -22,10 +22,10 @@ this session against the running application; none is inferred.
 | Accessibility checks | **PASS** | WCAG AA contrast measured per rendered element, 14 routes × 2 themes, 0 violations |
 | Test failures investigated | **PASS** | All 26 backend failures traced to the absent PostgreSQL; verified identical before and after |
 | Critical/high defects fixed | **PASS** | See `bug-remediation-report.md` |
-| Regression tests for repaired defects | **PASS** | `test/console/readiness-endpoint.test.ts` (9), `restore-account-state.test.ts` (2) |
+| Regression tests for repaired defects | **PASS** | `test/console/readiness-endpoint.test.ts` (10), `restore-account-state.test.ts` (2); the memory test was proved to fail by reverting its fix |
 | TypeScript typechecks pass | **PASS** | `bun run typecheck`, `bun run dashboard:typecheck` — both clean |
 | Production build passes | **PASS** | `bun run dashboard:build` — built in 568ms |
-| Backend tests pass | **PASS (scoped)** | 1800 pass / 26 fail; the 26 are the PostgreSQL-gated suite |
+| Backend tests pass | **PASS (scoped)** | 1801 pass / 26 fail; the 26 are the PostgreSQL-gated suite |
 | Frontend tests pass | **PASS** | 371 pass / 0 fail |
 | Browser E2E passes for critical journeys | **PASS** | 3552 executed: **PASS 317, FAIL 0** |
 | No unresolved known P0/P1 defects | **PASS** | None open |
@@ -37,7 +37,7 @@ this session against the running application; none is inferred.
 bun run typecheck          clean
 bun run dashboard:typecheck clean
 bun run dashboard:build    built in 568ms
-bun run test               1800 pass / 26 fail
+bun run test               1801 pass / 26 fail
 bun run dashboard:test      371 pass / 0 fail
 ci-cloviela-e2e --store lite
   planned 3522: UNVERIFIED=1065 BLOCKED=1656 NA=801
