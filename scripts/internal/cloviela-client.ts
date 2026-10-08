@@ -189,12 +189,23 @@ export class HarnessClient {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      /**
+       * Every frame consumed, in arrival order. `buffer` alone cannot answer
+       * "what did the stream say": the loop slices each frame out of it, so
+       * whatever is left is only the trailing partial frame. Asserting on that
+       * tail made the terminal-event check look for `finish_reason` in an
+       * empty string and fail every streaming case while the gateway was
+       * streaming correctly.
+       */
+      let received = "";
       let frames = 0;
       try {
         for (;;) {
           const chunk = await reader.read();
           if (chunk.done) break;
-          buffer += decoder.decode(chunk.value, { stream: true });
+          const decoded = decoder.decode(chunk.value, { stream: true });
+          buffer += decoded;
+          received += decoded;
           let boundary = buffer.indexOf("\n\n");
           while (boundary >= 0) {
             const frame = buffer.slice(0, boundary);
@@ -215,7 +226,9 @@ export class HarnessClient {
       } catch (error) {
         if (!aborted) throw error;
       }
-      text = buffer;
+      // The partial tail still belongs to the body: an upstream that closes
+      // mid-frame must be observable rather than silently dropped.
+      text = received + buffer;
       sseEvents = events;
     } else {
       text = await response.text();

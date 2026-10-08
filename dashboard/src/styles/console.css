@@ -3246,6 +3246,13 @@
 }
 
 @media (max-width: 560px) {
+  /* The action becomes a full-width row, so the step must be allowed to wrap:
+     a 100%-wide item with `flex-shrink: 0` inside a non-wrapping flex row is
+     wider than the row by definition, and pushed the button past the viewport
+     on a 320px screen. */
+  .onboarding-step {
+    flex-wrap: wrap;
+  }
   .onboarding-step-action {
     align-self: flex-start;
     width: 100%;
