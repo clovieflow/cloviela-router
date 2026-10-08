@@ -1,10 +1,20 @@
 import type { ReactElement } from "react";
 
 /**
- * Canonical repository link shared by every public surface, so the landing page
- * and the share page cannot drift onto different repositories.
+ * This product's own repository, shared by every public surface so the landing
+ * page and the share page cannot drift onto different repositories. The badge
+ * counts belong to this project, not to anything it is built on.
  */
-export const GITHUB_REPO_URL = "https://github.com/risunCode/Cartethyia";
+export const GITHUB_REPO_URL = "https://github.com/clovieflow/cloviela-router";
+
+/**
+ * The open-source gateway core this project is built on.
+ *
+ * Kept as a separate constant because it serves a different purpose: it is the
+ * attribution required by GPL-3.0, shown in About -> Credits. Pointing the star
+ * badge at it would send this product's visitors to someone else's project.
+ */
+export const UPSTREAM_PROJECT_URL = "https://github.com/risunCode/Cartethyia";
 
 /**
  * The badge host, declared here rather than imported from the backend CSP
@@ -15,7 +25,7 @@ export const GITHUB_REPO_URL = "https://github.com/risunCode/Cartethyia";
  */
 export const BADGE_IMAGE_ORIGIN = "https://img.shields.io";
 
-const REPO_SLUG = "risunCode/Cartethyia";
+const REPO_SLUG = "clovieflow/cloviela-router";
 
 /**
  * Live star and fork counts, as shields.io SVG badges.
@@ -63,7 +73,7 @@ export function GithubBadge({ className = "" }: { className?: string }): ReactEl
       href={GITHUB_REPO_URL}
       target="_blank"
       rel="noreferrer"
-      aria-label="Cartethyia on GitHub"
+      aria-label="Cloviela Router on GitHub"
     >
       <GithubMark size={15} />
       <img

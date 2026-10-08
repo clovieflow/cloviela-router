@@ -1,6 +1,6 @@
 # Architecture
 
-How one request flows through Rikka Router, and which module owns each step.
+How one request flows through Cloviela Router, and which module owns each step.
 The gateway core is inherited from Cartethyia; this document describes the
 shipped behavior, not an aspiration.
 
@@ -116,7 +116,7 @@ directory. Both modes expose the same application features.
 ## Extension points
 
 - **Provider** — `src/providers/*` (registry entry, adapter, auth, quota,
-  discovery). See `.skills/cartethyia-engineering/references/provider-lifecycle.md`.
+  discovery). See `.skills/cloviela-engineering/references/provider-lifecycle.md`.
 - **Protocol surface** — `src/transport/surface/*` plus `src/protocol/*`.
 - **Console domain** — `src/console/domains/*` or a domain folder under
   `src/console/`, registered in `src/console/domain-registration.ts`.

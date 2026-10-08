@@ -1,4 +1,4 @@
-# Rikka Router release evidence
+# Cloviela Router release evidence
 
 Recorded during the implementation session. Each entry names the command or
 boundary that produced it. `PASS` here means the stated command ran and
@@ -170,7 +170,7 @@ placements recorded in `assets/manifest.json`.
 
 ## Release binary (compiled artifact)
 
-Two real defects were found by actually executing `dist/rikka-router`:
+Two real defects were found by actually executing `dist/cloviela-router`:
 
 1. **macOS killed it silently on launch** — `SIGKILL (Code Signature Invalid)`.
    `bun build --compile` rewrites the file after the linker ad-hoc signs it, so
@@ -226,7 +226,7 @@ All commands run against the integrated tree, in this session:
 | `bun run test:backend` | **2033 pass / 0 fail** (2023 parallel + 10 serial DDL, 78 files), stable across 3 consecutive runs |
 | `bun run dashboard:test` | **371 pass / 0 fail** (9 files) |
 | `bun run build` | dashboard → AOT → binary, all succeeded |
-| `dist/rikka-router` | 85,700,688 bytes, `codesign --verify` valid, boots Lite and Full |
+| `dist/cloviela-router` | 85,700,688 bytes, `codesign --verify` valid, boots Lite and Full |
 | `bun doctor` (against a running instance) | "All systems operational" |
 | axe-core, 17 console routes × 2 themes | **0 violations** (629 passing checks in the Day sweep) |
 | Responsive 320/390/768/1024/1440/1920 | no horizontal overflow on any width |

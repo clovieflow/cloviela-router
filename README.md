@@ -1,10 +1,10 @@
-# Rikka Router
+# Cloviela Router
 
-**A private-first, self-hosted multi-provider AI gateway — an unofficial Rikka Takarada (SSSS.GRIDMAN) fan theme built on the Cartethyia routing core.**
+**A private-first, self-hosted multi-provider AI gateway with an original anime console — unofficial Rikka Takarada (SSSS.GRIDMAN) fan theme.**
 
-Rikka Router gives your AI clients one stable, OpenAI- and Anthropic-compatible endpoint while the gateway does the operational work behind it: provider-aware translation, account selection, health-aware failover, quota and cooldown enforcement, usage accounting, telemetry, and optional proxy pools. The dashboard is an original Rikka-themed console with its own artwork, Indonesian-first copy with full English support, and Rikka Night / Rikka Day / Follow-system themes.
+Cloviela Router gives your AI clients one stable, OpenAI- and Anthropic-compatible endpoint while the gateway does the operational work behind it: provider-aware translation, account selection, health-aware failover, quota and cooldown enforcement, usage accounting, telemetry, and optional proxy pools. The dashboard is an original Rikka-themed console with its own artwork, Indonesian-first copy with full English support, and Rikka Night / Rikka Day / Follow-system themes.
 
-> **This is an unofficial personal fan theme.** The anime character identity belongs to its respective rightsholders; nothing here implies endorsement or grants commercial character rights. The **source code** is a derivative of Cartethyia and remains licensed **GPL-3.0-only** — see [License and attribution](#license-and-attribution).
+> **This is an unofficial personal fan theme.** The anime character identity belongs to its respective rightsholders; nothing here implies endorsement or grants commercial character rights. The source code is licensed **GPL-3.0-only** — see [License and credits](#license-and-credits).
 
 > [!WARNING]
 > **Development version.** APIs, configuration, database behavior, and provider integrations may change without notice. Verify against the current source before depending on a detail.
@@ -67,7 +67,7 @@ bun run dev                     # backend + dashboard dev servers
 Production build and start:
 
 ```bash
-bun run build                   # dashboard → AOT → standalone binary (dist/rikka-router)
+bun run build                   # dashboard → AOT → standalone binary (dist/cloviela-router)
 bun start                       # runs the compiled binary
 ```
 
@@ -108,21 +108,34 @@ platform config directories into a disposable sandbox, and the CLI-tool
 injectors refuse any write outside it — a regression guard, because these
 helpers edit real client configuration files in normal operation.
 
-## License and attribution
+## License and credits
 
-Rikka Router is a derivative work of **[Cartethyia](https://github.com/risunCode/Cartethyia)**
-(branch `dev`, commit `382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`), licensed
-**GNU General Public License v3.0 only**. This fork keeps that license:
-see [`LICENSE`](LICENSE). If you distribute this software or a modified
-version, keep the license and copyright notices, provide the corresponding
-source, and license covered work under GPLv3.
+Cloviela Router is free software under the **GNU General Public License v3.0
+only** — see [`LICENSE`](LICENSE). You may use, study, modify, and redistribute
+it under the same terms. If you distribute it or a modified version, keep the
+license notices, provide the corresponding source, and license covered work
+under GPLv3.
 
-Character artwork in `assets/` and `dashboard/public/rikka/` was generated for
-this fork with OpenAI GPT-Image-2 through OMP and is an original derivative
-illustration of the Rikka Takarada character design; provenance, prompts, and
-hashes are recorded in [`assets/manifest.json`](assets/manifest.json). The
-character identity itself is not licensed by the GPL and remains the property
-of its rightsholders. The project is an unofficial personal fan theme and does
-not claim endorsement by or affiliation with the character's rightsholders.
+### Built on
+
+The gateway core derives from **Cartethyia** by risunCode
+(<https://github.com/risunCode/Cartethyia>, branch `dev`, commit
+`382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`), also GPL-3.0-only. Its copyright
+and license are retained as the GPL requires. Changes made here are recorded in
+[`CHANGELOG.md`](CHANGELOG.md) and summarised in the console under
+**Tentang → Kredit**.
+
+### Artwork
+
+The character illustrations in `assets/` and `dashboard/public/rikka/` were
+generated for this project with OpenAI GPT-Image-2 through OMP. They are
+original derivative illustrations of the Rikka Takarada character design;
+prompts, dimensions, and hashes are recorded in
+[`assets/manifest.json`](assets/manifest.json).
+
+The character identity is **not** covered by the GPL and remains the property
+of its rightsholders. This is an unofficial personal fan theme: it is not
+affiliated with, sponsored by, or endorsed by any rightsholder, and claims no
+commercial rights to the character.
 
 This software is provided **without warranty**, as stated in the GPLv3.

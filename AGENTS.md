@@ -1,13 +1,15 @@
-# Rikka Router Agent Guide
+# Cloviela Router Agent Guide
 
-Rikka Router is the GPLv3 Rikka-themed derivative of Cartethyia. Persisted
-contracts keep upstream names (`CARTETHYIA_*` environment variables, the
-`Cartethyia` data directory, `/console/api` paths, `cartethyia:*` storage
-keys); only presentation is Rikka-branded. Keep it that way when renaming.
+Cloviela Router's gateway core derives from Cartethyia (GPLv3). Persisted
+contracts deliberately keep their original names — the `CARTETHYIA_*`
+environment variables, the `Cartethyia` data directory, `/console/api` paths,
+and `cartethyia:*` storage keys — because they are compatibility surface for
+existing installations. Presentation is Cloviela-branded. Renaming a persisted
+contract breaks upgrades; renaming a label does not.
 
 The goal is to leave the repository trustworthy for the next reader. Keep this
 file concise; detailed subsystem guidance lives in
-`.skills/cartethyia-engineering/`.
+`.skills/cloviela-engineering/`.
 
 ## Core rule
 

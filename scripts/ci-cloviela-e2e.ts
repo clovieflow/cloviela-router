@@ -7,12 +7,12 @@
  * identifier this host can actually support, and writes sanitized evidence.
  *
  * Usage:
- *   bun run scripts/ci-rikka-e2e.ts                         # Lite, all dimensions
- *   bun run scripts/ci-rikka-e2e.ts --store full \
+ *   bun run scripts/ci-cloviela-e2e.ts                         # Lite, all dimensions
+ *   bun run scripts/ci-cloviela-e2e.ts --store full \
  *       --database-url postgres://postgres@127.0.0.1:5432/rikka_e2e_<unique> \
  *       [--redis-url redis://127.0.0.1:6379/13]
- *   bun run scripts/ci-rikka-e2e.ts --only GW-00001,CLI-00004
- *   bun run scripts/ci-rikka-e2e.ts --list                  # print the plan, run nothing
+ *   bun run scripts/ci-cloviela-e2e.ts --only GW-00001,CLI-00004
+ *   bun run scripts/ci-cloviela-e2e.ts --list                  # print the plan, run nothing
  *
  * Exit codes: 0 when every executed case passed and nothing was left
  * UNVERIFIED for a reason other than an explicit gate; 1 when any case failed;
@@ -21,7 +21,7 @@
  * Safety: the runner refuses to start unless every writable path lives inside
  * one temp root it owns, the database is a uniquely named `rikka_e2e_*`
  * database on loopback, and the Redis index is one reserved for harness runs.
- * See `scripts/internal/rikka-guard.ts` for the exact rules.
+ * See `scripts/internal/cloviela-guard.ts` for the exact rules.
  *
  * Every identifier starts UNVERIFIED. A case is only ever PASS when the
  * assertion matching its own clause ran and held.
@@ -38,8 +38,8 @@ import {
   GuardRefusal,
   portablePath,
   HARNESS_DB_PREFIX,
-} from "./internal/rikka-guard";
-import { startMockUpstream, type MockCall } from "./internal/rikka-mock-upstream";
+} from "./internal/cloviela-guard";
+import { startMockUpstream, type MockCall } from "./internal/cloviela-mock-upstream";
 import {
   defaultIndexPath,
   HARNESS_DIMENSIONS,
@@ -49,8 +49,8 @@ import {
   type HarnessDimension,
   type PlanSummary,
   type PlannedCase,
-} from "./internal/rikka-plan";
-import { HarnessClient } from "./internal/rikka-client";
+} from "./internal/cloviela-plan";
+import { HarnessClient } from "./internal/cloviela-client";
 import {
   clientResults,
   dispositionResult,
@@ -70,7 +70,7 @@ import {
   worldBehaviors,
   type CaseResult,
   type World,
-} from "./internal/rikka-execute";
+} from "./internal/cloviela-execute";
 import {
   ensureWorkDir,
   runClient,
@@ -78,8 +78,8 @@ import {
   writeOmpProfile,
   writeOpencodeProfile,
   clientEnv,
-} from "./internal/rikka-clients";
-import { READY_PREFIX } from "./internal/rikka-host";
+} from "./internal/cloviela-clients";
+import { READY_PREFIX } from "./internal/cloviela-host";
 
 interface Cli {
   readonly store: "lite" | "full";
@@ -96,7 +96,7 @@ function parseArgs(argv: readonly string[]): Cli {
   let store: "lite" | "full" = "lite";
   let databaseUrl: string | undefined;
   let redisUrl: string | undefined;
-  let outDir = ".rikka-work/e2e-rikka";
+  let outDir = ".rikka-work/e2e-cloviela";
   let only: Set<string> | undefined;
   let dimensions: readonly HarnessDimension[] = HARNESS_DIMENSIONS;
   let list = false;
@@ -146,7 +146,7 @@ const HELP = `Rikka gateway E2E matrix runner.
   --redis-url <url>          optional; index must be 13 or 14
   --dimensions GW,SEC,DB,CLI which matrix dimensions to plan (default all)
   --only <ids>               execute only these identifiers
-  --out <dir>                evidence directory (default .rikka-work/e2e-rikka)
+  --out <dir>                evidence directory (default .rikka-work/e2e-cloviela)
   --list                     print the resolved plan and exit without executing
   --keep-root                keep the temp run root for inspection`;
 
@@ -196,7 +196,7 @@ async function startHost(
   cwd: string,
   timeoutMs: number,
 ): Promise<HostHandle> {
-  const child = spawn(process.execPath, ["run", join(import.meta.dir, "internal", "rikka-host.ts")], {
+  const child = spawn(process.execPath, ["run", join(import.meta.dir, "internal", "cloviela-host.ts")], {
     cwd,
     env: env as NodeJS.ProcessEnv,
     stdio: ["ignore", "pipe", "pipe"],

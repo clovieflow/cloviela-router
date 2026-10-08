@@ -399,7 +399,7 @@ export function SharePage(): ReactElement {
                 }}
               />
             </span>
-            <b>Rikka Router</b>
+            <b>Cloviela Router</b>
           </a>
           <div className="share-topbar-actions">
             <GithubBadge className="share-github-badge" />

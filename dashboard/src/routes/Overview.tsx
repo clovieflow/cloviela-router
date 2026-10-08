@@ -168,7 +168,7 @@ function SystemOverviewPanel({
               <span className="overview-card-primary-label">RSS</span>
             </div>
             <p className="overview-card-summary">
-              RSS is the full Rikka Router process — Bun runtime, JIT heap, and buffers combined.
+              RSS is the full Cloviela Router process — Bun runtime, JIT heap, and buffers combined.
             </p>
             <div className="overview-card-footer">
               <div className="overview-mini-grid">

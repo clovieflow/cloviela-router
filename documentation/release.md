@@ -17,7 +17,7 @@ bun run build
 ```
 
 `bun run build` runs dashboard → AOT → standalone binary and writes
-`dist/rikka-router`.
+`dist/cloviela-router`.
 
 ## Test database
 
@@ -62,7 +62,7 @@ These are real and should not be read as covered:
 ## Evidence
 
 Release evidence lives outside version control (`.rikka-work/evidence/` and
-`.rikka-work/e2e-rikka/`) so that generated artifacts and traces do not enter
+`.rikka-work/e2e-cloviela/`) so that generated artifacts and traces do not enter
 the repository. It includes:
 
 - raw logs for each gate command with its exit code;
@@ -75,7 +75,7 @@ A claimed pass without a corresponding artifact is not a pass.
 
 ## Artwork provenance
 
-Original illustrations were generated for this fork with OpenAI GPT-Image-2
+Original illustrations were generated for this project with OpenAI GPT-Image-2
 through OMP. `assets/manifest.json` records, per asset: the generating tool and
 model selector, the prompt, the source image it derived from, output
 dimensions, MIME type, SHA-256, byte size, and the intended placement. The

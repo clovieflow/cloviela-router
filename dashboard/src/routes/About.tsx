@@ -1,6 +1,7 @@
 /**
- * About: license, upstream attribution, the derivative notice, the unofficial
- * fan-theme disclaimer, and an honest localization-coverage statement.
+ * About: license, the required upstream credit and change notice, the
+ * unofficial fan-theme disclaimer, and an honest localization-coverage
+ * statement.
  *
  * ── Why the localization gap is listed by name ─────────────────────────────
  * The product contract permits an accurate localization limitation instead of
@@ -22,7 +23,7 @@ import { Button } from "../components/ui/button";
 import { Stack } from "../components/ui/stack";
 import { useMissingArtNames } from "../components/rikka/RikkaArt";
 import { RIKKA_ART_NAMES } from "../components/rikka/rikka-art-manifest";
-import { GITHUB_REPO_URL } from "../components/patterns/github-badge";
+import { UPSTREAM_PROJECT_URL } from "../components/patterns/github-badge";
 import { PageHead } from "../components/PageHead";
 import { useT } from "../shared/locale-context";
 import { UNTRANSLATED_SURFACES } from "../shared/i18n";
@@ -81,16 +82,16 @@ export default function About(): ReactNode {
                 <strong>{t("about.upstream")}</strong>
               </p>
               <p className="about-prose">
-                {t("about.upstreamBody", { repo: GITHUB_REPO_URL })}
+                {t("about.upstreamBody", { repo: "Cartethyia" })}
               </p>
               <Button
                 variant="secondary"
                 size="sm"
                 icon={<ExternalLink size={13} />}
                 style={{ marginTop: 8 }}
-                onClick={() => window.open(GITHUB_REPO_URL, "_blank", "noopener,noreferrer")}
+                onClick={() => window.open(UPSTREAM_PROJECT_URL, "_blank", "noopener,noreferrer")}
               >
-                {GITHUB_REPO_URL.replace("https://github.com/", "")}
+                {UPSTREAM_PROJECT_URL.replace("https://github.com/", "")}
               </Button>
             </div>
             <div>

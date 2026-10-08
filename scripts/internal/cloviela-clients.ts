@@ -15,7 +15,7 @@
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { clientEnvironment } from "./rikka-guard";
+import { clientEnvironment } from "./cloviela-guard";
 
 export interface ClientInvocation {
   readonly command: readonly string[];

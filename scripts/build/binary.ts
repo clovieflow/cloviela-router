@@ -22,11 +22,11 @@
  *    first use. The migrations folder is not part of this decision —
  *    `resolveMigrationsFolder()` resolves `<cwd>/migrations` unconditionally.
  *
- * Usage: `bun run scripts/build/binary.ts [--outfile dist/rikka-router]`
+ * Usage: `bun run scripts/build/binary.ts [--outfile dist/cloviela-router]`
  */
 import { join } from "node:path";
 
-const DEFAULT_OUTFILE = "dist/rikka-router";
+const DEFAULT_OUTFILE = "dist/cloviela-router";
 
 /**
  * Where PGlite ships the runtime assets the embedded backend loads by name.
@@ -38,7 +38,7 @@ const PGLITE_DIST = join(import.meta.dir, "..", "..", "node_modules", "@electric
  * The artifact path `bun build --compile` actually writes for `outfile`.
  *
  * Bun appends `.exe` when it compiles for Windows, so the extensionless
- * `dist/rikka-router` handed to it never exists on that platform. This is the one
+ * `dist/cloviela-router` handed to it never exists on that platform. This is the one
  * place that knows where the compiled binary lands; `start-production.ts`
  * resolves its target from here instead of re-deriving the name, because a
  * launcher that probed the requested path reported "run bun run build first"

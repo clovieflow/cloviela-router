@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: rikka-router:local
+    image: cloviela-router:local
     ports:
       - "127.0.0.1:${PORT:-12800}:12800"
     # Keep credentials and URLs in .env; do not bake

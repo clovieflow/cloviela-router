@@ -1,6 +1,6 @@
-# Rikka Router documentation
+# Cloviela Router documentation
 
-Start here if you are installing or running Rikka Router:
+Start here if you are installing or running Cloviela Router:
 
 - [Getting started](getting-started.md) — requirements, setup, OS guidance, Docker,
   commands, migrations, and verification.
