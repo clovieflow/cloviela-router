@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="referrer" content="no-referrer" />
-    <meta name="theme-color" content="#05070d" />
+    <meta name="theme-color" content="#0f0d0b" />
     <meta
       name="description"
       content="Self-hosted Bun + Elysia gateway for OpenAI and Anthropic clients: one endpoint, protocol translation, failover, quotas, and an operator console."
@@ -41,11 +41,11 @@
       href="https://fonts.googleapis.com/css2?family=Geist+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     />
     <style>
-      html { background: #0b0f1a; }
+      html { background: #0f0d0b; }
       html[data-app="console"],
       html[data-app="share"] { background: #f7f5f2; }
       html[data-app="console"][data-theme="dark"],
-      html[data-app="share"][data-theme="dark"] { background: #0b0f1a; }
+      html[data-app="share"][data-theme="dark"] { background: #141210; }
     </style>
     <script>
       // This bootstrap mirrors dashboard/src/shared/theme.ts because it must run
@@ -81,7 +81,7 @@
         // Both palettes are dark-led for the browser chrome; the console and
         // share page share the Night page background so the address bar does
         // not flash cream before the first paint of a dark theme.
-        if (themeMeta) themeMeta.setAttribute("content", "#0b0f1a");
+        if (themeMeta) themeMeta.setAttribute("content", "#141210");
         if (!isConsole && !isShare) return;
         const osPrefersDark =
           typeof window.matchMedia === "function" &&

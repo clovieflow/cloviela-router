@@ -283,7 +283,43 @@ export interface ObservabilityStore {
     httpStatus?: number,
   ): Promise<UsageRequestsResponse>;
   usageRequestDetail(tenantId: string, requestId: string): Promise<UsageRequestDetail | undefined>;
+  /**
+   * First-run checklist counts. Measured per tenant; a step that cannot be
+   * counted must be reported as not-ok rather than guessed true, because this
+   * gates the onboarding screen's "your gateway is ready" claim.
+   */
+  readiness(tenantId: string): Promise<ReadinessResponse>;
 }
+/**
+ * One step of the first-run checklist.
+ *
+ * `id` is a closed set owned here, not an open string: the dashboard sorts and
+ * labels the checklist by these exact values, so a typo on either side would
+ * silently drop a step from the operator's screen.
+ */
+export type ReadinessStepId =
+  | "admin_created"
+  | "provider_connected"
+  | "model_available"
+  | "api_key_issued"
+  | "first_request_seen";
+
+export interface ReadinessCheck {
+  readonly id: ReadinessStepId;
+  readonly ok: boolean;
+  /** What was actually counted, e.g. "2 provider(s) connected". */
+  readonly detail?: string;
+  /** What the operator should do when `ok` is false. */
+  readonly remediation?: string;
+}
+
+export interface ReadinessResponse {
+  /** True only when every step that gates usability is satisfied. */
+  readonly ready: boolean;
+  readonly generatedAt: string;
+  readonly checks: readonly ReadinessCheck[];
+}
+
 export interface ObservabilityConfig {
   readonly store: ObservabilityStore;
   readonly accessResolver: ConsoleAccessResolver;
@@ -295,6 +331,10 @@ export function createObservabilityOperations(config: ObservabilityConfig) {
         const a = requireTenantScope(access, "dashboard:read");
         const h = await config.store.health(a.tenantId);
         return h;
+      },
+    async getReadiness(access: AccessDecision | undefined): Promise<ReadinessResponse> {
+        const a = requireTenantScope(access, "dashboard:read");
+        return config.store.readiness(a.tenantId);
       },
     async getTenantUsage(access: AccessDecision | undefined, period = "7d"): Promise<UsageResponse> {
         const a = requireTenantScope(access, "dashboard:read");
@@ -440,6 +480,9 @@ export function createObservabilityRoutes(config: ObservabilityConfig): Elysia {
     .error(consoleErrorHandler("Observability operation failed"))
     .get("/system/health", async ({ request }) => {
       return await factory.getSystemHealth(config.accessResolver(request));
+})
+    .get("/system/readiness", async ({ request }) => {
+      return await factory.getReadiness(config.accessResolver(request));
 })
     .get("/system/usage", { query: usageQuery }, async ({ request, query }) => {
       return await factory.getTenantUsage(config.accessResolver(request), query.period);

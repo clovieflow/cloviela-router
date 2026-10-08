@@ -669,7 +669,7 @@ function CliToolDetailBody({
                             gap: "6px",
                             marginTop: "2px",
                             fontSize: "10px",
-                            color: "var(--warn, #d97706)",
+                            color: "var(--orange)",
                           }}
                         >
                           <span>

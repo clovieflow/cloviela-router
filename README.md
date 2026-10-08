@@ -2,7 +2,7 @@
 
 **A private-first, self-hosted multi-provider AI gateway with an original anime console — unofficial Rikka Takarada (SSSS.GRIDMAN) fan theme.**
 
-Cloviela Router gives your AI clients one stable, OpenAI- and Anthropic-compatible endpoint while the gateway does the operational work behind it: provider-aware translation, account selection, health-aware failover, quota and cooldown enforcement, usage accounting, telemetry, and optional proxy pools. The dashboard is an original Rikka-themed console with its own artwork, Indonesian-first copy with full English support, and Rikka Night / Rikka Day / Follow-system themes.
+Cloviela Router gives your AI clients one stable, OpenAI- and Anthropic-compatible endpoint while the gateway does the operational work behind it: provider-aware translation, account selection, health-aware failover, quota and cooldown enforcement, usage accounting, telemetry, and optional proxy pools. The dashboard is an original Rikka-themed console with its own artwork, Indonesian-first copy with full English support, and Rikka Noir / Rikka Day / Follow-system themes.
 
 > **This is an unofficial personal fan theme.** The anime character identity belongs to its respective rightsholders; nothing here implies endorsement or grants commercial character rights. The source code is licensed **GPL-3.0-only** — see [License and credits](#license-and-credits).
 

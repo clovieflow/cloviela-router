@@ -1,14 +1,26 @@
 import { cpus, totalmem } from "node:os";
-import { and, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import type { CartethyiaDatabase } from "../../persistence/postgres";
 import type { RedisClient } from "../../persistence/redis";
-import { apiKeys, networkPools, telemetryEvents, telemetryPayloads } from "../../persistence/schema";
+import {
+  apiKeys,
+  consoleUsers,
+  models,
+  networkPools,
+  providerAccounts,
+  providers,
+  telemetryEvents,
+  telemetryPayloads,
+} from "../../persistence/schema";
+import { globalOrOwnedBy } from "../../persistence/tenant-scope";
 import { decodeDatedCursor, encodeCursor } from "../../persistence/page-cursor";
 import { CARTETHYIA_VERSION } from "../../transport/version";
 import { resolveMemoryLimitBytes } from "../../observability/runtime-metrics";
 import { CachedPreferencesReader, DrizzlePreferencesReader, type PreferencesReader } from "../../persistence/tenant-preferences";
 import type {
   ObservabilityStore,
+  ReadinessCheck,
+  ReadinessResponse,
   UsageDimension,
   SystemHealthResponse,
   TelemetryEventView,
@@ -732,6 +744,132 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
       }),
     };
   }
+  /**
+   * First-run checklist.
+   *
+   * ── Why these five steps and no more ──────────────────────────────────────
+   * They are the minimum for a client to get an answer: an operator exists to
+   * own the gateway, a provider can serve, a model is routable, a key lets a
+   * client in, and at least one request has proved the path end to end. The
+   * last one does not gate `ready` — a gateway with a key issued is usable,
+   * and "has anyone called it yet" is the operator's next action, not a setup
+   * requirement.
+   *
+   * ── Why every count is a real query ───────────────────────────────────────
+   * The dashboard falls back to composing these same five facts client-side
+   * when this route is absent. Two implementations of one claim can disagree,
+   * so the server is the canonical owner and every number here is measured,
+   * never inferred from configuration.
+   */
+  async readiness(tenantId: string): Promise<ReadinessResponse> {
+    const [adminRow] = await this.db
+      .select({ id: consoleUsers.id })
+      .from(consoleUsers)
+      .where(and(eq(consoleUsers.tenantId, tenantId), eq(consoleUsers.isActive, true)))
+      .limit(1);
+
+    // A provider counts as connected when it is enabled AND has the credential
+    // it needs: `requires_account = false` builtins (OpenCode Free) are usable
+    // with zero accounts, everything else needs at least one.
+    const [providerRow] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(providers)
+      .where(
+        and(
+          eq(providers.enabled, true),
+          globalOrOwnedBy(providers.tenantId, tenantId),
+          or(
+            eq(providers.requiresAccount, false),
+            sql`exists (
+              select 1 from ${providerAccounts}
+              where ${providerAccounts.providerId} = ${providers.id}
+            )`,
+          ),
+        ),
+      );
+
+    const [modelRow] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(models)
+      .innerJoin(providers, eq(models.providerId, providers.id))
+      .where(
+        and(
+          eq(models.enabled, true),
+          eq(providers.enabled, true),
+          globalOrOwnedBy(providers.tenantId, tenantId),
+        ),
+      );
+
+    const [keyRow] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(apiKeys)
+      .where(
+        and(
+          eq(apiKeys.tenantId, tenantId),
+          eq(apiKeys.enabled, true),
+          isNull(apiKeys.revokedAt),
+        ),
+      );
+
+    // 24h is the honest "served anything recently" window: an all-time total
+    // stays non-zero forever after a single test request.
+    const [requestRow] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(telemetryEvents)
+      .where(this.usageScope(tenantId, "24h"));
+
+    const providerCount = Number(providerRow?.count ?? 0);
+    const modelCount = Number(modelRow?.count ?? 0);
+    const keyCount = Number(keyRow?.count ?? 0);
+    const requestCount = Number(requestRow?.count ?? 0);
+
+    const checks: readonly ReadinessCheck[] = [
+      {
+        id: "admin_created",
+        ok: adminRow !== undefined,
+        detail: adminRow === undefined ? "No administrator account" : "Administrator account exists",
+        ...(adminRow === undefined
+          ? { remediation: "Create the administrator account on the setup screen." }
+          : {}),
+      },
+      {
+        id: "provider_connected",
+        ok: providerCount > 0,
+        detail: `${providerCount} provider(s) connected`,
+        ...(providerCount > 0 ? {} : { remediation: "Add a provider account under Providers." }),
+      },
+      {
+        id: "model_available",
+        ok: modelCount > 0,
+        detail: `${modelCount} routable model(s)`,
+        ...(modelCount > 0
+          ? {}
+          : { remediation: "Refresh a provider's model catalog so models become routable." }),
+      },
+      {
+        id: "api_key_issued",
+        ok: keyCount > 0,
+        detail: `${keyCount} active key(s)`,
+        ...(keyCount > 0 ? {} : { remediation: "Issue a gateway key under API Keys." }),
+      },
+      {
+        id: "first_request_seen",
+        ok: requestCount > 0,
+        detail: `${requestCount} request(s) in 24h`,
+        ...(requestCount > 0
+          ? {}
+          : { remediation: "Point a client at the gateway and send one request." }),
+      },
+    ];
+
+    // Only the four gating steps decide `ready`; see the note above.
+    const ready = checks
+      .filter((check) => check.id !== "first_request_seen")
+      .every((check) => check.ok);
+
+    return { ready, generatedAt: new Date().toISOString(), checks };
+  }
+
   async usageRequestDetail(
     tenantId: string,
     requestId: string,

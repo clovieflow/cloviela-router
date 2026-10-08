@@ -282,7 +282,7 @@ function AddCompatibleModal({
                 marginTop: "6px",
                 fontSize: "12px",
                 lineHeight: "1.4",
-                color: testResult.ok ? "var(--green, #2f9e44)" : "var(--red)",
+                color: testResult.ok ? "var(--green)" : "var(--red)",
                 wordBreak: "break-word",
               }}
             >

@@ -4,10 +4,10 @@
  *
  * ── Rikka palette ownership ─────────────────────────────────────────────────
  * This file is the single owner of the console/share palette. The two theme
- * blocks below are Rikka Day (default, warm cream + indigo) and Rikka Night
- * (deep indigo-slate + lavender). They are designed independently — Night is
- * not a colour inversion of Day — and share only the structural tokens
- * (radii, type, motion, z-order).
+ * blocks below are Rikka Day (default, warm cream + indigo) and Rikka Noir —
+ * Sumi & Vermilion (warm charcoal, vermilion action, champagne gold). They are
+ * designed independently — Noir is not a colour inversion of Day — and share
+ * only the structural tokens (radii, type, motion, z-order).
  *
  * `data-theme` is always the RESOLVED theme (`light` | `dark`), never
  * `system`: `shared/theme.ts` resolves the operator's stored preference and
@@ -134,63 +134,91 @@
 }
 
 :root[data-theme="dark"] {
-  /* ── Rikka Night (dark) ────────────────────────────────────────────────── */
-  --page-bg: #0b0f1a;
-  --surface-1: #131826;
-  --surface-2: #181e2e;
-  --surface-muted: #1e2536;
-  --surface-hover: #252d40;
-  --surface-active: #2c3549;
+  /* ── Rikka Noir — Sumi & Vermilion (dark) ────────────────────────────────
+   * Warm Japanese charcoal instead of the previous indigo-slate: sumi ink
+   * greys carry a brown undertone (R>G>B on every surface) so the console
+   * reads as ink on paper rather than as a blue-black SaaS panel. Vermilion
+   * is the action colour, champagne gold is the premium detail, and the
+   * semantic green/amber/red are reserved for real status.
+   *
+   * Contrast was measured, not eyeballed, with the WCAG relative-luminance
+   * formula. Two values from the original art direction were adjusted to clear
+   * 4.5:1 on the LIGHTEST surface they appear on (--surface-2 #292320):
+   *   accent  #C95F55 3.87:1 -> #DE776C 5.14:1
+   *   tertiary #918579 4.30:1 -> #9A8C80 4.75:1
+   * Everything below clears 4.5:1 on surface-2, the worst case. Secondary
+   * hues (teal/purple/rose/indigo) are deliberately desaturated to sage,
+   * mauve, dusty rose and taupe: they are category tags, not status, and a
+   * saturated violet tag would re-introduce the palette this theme replaces.
+   */
+  --page-bg: #141210;
+  --surface-1: #211d1b;
+  --surface-2: #292320;
+  --surface-muted: #1c1917;
+  --surface-hover: #332b27;
+  --surface-active: #3d332e;
 
-  --text-primary: #eef1f8;
-  --text-secondary: #a7b0c4;
-  --text-tertiary: #939fb8;
+  --text-primary: #f2eae0;
+  --text-secondary: #b7a99b;
+  --text-tertiary: #9a8c80;
 
-  --border-subtle: #232b3d;
-  --border-strong: #2f3850;
+  --border-subtle: #38312d;
+  --border-strong: #52443d;
   --inner-border: var(--border-subtle);
   --glass-border: var(--border-strong);
 
-  --accent: #8b93f8;
-  --accent-soft: #1d2340;
-  --accent-foreground: #0b0f1a;
-  --accent-hover: #a5abfa;
+  --accent: #de776c;
+  --accent-soft: #33231f;
+  --accent-foreground: #141210;
+  --accent-hover: #e88a7f;
 
-  --status-success: #5fd39a;
-  --status-danger: #f58a8a;
-  --status-warning: #f0c15c;
-  --status-info: #7fb0f5;
+  --status-success: #8faa92;
+  --status-danger: #da756c;
+  --status-warning: #d7a45f;
+  --status-info: #9aafa8;
 
   --green: var(--status-success);
   --red: var(--status-danger);
-  --orange: #f0c15c;
-  --teal: #6fd3d8;
-  --purple: #b9a6fb;
-  --rose: #f2a8bd;
-  --indigo: #8b93f8;
+  --orange: var(--status-warning);
+  --teal: #8faaa4;
+  --purple: #b9a0ae;
+  --rose: #d19a93;
+  --indigo: #b5a79c;
+  /* Champagne gold. Premium detailing only — never a status carrier. */
+  --gold: #d1ad79;
 
-  --green-soft: #16302a;
-  --red-soft: #33232a;
-  --orange-soft: #322c1e;
-  --teal-soft: #16302f;
-  --purple-soft: #241f3a;
-  --rose-soft: #33222c;
+  --green-soft: #1f2a22;
+  --red-soft: #33211f;
+  --orange-soft: #2e2617;
+  --teal-soft: #1f2a28;
+  --purple-soft: #2a2327;
+  --rose-soft: #2e2222;
 
-  --focus-ring: #a5abfa;
-  --track: #232b3d;
-  --code-surface: #151b29;
-  --popover-bg: #131826;
+  --focus-ring: #e88a7f;
+  --track: #38312d;
+  --code-surface: #1c1917;
+  --popover-bg: #292320;
   --hover: var(--surface-muted);
   --active-pill: var(--surface-hover);
-  --kbd-bg: #1b2233;
+  --kbd-bg: #2a2320;
+  /* The sidebar sits deeper than the page so the main column reads as the
+     raised surface, matching the layered sumi stack in the art direction. */
+  --sidebar-bg: rgba(24, 21, 19, 0.82);
 
-  --glass-bg: rgba(19, 24, 38, 0.72);
-  --glass-bg-2: rgba(24, 30, 46, 0.86);
-  --glass-border-2: rgba(255, 255, 255, 0.14);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.32), 0 16px 40px rgba(0, 0, 0, 0.42);
-  --shadow-popout: 0 24px 60px -12px rgba(0, 0, 0, 0.62), 0 0 0 1px var(--inner-border);
+  --glass-bg: rgba(33, 29, 27, 0.72);
+  --glass-bg-2: rgba(41, 35, 32, 0.86);
+  --glass-border-2: rgba(242, 234, 224, 0.14);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.34), 0 16px 40px rgba(12, 9, 8, 0.46);
+  --shadow-popout: 0 24px 60px -12px rgba(12, 9, 8, 0.66), 0 0 0 1px var(--inner-border);
 
   color-scheme: dark;
+}
+
+/* Rikka Noir gives the sidebar its own depth instead of reusing the shared
+   glass wash, so the navigation column and the topbar no longer read as one
+   continuous slab. Scoped to dark only: Rikka Day keeps the existing glass. */
+:root[data-theme="dark"] .app-sidebar {
+  background: var(--sidebar-bg);
 }
 
 /* Console document reset. Keep it in Tailwind's base layer so utilities can
@@ -641,7 +669,10 @@ html[data-glass-enabled="true"] .card-solid {
 
 .btn-danger {
   background: var(--red);
-  color: #ffffff;
+  /* Follows the accent's foreground rather than a literal white: the Noir
+     danger red is a light salmon, so white text on it measured 3.11:1. The
+     token resolves to ink in dark (6.00:1) and white in Day (5.89:1). */
+  color: var(--accent-foreground);
 }
 
 .btn-danger:hover {

@@ -56,7 +56,7 @@ export const RIKKA_ART = {
     path: "/rikka/night.webp",
     width: 1600,
     height: 640,
-    placement: "Rikka Night ambient or right edge",
+    placement: "Rikka Noir ambient or right edge",
   },
   day: {
     path: "/rikka/day.webp",

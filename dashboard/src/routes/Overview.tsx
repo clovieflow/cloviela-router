@@ -372,7 +372,7 @@ function SystemOverviewPanel({
                   <div
                     style={{
                       width: `${totalProxies ? (httpCount / totalProxies) * 100 : 0}%`,
-                      background: "#0a84ff",
+                      background: "var(--teal)",
                     }}
                   />
                 </div>
@@ -401,7 +401,7 @@ function SystemOverviewPanel({
                         width: "6px",
                         height: "6px",
                         borderRadius: "999px",
-                        background: "#0a84ff",
+                        background: "var(--teal)",
                       }}
                     />{" "}
                     HTTP/S

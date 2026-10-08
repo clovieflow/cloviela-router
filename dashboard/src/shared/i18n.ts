@@ -68,7 +68,7 @@ const ID_MESSAGES = {
 
   // ── Theme ─────────────────────────────────────────────────────────────────
   "theme.label": "Tema",
-  "theme.night": "Rikka Night",
+  "theme.night": "Rikka Noir",
   "theme.day": "Rikka Day",
   "theme.system": "Ikuti Sistem",
   "theme.systemHint": "Mengikuti preferensi gelap/terang sistem operasi",
@@ -483,7 +483,7 @@ const EN_MESSAGES: Readonly<Record<MessageKey, string>> = {
   "nav.signedInAs": "Signed in as",
 
   "theme.label": "Theme",
-  "theme.night": "Rikka Night",
+  "theme.night": "Rikka Noir",
   "theme.day": "Rikka Day",
   "theme.system": "Follow System",
   "theme.systemHint": "Follows the operating system's dark/light preference",

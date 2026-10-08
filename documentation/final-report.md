@@ -69,7 +69,7 @@ each is now proven fixed by the same boundary.
 
 ## Delivered
 
-- **Rikka identity:** Rikka Night / Rikka Day / Follow-system palettes designed
+- **Rikka identity:** Rikka Noir (Sumi & Vermilion) / Rikka Day / Follow-system palettes designed
   independently; 30 optimized WebP assets (~1.0 MB) generated with GPT-Image-2
   and recorded in `assets/manifest.json` with prompts, hashes, dimensions.
 - **Dashboard:** nine new screens (onboarding, health, models, simulator,
