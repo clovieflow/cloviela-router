@@ -9,7 +9,7 @@ not executed; not claimed.
 | R-01 Source commit and upstream SHA | PASS | core imported from upstream `dev` `382cf23…` as one commit stating its origin; branch `cloviela/release`; full upstream history kept at tag `upstream-base` |
 | R-02 GPL license and derivative notices preserved | PASS | `LICENSE` unchanged (GPL-3.0); README → License and credits; About → Kredit with the upstream link; CHANGELOG change notice |
 | R-03 Baseline and final code inventory | PASS | `baseline-inventory.json`; 141,815 production lines / 680 files measured |
-| R-04 No unintended data loss or credential exposure | PASS | Test suite damaged real client configs; 15 test-created files quarantined, Hermes restored from matching backup; original Codex `config.toml` backed up to `~/.codex/config.toml.backup-2026-10-09`, sha256 matches the live file (`21a67861…`) |
+| R-04 No unintended data loss or credential exposure | **BLOCKED** | Test suite damaged real client configs; 15 test-created files quarantined, Hermes restored from matching backup. The live `~/.codex/config.toml` is itself fixture residue (`# my codex config` / `other_agent_setting = "keep-me"`, both from `test/console/cli-tool-lifecycle.test.ts`), so the operator's original body was not recovered. The copy at `~/.codex/config.toml.backup-2026-10-09` preserves that residue; it is post-incident preservation, not recovery |
 | R-05 Bun setup and doctor in clean Lite fixture | PASS | `bun setup --non-interactive`; `bun doctor` → "All systems operational" |
 | R-06 Production backend + built dashboard serve live routes | PASS | source run and compiled binary both: `/health/ready` 200, `/console` 200, `/rikka/*` 200 |
 | R-07 OpenAI Chat Completions smoke | PASS | live gateway → mock upstream, JSON + SSE, 200 |
@@ -41,7 +41,7 @@ not executed; not claimed.
 
 ## Summary
 
-- **PASS: 30**
+- **PASS: 29**
 - **PASS (partial, scope stated): 4** — R-10, R-12, R-14, R-23
-- **BLOCKED: 0**
+- **BLOCKED: 1** — R-04 (operator's original Codex `config.toml` body)
 - **UNVERIFIED: 1** — R-25 (Docker unavailable in this environment)
