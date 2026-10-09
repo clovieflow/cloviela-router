@@ -454,7 +454,7 @@ export function classifyTerminalOutcome(error: unknown, signal: AbortSignal): Te
     status: isClientCancellation(error, signal) ? "cancelled" : "failed",
     errorCategory: classifyTerminalCategory(error, signal),
     // A non-GatewayError outcome has no upstream origin to claim: it is ours.
-    errorOrigin: error instanceof GatewayError ? error.origin : "cartethyia",
+    errorOrigin: error instanceof GatewayError ? error.origin : "cloviela",
   };
 }
 
@@ -716,7 +716,7 @@ export async function throwIfHtmlResponse(response: Response): Promise<void> {
   const body = await response.text().catch(() => "");
   const summary = body ? extractHtmlTitle(body) : `HTTP ${response.status}`;
   // The page came from the upstream (an edge proxy or the origin itself), so
-  // it is an upstream failure: attributing it to `cartethyia` made the console
+  // it is an upstream failure: attributing it to `cloviela` made the console
   // blame the gateway for a provider/edge response.
   throw new GatewayError(
     "transport_unavailable",
@@ -734,8 +734,8 @@ export function isRetryableFailure(error: unknown): boolean {
 
 /**
  * Capped exponential backoff with full jitter for a zero-based attempt index.
- * The base and cap are operator-tunable (`CARTETHYIA_FALLBACK_RETRY_BASE_MS`,
- * `CARTETHYIA_FALLBACK_RETRY_CAP_MS`) and default to 100ms / 2000ms.
+ * The base and cap are operator-tunable (`CLOVIELA_FALLBACK_RETRY_BASE_MS`,
+ * `CLOVIELA_FALLBACK_RETRY_CAP_MS`) and default to 100ms / 2000ms.
  */
 export function fallbackRetryDelayMs(attemptIndex: number): number {
   const exp = Math.min(resolveFallbackRetryCapMs(), resolveFallbackRetryBaseMs() * 2 ** attemptIndex);

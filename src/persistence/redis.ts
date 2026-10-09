@@ -50,13 +50,13 @@ function requireRedisUrl(): string {
       "Variables tab (REDIS_URL=${{ Redis.REDIS_URL }}), spelling the service name exactly — a " +
       "reference to a service that does not exist resolves to an empty string. REDISHOST, REDISPORT, " +
       "REDISUSER and REDISPASSWORD are accepted as an alternative. " +
-      "Cartethyia never infers a Docker or Laragon connection automatically.",
+      "Cloviela never infers a Docker or Laragon connection automatically.",
   });
 }
 
 declare global {
   // eslint-disable-next-line no-var -- globalThis augmentation requires `var`
-  var __cartethyiaRedis: RedisClient | undefined;
+  var __clovielaRedis: RedisClient | undefined;
 }
 
 /**
@@ -65,7 +65,7 @@ declare global {
  * undefined client). There is no mode flag anymore.
  */
 export function resolveRedisClient(): RedisClient | undefined {
-  if (globalThis.__cartethyiaRedis) return globalThis.__cartethyiaRedis;
+  if (globalThis.__clovielaRedis) return globalThis.__clovielaRedis;
   let url: string;
   try {
     url = requireRedisUrl();
@@ -81,7 +81,7 @@ export function resolveRedisClient(): RedisClient | undefined {
     // Visible but does not crash the process; health checks surface the state.
     log.error("[redis] connection error", err);
   });
-  globalThis.__cartethyiaRedis = c;
+  globalThis.__clovielaRedis = c;
   return c;
 }
 
@@ -103,9 +103,9 @@ export interface CloseRedisOptions {
  * in time. Failure-isolated — shutdown must never hang on Redis.
  */
 export async function closeRedis(options: CloseRedisOptions = {}): Promise<void> {
-  const c = globalThis.__cartethyiaRedis;
+  const c = globalThis.__clovielaRedis;
   if (!c) return;
-  globalThis.__cartethyiaRedis = undefined;
+  globalThis.__clovielaRedis = undefined;
   try {
     await Promise.race([
       c.quit(),
@@ -121,7 +121,7 @@ export async function closeRedis(options: CloseRedisOptions = {}): Promise<void>
 }
 
 export function setRedisForTesting(testClient: RedisClient): void {
-  globalThis.__cartethyiaRedis = testClient;
+  globalThis.__clovielaRedis = testClient;
 }
 
 /**

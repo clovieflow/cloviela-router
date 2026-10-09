@@ -35,7 +35,7 @@ describe("GatewayError", () => {
     const error = new GatewayError("quota_exceeded", 429, "rpm limit exceeded", { limit: 10 });
     expect(error.code).toBe("quota_exceeded");
     expect(error.status).toBe(429);
-    expect(error.origin).toBe("cartethyia");
+    expect(error.origin).toBe("cloviela");
     expect(error.details).toEqual({ limit: 10 });
     expect(error).toBeInstanceOf(Error);
     expect(error.name).toBe("GatewayError");
@@ -44,7 +44,7 @@ describe("GatewayError", () => {
   test("defaults to the gateway as the origin", () => {
     // Origin drives the operator's triage: "our bug" and "the provider's bug"
     // are different incidents. A default of `upstream` would mis-blame.
-    expect(new GatewayError("internal_error", 500, "x").origin).toBe("cartethyia");
+    expect(new GatewayError("internal_error", 500, "x").origin).toBe("cloviela");
   });
 
   test("defaults to no details rather than undefined", () => {
@@ -54,7 +54,7 @@ describe("GatewayError", () => {
   });
 
   test("accepts each documented origin", () => {
-    for (const origin of ["cartethyia", "upstream", "network"] as const) {
+    for (const origin of ["cloviela", "upstream", "network"] as const) {
       expect(new GatewayError("platform_unavailable", 502, "x", {}, origin).origin).toBe(origin);
     }
   });
@@ -94,7 +94,7 @@ describe("formatPublicErrorMessage", () => {
     // raw upstream text, so a chained gateway on an older build emits exactly
     // this shape into our error path. A client must never see the brand, and
     // blame lives in the structured `origin` field instead.
-    expect(formatPublicErrorMessage("internal_error", "Cartethyia Error: something broke")).toBe(
+    expect(formatPublicErrorMessage("internal_error", "Cloviela Error: something broke")).toBe(
       "internal_error: something broke",
     );
     expect(formatPublicErrorMessage("platform_unavailable", "Upstream Error: bad gateway")).toBe(
@@ -108,8 +108,8 @@ describe("formatPublicErrorMessage", () => {
   test("a legacy prefix alone collapses to the bare code", () => {
     // Stripping leaves nothing; the result must not be `code: ` with a
     // dangling separator.
-    expect(formatPublicErrorMessage("internal_error", "Cartethyia Error:")).toBe("internal_error");
-    expect(formatPublicErrorMessage("internal_error", "  Cartethyia Error:   ")).toBe(
+    expect(formatPublicErrorMessage("internal_error", "Cloviela Error:")).toBe("internal_error");
+    expect(formatPublicErrorMessage("internal_error", "  Cloviela Error:   ")).toBe(
       "internal_error",
     );
   });
@@ -118,8 +118,8 @@ describe("formatPublicErrorMessage", () => {
     // A message that happens to mention the brand mid-sentence is real content;
     // stripping it would corrupt the explanation.
     expect(
-      formatPublicErrorMessage("internal_error", "the Cartethyia Error: handler failed"),
-    ).toBe("internal_error: the Cartethyia Error: handler failed");
+      formatPublicErrorMessage("internal_error", "the Cloviela Error: handler failed"),
+    ).toBe("internal_error: the Cloviela Error: handler failed");
   });
 
   test("a message that already starts with a DIFFERENT code is still prefixed", () => {
@@ -147,15 +147,15 @@ describe("explainGatewayError", () => {
     // The same error object is reused for telemetry and for the console; a
     // formatter that rewrote `message` in place would leak the shaped text into
     // the internal record.
-    const error = new GatewayError("internal_error", 500, "Cartethyia Error: boom");
+    const error = new GatewayError("internal_error", 500, "Cloviela Error: boom");
     explainGatewayError(error);
-    expect(error.message).toBe("Cartethyia Error: boom");
+    expect(error.message).toBe("Cloviela Error: boom");
   });
 
   test("the origin never appears in the public text", () => {
     // The comment is explicit: gateway and upstream look the same on the wire,
     // and a client that needs the layer reads `error.origin`.
-    for (const origin of ["cartethyia", "upstream", "network"] as const) {
+    for (const origin of ["cloviela", "upstream", "network"] as const) {
       const text = explainGatewayError(new GatewayError("platform_unavailable", 502, "failed", {}, origin));
       expect(text).not.toContain(origin);
     }

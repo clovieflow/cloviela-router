@@ -1,3 +1,4 @@
+import { envValue } from "../env-compat";
 import { mkdir, open, readdir, readFile, stat, unlink } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -63,11 +64,11 @@ const DEFAULT_DIRECTORY = "./data/telemetry-payloads";
 let writeTail: Promise<void> = Promise.resolve();
 
 function payloadDirectory(): string {
-  return process.env.CARTETHYIA_TELEMETRY_PAYLOAD_DIR?.trim() || DEFAULT_DIRECTORY;
+  return envValue("CLOVIELA_TELEMETRY_PAYLOAD_DIR")?.trim() || DEFAULT_DIRECTORY;
 }
 
 function maxFileBytes(): number {
-  const raw = Number(process.env.CARTETHYIA_TELEMETRY_PAYLOAD_FILE_MAX_BYTES ?? DEFAULT_MAX_FILE_BYTES);
+  const raw = Number(process.env.CLOVIELA_TELEMETRY_PAYLOAD_FILE_MAX_BYTES ?? DEFAULT_MAX_FILE_BYTES);
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_MAX_FILE_BYTES;
 }
 

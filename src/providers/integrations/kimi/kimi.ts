@@ -8,7 +8,7 @@
  * tool-use pairing, streaming, and `cache_control` prompt-cache markers.
  *
  * Kimi's reference catalog carries model bootstrap metadata that is not part
- * of Cartethyia's generic `ModelDefinition`: tokenizer family and prompt-cache
+ * of Cloviela's generic `ModelDefinition`: tokenizer family and prompt-cache
  * / max-token defaults. The exported lookup keeps this metadata centralized
  * and the adapter uses it when selecting request defaults.
  *

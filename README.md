@@ -77,10 +77,10 @@ Configuration is environment-driven; every supported knob is documented in
 important defaults:
 
 ```dotenv
-CARTETHYIA_DB_MODE=lite          # lite | full
+CLOVIELA_DB_MODE=lite          # lite | full
 PORT=12800
-CARTETHYIA_BIND_HOST=127.0.0.1   # private-first; set 0.0.0.0 only inside a container/reverse proxy
-CARTETHYIA_ENCRYPTION_KEY=       # required; encrypts provider credentials and API keys
+CLOVIELA_BIND_HOST=127.0.0.1   # private-first; set 0.0.0.0 only inside a container/reverse proxy
+CLOVIELA_ENCRYPTION_KEY=       # required; encrypts provider credentials and API keys
 ```
 
 ## Documentation
@@ -118,8 +118,8 @@ under GPLv3.
 
 ### Built on
 
-The gateway core is **Cartethyia** by risunCode
-(<https://github.com/risunCode/Cartethyia>), imported at branch `dev`, commit
+The gateway core is **Cloviela** by risunCode
+(<https://github.com/risunCode/Cloviela>), imported at branch `dev`, commit
 `382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`, also GPL-3.0-only. It is the
 first commit in this repository and says so in its message; the full upstream
 history is kept at the tag `upstream-base` for anyone who wants to diff

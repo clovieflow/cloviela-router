@@ -5,7 +5,7 @@
  * registration for its Grok subscriptions, so the client id, device endpoint,
  * and token endpoint here are the same values the Grok Build provider uses —
  * they are declared once in this module because they are facts about xAI, not
- * about either Cartethyia provider, and `grok-oauth.ts` imports them rather
+ * about either Cloviela provider, and `grok-oauth.ts` imports them rather
  * than restating them.
  *
  * What differs between the two products is the **label source**: the

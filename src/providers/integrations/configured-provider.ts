@@ -49,7 +49,7 @@ export interface ApiKeyProviderSpec {
   /** `"never"` withholds `Authorization` for genuinely public endpoints (OpenCode Free). */
   readonly credential_forwarding?: "account" | "never";
   /**
-   * Opts this provider into the gateway identity (`Cartethyia/<version>` as
+   * Opts this provider into the gateway identity (`Cloviela/<version>` as
    * the upstream `user-agent`). Explicit only: providers with their own
    * first-party identity (Codex, Claude Code) and unprovisioned BYOK rows
    * never get it.

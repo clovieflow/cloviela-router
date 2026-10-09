@@ -85,7 +85,7 @@ export const CLAUDE_MODELS: readonly ModelDefinition[] = [
 
 
 
-const CLAUDE_DEVICE_ID_DOMAIN = "cartethyia-claude-device-id-v1";
+const CLAUDE_DEVICE_ID_DOMAIN = "cloviela-claude-device-id-v1";
 
 /**
  * Stable per-installation id, persisted once like the Codex install id. The

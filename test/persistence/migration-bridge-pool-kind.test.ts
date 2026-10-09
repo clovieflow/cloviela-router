@@ -124,7 +124,7 @@ dbDescribe("migration: add the bridge network-pool kind", () => {
       expect(await poolKindLabels(client)).toEqual(["http", "socks5", "bridge"]);
 
       const recorded = await client.query(
-        "select migration_id from cartethyia_schema_migrations where migration_id = $1",
+        "select migration_id from cloviela_schema_migrations where migration_id = $1",
         [MIGRATION_FILE],
       );
       expect(recorded.rows.length).toBe(1);

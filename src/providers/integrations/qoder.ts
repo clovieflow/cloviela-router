@@ -644,7 +644,7 @@ async function* qoderBodyToCanonicalEvents(
   } as CanonicalEvent;
 }
 
-// Model catalog — maps QODER_MODEL_CONFIGS (provider) to Cartethyia ModelDefinition
+// Model catalog — maps QODER_MODEL_CONFIGS (provider) to Cloviela ModelDefinition
 
 export const QODER_MODELS: readonly ModelDefinition[] = Object.entries(QODER_MODEL_CONFIGS).map(([id, cfg]) =>
   defineModel({ id, endpoint: "/algo/api/v2/service/pro/sse/agent_chat_generation?FetchKeys=llm_model_result&AgentId=agent_common&Encode=1", ctx: cfg.max_input_tokens, out: cfg.max_output_tokens ?? 32768, vision: cfg.is_vl, reasoning: cfg.is_reasoning }),

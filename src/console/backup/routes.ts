@@ -123,7 +123,7 @@ export function createBackupRoutes(config: BackupRoutesConfig): Elysia {
           tenantId: access.tenantId,
           ...(sections === undefined ? {} : { sections }),
         });
-        set.headers["content-disposition"] = `attachment; filename="cartethyia-backup-${new Date()
+        set.headers["content-disposition"] = `attachment; filename="cloviela-backup-${new Date()
           .toISOString()
           .replace(/[:.]/g, "-")}.json"`;
         set.headers["content-type"] = "application/json; charset=utf-8";

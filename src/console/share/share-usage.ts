@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { ApiKeyRecord } from "../../persistence/api-key-store";
 import { CachedPreferencesReader, DrizzlePreferencesReader } from "../../persistence/tenant-preferences";
 import { maskClientIp } from "../../observability/redaction";
@@ -90,7 +90,7 @@ function tokenUsage(row: {
   };
 }
 
-export function createShareUsagePort(db: CartethyiaDatabase): ShareActivityPort {
+export function createShareUsagePort(db: ClovielaDatabase): ShareActivityPort {
   const preferences = new CachedPreferencesReader(new DrizzlePreferencesReader(db));
   return {
     async getSharedKeySummaries(tenantId, children) {

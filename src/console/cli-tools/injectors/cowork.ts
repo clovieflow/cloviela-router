@@ -23,7 +23,7 @@ export const coworkSpec: InjectorSpec = {
 
   async readStatus(path) {
     // Claude Cowork has no MCP bridge yet (the /mcp surface arrives in P3-2).
-    // Report unconfigured instead of a phantom `cartethyia` managed server.
+    // Report unconfigured instead of a phantom `cloviela` managed server.
     void path;
     return {
       configured: false,
@@ -34,12 +34,12 @@ export const coworkSpec: InjectorSpec = {
   },
 
   async apply(input, path) {
-    // Remove any previously-injected phantom `cartethyia` managed server. No
+    // Remove any previously-injected phantom `cloviela` managed server. No
     // MCP bridge exists yet, so `apply` only cleans the stale key.
     void input;
     const meta = ((await readJsonFile(path)) as Record<string, unknown> | null) ?? {};
     if (typeof meta.managedServers === "object" && meta.managedServers !== null) {
-      delete (meta.managedServers as Record<string, unknown>).cartethyia;
+      delete (meta.managedServers as Record<string, unknown>).cloviela;
     }
     await writeJsonFile(path, meta);
   },
@@ -47,7 +47,7 @@ export const coworkSpec: InjectorSpec = {
   async reset(path) {
     const meta = (await readJsonFile(path)) as { managedServers?: Record<string, unknown> } | null;
     if (!meta?.managedServers) return false;
-    delete meta.managedServers.cartethyia;
+    delete meta.managedServers.cloviela;
     await writeJsonFile(path, meta);
   },
 
@@ -58,7 +58,7 @@ export const coworkSpec: InjectorSpec = {
 
   messages: {
     applied: "Claude Cowork settings applied",
-    reset: "Cartethyia settings removed from Claude Cowork",
+    reset: "Cloviela settings removed from Claude Cowork",
   },
 };
 

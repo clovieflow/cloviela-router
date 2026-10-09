@@ -599,7 +599,7 @@ export function applyCodexResponsesLiteShape(
     "type" in (toolChoice as Record<string, unknown>)
   ) {
     const choice = toolChoice as Record<string, unknown>;
-    // Handle both `"function"` (reference) and `"tool"` (Cartethyia canonical)
+    // Handle both `"function"` (reference) and `"tool"` (Cloviela canonical)
     // selector types; canonical `ToolDefinition` may lack a `type` discriminator,
     // so match by `name` alone.
     if (choice["type"] === "computer") {

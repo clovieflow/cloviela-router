@@ -136,8 +136,8 @@ export function writeOpencodeProfile(fixture: ClientFixture, providerId: string)
     $schema: "https://opencode.ai/config.json",
     providers: {
       [providerId]: {
-        name: "Cartethyia E2E",
-        env: ["CARTETHYIA_E2E_KEY"],
+        name: "Cloviela E2E",
+        env: ["CLOVIELA_E2E_KEY"],
         package: "@opencode/ai/providers/openai-compatible",
         settings: { baseURL: `${fixture.origin}/v1` },
         models,

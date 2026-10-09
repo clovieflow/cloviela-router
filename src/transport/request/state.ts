@@ -23,7 +23,7 @@ export interface ProxyRequestOutcome {
   readonly networkPoolId?: string;
   readonly errorCategory?: string;
   /**
-   * Layer that produced the failure (`cartethyia` | `upstream` | `network`).
+   * Layer that produced the failure (`cloviela` | `upstream` | `network`).
    * Recorded beside `errorCategory` because a code alone cannot say whether the
    * gateway rejected the request or the provider did.
    */
@@ -235,7 +235,7 @@ export class ProxyRequestStateStore {
             504,
             "request deadline exceeded",
             {},
-            "cartethyia",
+            "cloviela",
           ),
         );
       }, Math.max(0, ms));

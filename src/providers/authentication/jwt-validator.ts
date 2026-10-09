@@ -1,7 +1,7 @@
 /**
  * JWT inspection and verification for provider-issued OAuth tokens.
  *
- * Cartethyia receives provider access tokens directly from the issuer's token
+ * Cloviela receives provider access tokens directly from the issuer's token
  * endpoint over TLS, then sends them back to the same provider. That transport
  * path is the primary trust boundary, so signature verification is
  * defense-in-depth: when the provider's manifest declares a JWKS URL

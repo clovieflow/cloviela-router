@@ -119,7 +119,7 @@ export function BackupPanel(): ReactNode {
         onSuccess: (payload) => {
           const stamp = new Date().toISOString().replace(/[:.]/g, "-");
           downloadTextFile(
-            `cartethyia-backup-${stamp}.json`,
+            `cloviela-backup-${stamp}.json`,
             JSON.stringify(payload, null, 2),
             "application/json",
           );
@@ -240,13 +240,13 @@ export function BackupPanel(): ReactNode {
             A backup carries request metadata only — status, tokens, cost, latency — never prompt or
             response bodies, so it is not a substitute for a database dump. Restored history older
             than the retention window is pruned again on the next sweep; raise
-            <code> CARTETHYIA_TELEMETRY_RETENTION_DAYS </code> if you need it to persist. A restore
+            <code> CLOVIELA_TELEMETRY_RETENTION_DAYS </code> if you need it to persist. A restore
             only ever touches your own tenant&apos;s rows.
           </p>
 
           {format !== null ? (
             <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Detected format: {format === "nine_router" ? "router export" : "Cartethyia backup"}
+              Detected format: {format === "nine_router" ? "router export" : "Cloviela backup"}
             </p>
           ) : null}
 

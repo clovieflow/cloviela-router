@@ -124,7 +124,7 @@ export const claudeSpec: InjectorSpec = {
 
   messages: {
     applied: "Claude Code settings applied",
-    reset: "Cartethyia settings removed from Claude Code",
+    reset: "Cloviela settings removed from Claude Code",
   },
 };
 

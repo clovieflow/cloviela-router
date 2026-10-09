@@ -52,7 +52,7 @@ export function abortGatewayError(
   const reason = lifecycle.signal.reason ?? requestSignal?.reason;
   if (reason instanceof GatewayError) return reason;
   if (reason instanceof DOMException && reason.name === "TimeoutError")
-    return new GatewayError("deadline_exceeded", 504, "request deadline exceeded", {}, "cartethyia");
+    return new GatewayError("deadline_exceeded", 504, "request deadline exceeded", {}, "cloviela");
   const abortLike =
     (error instanceof DOMException && error.name === "AbortError") ||
     (error instanceof Error && error.name === "AbortError");

@@ -340,9 +340,9 @@ describe("isAddressAllowed — the policy overrides", () => {
    * admits *every* IPv4 destination.
    *
    * Reachable impact: `resolveSsrfPolicy` (`src/config.ts:375`) reads this list
-   * verbatim from `CARTETHYIA_ALLOWED_NETWORKS` through `readList`, which splits
+   * verbatim from `CLOVIELA_ALLOWED_NETWORKS` through `readList`, which splits
    * on commas and trims but validates nothing. An operator writing
-   * `CARTETHYIA_ALLOWED_NETWORKS=10.0.0.0/` — a truncated paste, or the prefix
+   * `CLOVIELA_ALLOWED_NETWORKS=10.0.0.0/` — a truncated paste, or the prefix
    * left off — gets a guard that accepts `169.254.169.254` (the instance
    * metadata service) plus every private range the guard exists to refuse, with
    * no warning at startup. The failure is silent and fail-open, which is the
@@ -478,7 +478,7 @@ describe("validateResolvedAddresses", () => {
     expect(failure).toBeInstanceOf(GatewayError);
     expect((failure as GatewayError).status).toBe(400);
     expect((failure as GatewayError).code).toBe("invalid_request");
-    expect((failure as GatewayError).origin).toBe("cartethyia");
+    expect((failure as GatewayError).origin).toBe("cloviela");
   });
 
   test("the policy is honoured for every address in the list", () => {

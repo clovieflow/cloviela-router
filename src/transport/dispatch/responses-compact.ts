@@ -3,7 +3,7 @@ import { GatewayError } from "../gateway-error";
 import { resolveCredentialForAccount } from "../../providers/operations/provider-credential-service";
 import type { OAuthTokenRefresher, OAuthRefreshService } from "../../providers/authentication/oauth-refresh-service";
 import type { ValidatedNetworkBindingFactory } from "../../network/pool/resolver";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { RouteSnapshotService } from "../routing/route-model";
 import { metrics } from "../../observability/metrics";
 import type { NetworkPoolSelector } from "../../network/pool/selector";
@@ -21,7 +21,7 @@ import { runAttemptLoop } from "./attempt-loop";
  * dependency surface it needs to drive `runAttemptLoop`.
  */
 export interface ResponsesCompactHandlerDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly providerAdapters: ReadonlyMap<string, ProviderAdapter>;
   /** Preferred over `providerAdapters`: resolves an adapter on demand and caches it. */
   readonly resolveProviderAdapter?: (providerId: string) => Promise<ProviderAdapter | undefined>;

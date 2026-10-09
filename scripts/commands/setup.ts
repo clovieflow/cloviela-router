@@ -4,7 +4,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
-  generateCartethyiaEncryptionKey,
+  generateClovielaEncryptionKey,
   getLocalPlatform,
   getOsHints,
   hasPlaceholderSecrets,
@@ -48,10 +48,10 @@ async function updateEnv(values: Readonly<Record<string, string>>): Promise<void
 type SetupMode = "auto" | "native" | "docker";
 
 export function resolveSetupMode(): SetupMode {
-  const raw = process.env.CARTETHYIA_SETUP_MODE ?? "auto";
+  const raw = process.env.CLOVIELA_SETUP_MODE ?? "auto";
   if (raw === "auto" || raw === "native" || raw === "docker") return raw;
   throw new Error(
-    `CARTETHYIA_SETUP_MODE must be auto, native, or docker (got "${raw}")`,
+    `CLOVIELA_SETUP_MODE must be auto, native, or docker (got "${raw}")`,
   );
 }
 
@@ -78,21 +78,21 @@ async function setupEnvFile(config: SetupConfig): Promise<boolean> {
 
   if (existsSync(config.envPath)) {
     const fileEnv: Record<string, string> = await readEnvFile(config.envPath).catch(() => ({}) as Record<string, string>);
-    const key = fileEnv.CARTETHYIA_ENCRYPTION_KEY?.trim();
+    const key = fileEnv.CLOVIELA_ENCRYPTION_KEY?.trim();
     if (!key || hasPlaceholderSecrets(key)) {
-      const generated = generateCartethyiaEncryptionKey();
+      const generated = generateClovielaEncryptionKey();
       const raw = await readFile(config.envPath, "utf8");
       const lines = raw.split(/\r?\n/);
       let patched = false;
       const out = lines.map((line) => {
-        const m = /^(\s*)(CARTETHYIA_ENCRYPTION_KEY)\s*=/.exec(line);
+        const m = /^(\s*)(CLOVIELA_ENCRYPTION_KEY)\s*=/.exec(line);
         if (!m) return line;
         patched = true;
         return `${m[1]}${m[2]}=${generated}`;
       });
-      if (!patched) out.push(`CARTETHYIA_ENCRYPTION_KEY=${generated}`);
+      if (!patched) out.push(`CLOVIELA_ENCRYPTION_KEY=${generated}`);
       await writeFile(config.envPath, `${out.join("\n")}\n`, "utf8");
-      console.warn("🔑 Generated CARTETHYIA_ENCRYPTION_KEY and patched .env (key was placeholder/empty)");
+      console.warn("🔑 Generated CLOVIELA_ENCRYPTION_KEY and patched .env (key was placeholder/empty)");
     }
     return false;
   }
@@ -101,13 +101,13 @@ async function setupEnvFile(config: SetupConfig): Promise<boolean> {
     throw new Error(`${examplePath} not found`);
   }
 
-  const generated = generateCartethyiaEncryptionKey();
+  const generated = generateClovielaEncryptionKey();
   const body = await mandatoryEnvBody(examplePath, {
-    CARTETHYIA_ENCRYPTION_KEY: generated,
+    CLOVIELA_ENCRYPTION_KEY: generated,
   });
   await writeFile(config.envPath, body, "utf8");
   console.warn("✨ Created .env from .env.example (mandatory entries only)");
-  console.warn("🔑 Auto-generated CARTETHYIA_ENCRYPTION_KEY in .env — keep it safe");
+  console.warn("🔑 Auto-generated CLOVIELA_ENCRYPTION_KEY in .env — keep it safe");
   if (!body.includes("DATABASE_URL")) {
     console.warn("⚠️  DATABASE_URL is not set — update it to point at your PostgreSQL");
   }
@@ -135,7 +135,7 @@ async function probeDocker(timeoutMs: number): Promise<ProbeResult> {
 }
 
 async function setup(): Promise<void> {
-  console.log("🚀 Setting up Cartethyia local environment...\n");
+  console.log("🚀 Setting up Cloviela local environment...\n");
 
   // Step 1: Setup .env file
   const envPath = resolve(projectRoot, ".env");
@@ -158,7 +158,7 @@ async function setup(): Promise<void> {
     if (!process.env[key]) process.env[key] = value;
   }
   if (
-    !process.env.CARTETHYIA_DB_MODE &&
+    !process.env.CLOVIELA_DB_MODE &&
     process.stdin.isTTY &&
     !process.argv.includes("--non-interactive")
   ) {
@@ -169,8 +169,8 @@ async function setup(): Promise<void> {
     if (answer !== "lite" && answer !== "full") {
       throw new Error(`Database mode must be lite or full (got "${answer}")`);
     }
-    await updateEnv({ CARTETHYIA_DB_MODE: answer });
-    process.env.CARTETHYIA_DB_MODE = answer;
+    await updateEnv({ CLOVIELA_DB_MODE: answer });
+    process.env.CLOVIELA_DB_MODE = answer;
     console.log(`✓ Database mode selected: ${answer}\n`);
   }
   const config = loadConfig();

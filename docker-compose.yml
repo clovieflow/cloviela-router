@@ -9,27 +9,27 @@ services:
     # Keep credentials and URLs in .env; do not bake
     # database secrets or a database service into this application stack.
     # Docker defaults to full capabilities (external PostgreSQL + bundled
-    # Redis); .env overrides both — set CARTETHYIA_DB_MODE=lite for the
+    # Redis); .env overrides both — set CLOVIELA_DB_MODE=lite for the
     # embedded database, or clear REDIS_URL for the in-memory backend.
     env_file:
-      - "${CARTETHYIA_ENV_FILE:-.env}"
+      - "${CLOVIELA_ENV_FILE:-.env}"
     environment:
       NODE_ENV: production
       PORT: "12800"
-      CARTETHYIA_BIND_HOST: "0.0.0.0"
+      CLOVIELA_BIND_HOST: "0.0.0.0"
       DASHBOARD_DIST: /app/dist/dashboard
-      CARTETHYIA_DATA_DIR: /app/data
-      CARTETHYIA_DB_MODE: ${CARTETHYIA_DB_MODE:-full}
+      CLOVIELA_DATA_DIR: /app/data
+      CLOVIELA_DB_MODE: ${CLOVIELA_DB_MODE:-full}
       REDIS_URL: ${REDIS_URL-redis://redis:6379}
     depends_on:
       - redis
     volumes:
       # Lite database, install id, and payload captures live under /app/data;
       # without this mount a container replace wipes them.
-      - cartethyia-data:/app/data
+      - cloviela-data:/app/data
     restart: unless-stopped
     networks:
-      - cartethyia
+      - cloviela
 
   # Redis is bundled for Docker's default full capabilities. Compose allows
   # REDIS_URL to be overridden/emptied for the in-memory backend. PostgreSQL is
@@ -47,12 +47,12 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - cartethyia
+      - cloviela
 
 volumes:
   redisdata:
-  cartethyia-data:
+  cloviela-data:
 
 networks:
-  cartethyia:
+  cloviela:
     driver: bridge

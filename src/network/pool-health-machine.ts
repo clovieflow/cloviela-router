@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../persistence/postgres";
+import type { ClovielaDatabase } from "../persistence/postgres";
 import { healthEvents, networkPools } from "../persistence/schema";
 import { drainPoolByteDelta } from "./pool/byte-accounting";
 import { resolvePoolCooldownMs } from "../config";
@@ -50,7 +50,7 @@ function poolFaultCategory(error: unknown, origin: string | undefined): string |
 
 /** Record a pool-bound attempt. Only failures produced by the proxy/network boundary degrade the pool. */
 export async function recordPoolDispatchOutcome(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   poolId: string,
   input: { readonly succeeded: boolean; readonly error?: unknown; readonly errorOrigin?: string; readonly snapshotInvalidator?: { invalidate(): unknown } },
 ): Promise<void> {
@@ -153,7 +153,7 @@ export async function recordPoolDispatchOutcome(
 
 /** Disables a proxy pool after a proxy-origin payment or authentication failure. */
 export async function disablePoolForProxyHttpStatus(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   poolId: string,
   statusCode: number,
   snapshotInvalidator?: { invalidate(): unknown },
@@ -213,7 +213,7 @@ export async function disablePoolForProxyHttpStatus(
 }
 
 /** Operator recovery mirrors account recovery and records the transition. */
-export async function recoverNetworkPool(db: CartethyiaDatabase, tenantId: string, poolId: string): Promise<boolean> {
+export async function recoverNetworkPool(db: ClovielaDatabase, tenantId: string, poolId: string): Promise<boolean> {
   const rows = await db.select().from(networkPools).where(and(eq(networkPools.tenantId, tenantId), eq(networkPools.id, poolId))).limit(1);
   const pool = rows[0];
   if (!pool) return false;
@@ -225,7 +225,7 @@ export async function recoverNetworkPool(db: CartethyiaDatabase, tenantId: strin
 }
 
 /** List recent health and recovery events for a tenant-owned pool. */
-export async function listNetworkPoolHealthEvents(db: CartethyiaDatabase, tenantId: string, poolId: string, limit = 50): Promise<readonly PoolHealthEvent[]> {
+export async function listNetworkPoolHealthEvents(db: ClovielaDatabase, tenantId: string, poolId: string, limit = 50): Promise<readonly PoolHealthEvent[]> {
   const owned = await db.select({ id: networkPools.id }).from(networkPools).where(and(eq(networkPools.tenantId, tenantId), eq(networkPools.id, poolId))).limit(1);
   if (!owned[0]) return [];
   const rows = await db.select().from(healthEvents).where(and(eq(healthEvents.entityKind, "pool"), eq(healthEvents.networkPoolId, poolId))).orderBy(desc(healthEvents.createdAt)).limit(limit);
@@ -233,7 +233,7 @@ export async function listNetworkPoolHealthEvents(db: CartethyiaDatabase, tenant
 }
 
 /** Recover expired cooling pools; operator-disabled pools are never swept. */
-export async function sweepExpiredPoolCooldowns(db: CartethyiaDatabase): Promise<number> {
+export async function sweepExpiredPoolCooldowns(db: ClovielaDatabase): Promise<number> {
   const now = new Date();
   const expired = await db.select({ id: networkPools.id, tenantId: networkPools.tenantId, status: networkPools.status }).from(networkPools).where(and(inArray(networkPools.status, ["cooldown"]), isNotNull(networkPools.cooldownUntil), lte(networkPools.cooldownUntil, now)));
   if (expired.length === 0) return 0;

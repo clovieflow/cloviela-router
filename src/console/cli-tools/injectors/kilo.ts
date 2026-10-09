@@ -83,7 +83,7 @@ export const kiloSpec: InjectorSpec = {
 
   messages: {
     applied: "Kilo Code settings applied",
-    reset: "Cartethyia settings removed from Kilo Code",
+    reset: "Cloviela settings removed from Kilo Code",
     resetMissing: "No auth file to reset",
   },
 };

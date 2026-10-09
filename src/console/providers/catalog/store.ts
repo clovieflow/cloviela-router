@@ -3,7 +3,7 @@ import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { ConsoleDomainError } from "../../shared/errors";
 import { parseCustomProviderId, isBundledProviderId, type ModelDefinition, type ProviderRegistry } from "../../../providers/provider-registry";
 import { globalOrOwnedBy, ownedByOnly } from "../../../persistence/tenant-scope";
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import { models, providerAccounts, providerOauthStates, providers, telemetryEvents, telemetryUsageTotals, tenantDisabledModels } from "../../../persistence/schema";
 import type { WireFamily } from "../../../transport/canonical-model";
 import { listAccountHealthEvents, recoverAccount, type AccountHealthEventRecord } from "../../../providers/operations/account-health-service";
@@ -190,7 +190,7 @@ export class DrizzleProviderCatalogStore implements ProviderCatalogStore {
     | undefined;
 
   constructor(
-    private readonly db: CartethyiaDatabase,
+    private readonly db: ClovielaDatabase,
     options: {
       readonly telemetryBuffer: TelemetryBatchBuffer;
       readonly bundledModelCatalog: BundledProviderCatalog;
@@ -695,7 +695,7 @@ export class DrizzleProviderCatalogStore implements ProviderCatalogStore {
   private async accountsWithUsage(
     tenantId: string,
     rows: readonly (typeof providerAccounts.$inferSelect)[],
-    executor?: CartethyiaDatabase | Parameters<Parameters<CartethyiaDatabase["transaction"]>[0]>[0],
+    executor?: ClovielaDatabase | Parameters<Parameters<ClovielaDatabase["transaction"]>[0]>[0],
   ): Promise<readonly ProviderAccountResponse[]> {
     if (rows.length === 0) return [];
     // Reads inside an open transaction MUST use the transaction executor. Lite
@@ -802,7 +802,7 @@ export class DrizzleProviderCatalogStore implements ProviderCatalogStore {
    * first account land at a high index.
    */
   private async nextAccountSortIndex(
-    db: CartethyiaDatabase | Parameters<Parameters<CartethyiaDatabase["transaction"]>[0]>[0],
+    db: ClovielaDatabase | Parameters<Parameters<ClovielaDatabase["transaction"]>[0]>[0],
     providerId: string,
     tenantId: string,
   ): Promise<number> {

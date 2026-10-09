@@ -1,6 +1,6 @@
 // API-key authentication and authorization snapshots: token extraction, hashing, lookup, and admission identity.
 
-import type { CartethyiaDatabase } from "../persistence/postgres";
+import type { ClovielaDatabase } from "../persistence/postgres";
 import { DrizzleApiKeyStore } from "../persistence/api-key-store";
 import { GatewayError } from "../transport/gateway-error";
 import { hashSecret } from "./crypto";
@@ -234,7 +234,7 @@ export function requestToken(headers: Headers | Record<string, string>): string 
  * to an implicit/default identity.
  */
 export async function resolveApiKeyAuthorization(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   token: string,
 ): Promise<ResolvedApiKey | undefined> {
   const hash = hashSecret(token);

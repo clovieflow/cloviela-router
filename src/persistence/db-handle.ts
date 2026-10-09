@@ -12,7 +12,7 @@ export const fullSchema = schema;
  * differs. The PGlite backend asserts its instance to this type once, at
  * creation, instead of forcing a union through ~30 transaction call sites.
  */
-export type CartethyiaDatabase = NodePgDatabase<typeof fullSchema>;
+export type ClovielaDatabase = NodePgDatabase<typeof fullSchema>;
 
 /** Raw rows from a parameter query, without driver-specific decoration. */
 export interface QueryRows {
@@ -20,13 +20,13 @@ export interface QueryRows {
 }
 
 /**
- * One open database behind the `CartethyiaDatabase` instance. Stores only ever
+ * One open database behind the `ClovielaDatabase` instance. Stores only ever
  * see `db`; the runner and health checks use `query`/`exec`; `close` is
  * shutdown-symmetric per backend.
  */
 export interface DatabaseHandle {
   readonly kind: "pg" | "pglite";
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   query: (text: string, params?: readonly unknown[]) => Promise<QueryRows>;
   exec: (script: string) => Promise<void>;
   close: () => Promise<void>;

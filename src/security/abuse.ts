@@ -517,15 +517,15 @@ export class RedisIpAbuseStore implements IpAbuseStore {
     private readonly windowMs = 60_000,
   ) {}
   private key(identity: string, route: string): string {
-    return `cartethyia:ip:${identity}:${route}`;
+    return `cloviela:ip:${identity}:${route}`;
   }
   /** Identity-wide escalation counter; distinct prefix from the per-route key. */
   private banKey(identity: string): string {
-    return `cartethyia:ip:ban-count:${identity}`;
+    return `cloviela:ip:ban-count:${identity}`;
   }
   /** The ban marker; its value is the ban's expiry and its TTL is the duration. */
   private banMarkerKey(identity: string): string {
-    return `cartethyia:ip:ban:${identity}`;
+    return `cloviela:ip:ban:${identity}`;
   }
 
   async checkAndRecord(attempt: IpAbuseAttempt): Promise<IpAbuseOutcome> {

@@ -27,7 +27,7 @@
  * whole `providers` table (one registry per process), so a row that still
  * exists for any tenant is re-registered before anything is dropped.
  */
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { ProviderRegistry } from "../../providers/provider-registry";
 import { reconcileByokProviders } from "../../providers/operations/provider-catalog-service";
 import { invalidateCredentialCache } from "../../providers/operations/provider-credential-service";
@@ -50,7 +50,7 @@ export interface RestoreRuntimeSync {
  * same state) and cheap relative to the restore that preceded it.
  */
 export function createRestoreRuntimeSync(deps: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly registry: ProviderRegistry;
   readonly ssrfPolicy?: SsrfPolicy;
 }): () => Promise<RestoreRuntimeSync> {

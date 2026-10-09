@@ -106,7 +106,7 @@ interface ClaudeMessagesRequestOptions {
     | ((payload: Record<string, unknown>) => Record<string, unknown>)
     | undefined;
   /**
-   * Explicit gateway identity (`user-agent: Cartethyia/<version>`). Opt-in
+   * Explicit gateway identity (`user-agent: Cloviela/<version>`). Opt-in
    * per call site — the shared builder never stamps it by default.
    */
   readonly gatewayUserAgent?: string | undefined;

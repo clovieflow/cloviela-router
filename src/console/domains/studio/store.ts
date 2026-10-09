@@ -3,7 +3,7 @@
 // Owns persistence and the row-to-view mapping; routes never touch Drizzle.
 
 import { and, desc, eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import { studioSessions } from "../../../persistence/schema";
 import {
   type StudioSessionRow,
@@ -11,7 +11,7 @@ import {
 } from "./contracts";
 
 export class DrizzleStudioSessionStore implements StudioSessionStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async list(tenantId: string): Promise<readonly StudioSessionRow[]> {
     const rows = await this.db

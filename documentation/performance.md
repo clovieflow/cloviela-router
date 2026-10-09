@@ -33,7 +33,7 @@ measuring there.
 
 ```bash
 # cold start
-CARTETHYIA_DB_MODE=lite CARTETHYIA_DATA_DIR=$(mktemp -d) PORT=12999 \
+CLOVIELA_DB_MODE=lite CLOVIELA_DATA_DIR=$(mktemp -d) PORT=12999 \
   bun run src/main.ts &
 until curl -sf http://127.0.0.1:12999/health/ready; do sleep 0.2; done
 

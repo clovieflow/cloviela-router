@@ -81,7 +81,7 @@ function createKimiDeviceId(): string {
 }
 
 function deviceIdForScope(scope: string): string {
-  return crypto.createHash("sha256").update(`cartethyia:kimi:${scope}`).digest("hex").slice(0, 32);
+  return crypto.createHash("sha256").update(`cloviela:kimi:${scope}`).digest("hex").slice(0, 32);
 }
 
 export function getKimiCommonHeaders(deviceId = deviceIdForScope("process-default")): Readonly<Record<string, string>> {

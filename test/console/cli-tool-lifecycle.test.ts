@@ -6,7 +6,7 @@
  * probe → read → apply → write, and each injector's `apply` performs a sequence
  * of edits — remove these keys, upsert those, replace this table — against a
  * file the **user** owns and has been maintaining by hand. A reset is supposed
- * to remove Cartethyia's settings and leave the rest of that file as it was.
+ * to remove Cloviela's settings and leave the rest of that file as it was.
  *
  * Two classes of failure are what this suite is built to catch, and both were
  * reproduced before they were fixed:
@@ -16,7 +16,7 @@
  *   (`other = "9"[z]`). The target CLI refuses to start on either, so the
  *   operator's tool broke the moment they configured it.
  * - **A status that disagrees with the file.** Codex writes `base_url` inside
- *   `[model_providers.cartethyia]` but read it back as a root key, so a config
+ *   `[model_providers.cloviela]` but read it back as a root key, so a config
  *   this very injector had just written reported `currentEndpoint: null` — the
  *   dashboard's endpoint field went blank while the status said "configured".
  *
@@ -70,8 +70,8 @@ model_provider = "openai"
 const APPLY_INPUT = {
   endpoint: "http://localhost:12800",
   apiKey: "sk-ant-EXAMPLE-not-a-real-key",
-  modelIds: ["cartethyia-sonnet"],
-  modelSlots: { session: "cartethyia-sonnet", subagent: "cartethyia-haiku" },
+  modelIds: ["cloviela-sonnet"],
+  modelSlots: { session: "cloviela-sonnet", subagent: "cloviela-haiku" },
 };
 
 /** True when a header and a key ended up on one line, which TOML forbids. */
@@ -113,7 +113,7 @@ function redirectHome(home: string): Record<string, string | undefined> {
     XDG_CONFIG_HOME: join(home, ".config"),
     APPDATA: join(home, "AppData", "Roaming"),
     LOCALAPPDATA: join(home, "AppData", "Local"),
-    CARTETHYIA_TEST_HOME_ROOT: home,
+    CLOVIELA_TEST_HOME_ROOT: home,
   };
   for (const [key, value] of Object.entries(redirects)) {
     saved[key] = process.env[key];
@@ -141,7 +141,7 @@ function restoreHome(saved: Record<string, string | undefined>): void {
  */
 function assertHomeRedirect(home: string): void {
   expect(homeDir()).toBe(home);
-  expect(process.env.CARTETHYIA_TEST_HOME_ROOT).toBe(home);
+  expect(process.env.CLOVIELA_TEST_HOME_ROOT).toBe(home);
   for (const key of PLATFORM_DIR_KEYS) {
     const value = process.env[key];
     expect(`${key}=${value !== undefined && isInsideHome(home, value)}`).toBe(`${key}=true`);
@@ -169,7 +169,7 @@ function companionFiles(toolId: string, home: string): ReadonlyArray<readonly [s
     case "codex":
       return [
         ["auth", join(home, ".codex", "auth.json")],
-        ["helper", join(home, ".codex", "cartethyia-auth.cjs")],
+        ["helper", join(home, ".codex", "cloviela-auth.cjs")],
       ];
     case "cline":
       return [["secrets", join(home, ".cline", "data", "secrets.json")]];
@@ -186,7 +186,7 @@ function companionFiles(toolId: string, home: string): ReadonlyArray<readonly [s
           join(
             process.env.XDG_CONFIG_HOME ?? join(home, ".config"),
             "jcode",
-            "provider-cartethyia.env",
+            "provider-cloviela.env",
           ),
         ],
       ];
@@ -270,7 +270,7 @@ describe("the codex injector against a temp HOME", () => {
   let savedEnv: Record<string, string | undefined>;
 
   beforeEach(() => {
-    home = mkdtempSync(join(tmpdir(), "cartethyia-codex-"));
+    home = mkdtempSync(join(tmpdir(), "cloviela-codex-"));
     savedEnv = redirectHome(home);
     // Before any seed, apply or reset: if this fails, the redirect was ignored
     // and the tests below would write into the operator's real home. The
@@ -302,12 +302,12 @@ describe("the codex injector against a temp HOME", () => {
     const text = (await readTextFile(path)) ?? "";
     expect(hasGluedHeader(text)).toBe(false);
     expect(hasGluedValue(text)).toBe(false);
-    expect(textGet(text, { kind: "flat", key: "model" })).toBe("cartethyia-sonnet");
-    expect(textGet(text, { kind: "flat", key: "model_provider" })).toBe("cartethyia");
+    expect(textGet(text, { kind: "flat", key: "model" })).toBe("cloviela-sonnet");
+    expect(textGet(text, { kind: "flat", key: "model_provider" })).toBe("cloviela");
     expect(
       textGet(text, {
         kind: "sectionKey",
-        section: "model_providers.cartethyia",
+        section: "model_providers.cloviela",
         key: "base_url",
       }),
     ).toBe("http://localhost:12800/v1");
@@ -324,7 +324,7 @@ describe("the codex injector against a temp HOME", () => {
     // The user's own provider credential is untouched.
     const auth = JSON.parse((await readTextFile(join(home, ".codex", "auth.json"))) ?? "{}");
     expect(auth.openai).toBe("sk-user");
-    expect(auth.cartethyia).toBe("sk-ant-EXAMPLE-not-a-real-key");
+    expect(auth.cloviela).toBe("sk-ant-EXAMPLE-not-a-real-key");
   });
 
   test("status reports the endpoint the file actually holds", async () => {
@@ -336,7 +336,7 @@ describe("the codex injector against a temp HOME", () => {
     const status = await injector.getStatus();
     expect(status.configured).toBe(true);
     expect(status.currentEndpoint).toBe("http://localhost:12800/v1");
-    expect(status.currentModels).toEqual(["cartethyia-sonnet"]);
+    expect(status.currentModels).toEqual(["cloviela-sonnet"]);
   });
 
   test("status exposes only a prefix of the key, never the secret", async () => {
@@ -348,7 +348,7 @@ describe("the codex injector against a temp HOME", () => {
     expect(JSON.stringify(status)).not.toContain(APPLY_INPUT.apiKey);
   });
 
-  test("reset removes Cartethyia's settings and restores the user's provider", async () => {
+  test("reset removes Cloviela's settings and restores the user's provider", async () => {
     const path = await seedConfig();
     const injector = createFileInjector(codexSpec);
     await injector.apply(APPLY_INPUT);
@@ -357,7 +357,7 @@ describe("the codex injector against a temp HOME", () => {
     const text = (await readTextFile(path)) ?? "";
     expect(hasGluedHeader(text)).toBe(false);
     expect(hasGluedValue(text)).toBe(false);
-    expect(text).not.toContain("[model_providers.cartethyia]");
+    expect(text).not.toContain("[model_providers.cloviela]");
     expect(text).not.toContain("default_subagent_model");
     // The unrelated user settings survive.
     expect(text).toContain("# my codex config");
@@ -369,14 +369,14 @@ describe("the codex injector against a temp HOME", () => {
     // The credential this injector added is withdrawn; the user's is kept.
     const auth = JSON.parse((await readTextFile(join(home, ".codex", "auth.json"))) ?? "{}");
     expect(auth.openai).toBe("sk-user");
-    expect(auth.cartethyia).toBeUndefined();
+    expect(auth.cloviela).toBeUndefined();
   });
 
   test("reset removes the auth helper script it wrote", async () => {
     await seedConfig();
     const injector = createFileInjector(codexSpec);
     await injector.apply(APPLY_INPUT);
-    const helper = join(home, ".codex", "cartethyia-auth.cjs");
+    const helper = join(home, ".codex", "cloviela-auth.cjs");
     expect(existsSync(helper)).toBe(true);
     await injector.reset();
     expect(existsSync(helper)).toBe(false);
@@ -428,7 +428,7 @@ describe("the codex injector against a temp HOME", () => {
     expect(second).toBe(first);
   });
 
-  test("a third-party tool config is not left with Cartethyia's provider table", async () => {
+  test("a third-party tool config is not left with Cloviela's provider table", async () => {
     // The reset is the operator's undo. If it leaves the table behind, the tool
     // keeps trying to route through a gateway that is no longer configured.
     const path = await seedConfig();
@@ -436,8 +436,8 @@ describe("the codex injector against a temp HOME", () => {
     await injector.apply(APPLY_INPUT);
     await injector.reset();
     const text = (await readTextFile(path)) ?? "";
-    expect(textHas(text, { kind: "section", section: "model_providers.cartethyia" })).toBe(false);
-    expect(textHas(text, { kind: "section", section: "model_providers.cartethyia.auth" })).toBe(false);
+    expect(textHas(text, { kind: "section", section: "model_providers.cloviela" })).toBe(false);
+    expect(textHas(text, { kind: "section", section: "model_providers.cloviela.auth" })).toBe(false);
   });
 
   test("the download output carries the same endpoint the apply writes", async () => {
@@ -445,7 +445,7 @@ describe("the codex injector against a temp HOME", () => {
     // there than in the applied file would send them somewhere else.
     const download = await createFileInjector(codexSpec).download(APPLY_INPUT);
     expect(download.content).toContain("http://localhost:12800/v1");
-    expect(download.content).toContain("[model_providers.cartethyia]");
+    expect(download.content).toContain("[model_providers.cloviela]");
     expect(download.filename).toBe("codex-config.txt");
   });
 });
@@ -455,7 +455,7 @@ describe("the generic driver's status branches", () => {
   let savedEnv: Record<string, string | undefined>;
 
   beforeEach(() => {
-    home = mkdtempSync(join(tmpdir(), "cartethyia-driver-"));
+    home = mkdtempSync(join(tmpdir(), "cloviela-driver-"));
     savedEnv = redirectHome(home);
     assertHomeRedirect(home);
   });
@@ -664,7 +664,7 @@ describe("the generic driver's status branches", () => {
  * These are structural invariants rather than per-tool assertions, and they are
  * here because the same defect kept reappearing in different injectors: `apply`
  * writes a key *inside* a section (`[providers.openai]`, `[model_providers.
- * cartethyia]`) while `readStatus` looked for it as a **root** key, so a config
+ * cloviela]`) while `readStatus` looked for it as a **root** key, so a config
  * the injector had just written reported `currentEndpoint: null`. Codex,
  * deepseek-tui and jcode each had it. One loop over the registry catches the
  * next one at the moment it is introduced, instead of after an operator reports
@@ -681,7 +681,7 @@ describe("every file injector round-trips apply → status → reset", () => {
   ]);
 
   beforeEach(() => {
-    home = mkdtempSync(join(tmpdir(), "cartethyia-all-tools-"));
+    home = mkdtempSync(join(tmpdir(), "cloviela-all-tools-"));
     savedEnv = redirectHome(home);
     // Every loop below drives the real injectors against this fixture. If the
     // redirect were ignored they would rewrite the operator's real configs —
@@ -698,13 +698,13 @@ describe("every file injector round-trips apply → status → reset", () => {
   const INPUT = {
     endpoint: "http://localhost:12800/",
     apiKey: "sk-ant-EXAMPLE-not-a-real-key",
-    modelIds: ["cartethyia-sonnet", "cartethyia-haiku"],
+    modelIds: ["cloviela-sonnet", "cloviela-haiku"],
     modelSlots: {
-      session: "cartethyia-sonnet",
-      subagent: "cartethyia-haiku",
-      review: "cartethyia-haiku",
-      primary: "cartethyia-sonnet",
-      fast: "cartethyia-haiku",
+      session: "cloviela-sonnet",
+      subagent: "cloviela-haiku",
+      review: "cloviela-haiku",
+      primary: "cloviela-sonnet",
+      fast: "cloviela-haiku",
     },
   };
 

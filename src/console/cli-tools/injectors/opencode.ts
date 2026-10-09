@@ -50,11 +50,11 @@ export const opencodeSpec: InjectorSpec = {
     if (!config) {
       return { configured: false, currentEndpoint: null, rawApiKey: null, currentModels: null };
     }
-    const provider = config.provider?.cartethyia;
+    const provider = config.provider?.cloviela;
     const endpoint = provider?.options?.baseURL ?? null;
     const models = provider?.models ? Object.keys(provider.models) : null;
     const active =
-      typeof config.model === "string" && config.model.startsWith("cartethyia/")
+      typeof config.model === "string" && config.model.startsWith("cloviela/")
         ? config.model.split("/").slice(1).join("/")
         : null;
     return {
@@ -70,8 +70,8 @@ export const opencodeSpec: InjectorSpec = {
     const config: OpencodeConfig = (existing ?? {}) as OpencodeConfig;
 
     if (!config.provider) config.provider = {};
-    const prior = config.provider.cartethyia;
-    config.provider.cartethyia = {
+    const prior = config.provider.cloviela;
+    config.provider.cloviela = {
       npm: "@ai-sdk/openai-compatible",
       options: {
         ...(prior?.options ?? {}),
@@ -82,14 +82,14 @@ export const opencodeSpec: InjectorSpec = {
     };
 
     const activeModel = input.activeModel ?? input.modelIds[0] ?? "";
-    config.model = activeModel === "" ? "" : `cartethyia/${activeModel}`;
+    config.model = activeModel === "" ? "" : `cloviela/${activeModel}`;
 
     if (!config.agent) config.agent = {};
     const subagentModel = input.subagentModel ?? input.modelIds[0] ?? activeModel;
     config.agent.explorer = {
       description: "Fast explorer subagent",
       mode: "subagent",
-      model: `cartethyia/${subagentModel}`,
+      model: `cloviela/${subagentModel}`,
     };
 
     await writeJsonFile(path, config);
@@ -100,15 +100,15 @@ export const opencodeSpec: InjectorSpec = {
     if (!config) return false;
 
     if (config.provider) {
-      delete config.provider.cartethyia;
+      delete config.provider.cloviela;
       if (Object.keys(config.provider).length === 0) delete config.provider;
     }
 
-    if (typeof config.model === "string" && config.model.startsWith("cartethyia/")) {
+    if (typeof config.model === "string" && config.model.startsWith("cloviela/")) {
       delete config.model;
     }
 
-    if (config.agent?.explorer?.model?.startsWith("cartethyia/")) {
+    if (config.agent?.explorer?.model?.startsWith("cloviela/")) {
       delete config.agent.explorer;
       if (Object.keys(config.agent).length === 0) delete config.agent;
     }
@@ -121,7 +121,7 @@ export const opencodeSpec: InjectorSpec = {
     const subagentModel = input.subagentModel ?? input.modelIds[0] ?? activeModel;
     const config: OpencodeConfig = {
       provider: {
-        cartethyia: {
+        cloviela: {
           npm: "@ai-sdk/openai-compatible",
           options: {
             baseURL: ensureV1Suffix(input.endpoint),
@@ -130,12 +130,12 @@ export const opencodeSpec: InjectorSpec = {
           models: buildOpencodeModels(input.modelIds),
         },
       },
-      model: activeModel === "" ? "" : `cartethyia/${activeModel}`,
+      model: activeModel === "" ? "" : `cloviela/${activeModel}`,
       agent: {
         explorer: {
           description: "Fast explorer subagent",
           mode: "subagent",
-          model: `cartethyia/${subagentModel}`,
+          model: `cloviela/${subagentModel}`,
         },
       },
     };
@@ -148,6 +148,6 @@ export const opencodeSpec: InjectorSpec = {
 
   messages: {
     applied: "OpenCode settings applied",
-    reset: "Cartethyia settings removed from OpenCode",
+    reset: "Cloviela settings removed from OpenCode",
   },
 };

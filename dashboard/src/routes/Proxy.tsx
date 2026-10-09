@@ -1417,7 +1417,7 @@ export default function Proxy(): ReactNode {
   // throughput after a reload, so throwing it away on navigation is wasteful.
   const [speedResults, setSpeedResults] = useState<Record<string, StoredSpeedResult>>(() => {
     try {
-      const saved = localStorage.getItem("cartethyia_proxy_speed_results");
+      const saved = localStorage.getItem("cloviela_proxy_speed_results");
       return saved ? (JSON.parse(saved) as Record<string, StoredSpeedResult>) : {};
     } catch {
       return {};
@@ -1429,14 +1429,14 @@ export default function Proxy(): ReactNode {
     setSpeedResults((prev) => {
       const next = { ...prev, [poolId]: stamped };
       try {
-        localStorage.setItem("cartethyia_proxy_speed_results", JSON.stringify(next));
+        localStorage.setItem("cloviela_proxy_speed_results", JSON.stringify(next));
       } catch {}
       return next;
     });
   }, []);
   const [checkResults, setCheckResults] = useState<Record<string, HealthCheckResult>>(() => {
     try {
-      const saved = localStorage.getItem("cartethyia_proxy_check_results");
+      const saved = localStorage.getItem("cloviela_proxy_check_results");
       const cached: Record<string, HealthCheckResult> = saved ? JSON.parse(saved) : {};
       return Object.fromEntries(
         Object.entries(cached).map(([poolId, result]) => {
@@ -1513,7 +1513,7 @@ export default function Proxy(): ReactNode {
         setCheckResults((prev) => {
           const next = { ...prev, [pool.id]: result };
           try {
-            localStorage.setItem("cartethyia_proxy_check_results", JSON.stringify(next));
+            localStorage.setItem("cloviela_proxy_check_results", JSON.stringify(next));
           } catch {}
           return next;
         });
@@ -1562,7 +1562,7 @@ export default function Proxy(): ReactNode {
           setCheckResults((prev) => {
             const next = { ...prev, [pool.id]: result };
             try {
-              localStorage.setItem("cartethyia_proxy_check_results", JSON.stringify(next));
+              localStorage.setItem("cloviela_proxy_check_results", JSON.stringify(next));
             } catch {}
             return next;
           });
@@ -1578,7 +1578,7 @@ export default function Proxy(): ReactNode {
           setCheckResults((prev) => {
             const next = { ...prev, [pool.id]: result };
             try {
-              localStorage.setItem("cartethyia_proxy_check_results", JSON.stringify(next));
+              localStorage.setItem("cloviela_proxy_check_results", JSON.stringify(next));
             } catch {}
             return next;
           });
@@ -1655,7 +1655,7 @@ export default function Proxy(): ReactNode {
     const targets = selectedIds.size > 0 ? pools.filter((p) => selectedIds.has(p.id)) : pools;
     if (targets.length === 0) return;
     const content = targets.map((p) => poolDisplay(p).endpoint || p.endpoint).join("\n");
-    downloadTextFile("cartethyia-proxies.txt", content, "text/plain;charset=utf-8");
+    downloadTextFile("cloviela-proxies.txt", content, "text/plain;charset=utf-8");
     toast.success(`Exported ${targets.length} pool(s)`);
   };
 

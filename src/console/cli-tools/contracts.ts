@@ -10,14 +10,14 @@ import { ensureV1Suffix } from "./fs-ops";
  * with static metadata and (when `configType !== "guide"`) a paired
  * `ToolInjector` that reads and writes the tool's config files on the host
  * filesystem. The dashboard picks an API key + models, POSTs to the backend,
- * and the injector merges Cartethyia-specific fields into the tool's config
+ * and the injector merges Cloviela-specific fields into the tool's config
  * without clobbering user settings.
  */
 
 /**
- * Cartethyia proxy surface a CLI tool targets. Registry/source material from a
+ * Cloviela proxy surface a CLI tool targets. Registry/source material from a
  * sibling project used `openai-chat | openai-responses | anthropic-messages`;
- * Cartethyia's canonical surface vocabulary is the shorter form.
+ * Cloviela's canonical surface vocabulary is the shorter form.
  */
 export type CliToolSurface = "chat" | "responses" | "messages";
 
@@ -145,7 +145,7 @@ export type ToolRegistryEntry = Pick<
 export interface ToolStatus {
   readonly toolId: string;
   readonly installed: boolean;
-  /** True if the tool's config already points to a Cartethyia endpoint. */
+  /** True if the tool's config already points to a Cloviela endpoint. */
   readonly configured: boolean;
   readonly settingsPath: string | null;
   readonly currentEndpoint: string | null;
@@ -155,11 +155,11 @@ export interface ToolStatus {
   readonly message?: string;
 }
 
-/** Input from the dashboard when applying Cartethyia config to a tool. */
+/** Input from the dashboard when applying Cloviela config to a tool. */
 export interface ApplyInput {
   /** Raw endpoint URL, e.g. "http://localhost:12800". Each injector normalizes as needed. */
   readonly endpoint: string;
-  /** Full API key secret from Cartethyia's key store. */
+  /** Full API key secret from Cloviela's key store. */
   readonly apiKey: string;
   /** Ordered model identifiers used by positional tool slots. */
   readonly modelIds: readonly string[];
@@ -325,11 +325,11 @@ export interface InjectorSpec {
   /** Extract status details from existing settings file(s) */
   readonly readStatus: (path: string) => Promise<StatusDetails> | StatusDetails;
 
-  /** Apply Cartethyia configuration to the settings file(s) */
+  /** Apply Cloviela configuration to the settings file(s) */
   readonly apply: (input: ApplyInput, path: string) => Promise<void> | void;
 
   /**
-   * Reset Cartethyia configuration from settings file(s).
+   * Reset Cloviela configuration from settings file(s).
    * Returning `false` indicates no settings file was present to reset.
    */
   readonly reset: (path: string) => Promise<void | boolean> | void | boolean;
@@ -353,7 +353,7 @@ export interface InjectorSpec {
  *
  * Consumed by the backend service (for injector dispatch) and sent to the
  * frontend via GET /console/api/cli-tools/registry. MITM-based tools are
- * excluded — Cartethyia does not run a MITM proxy.
+ * excluded — Cloviela does not run a MITM proxy.
  */
 
 export const TOOL_REGISTRY = {
@@ -667,7 +667,7 @@ export const TOOL_REGISTRY = {
     notes: [
       {
         type: "info",
-        text: "Use Cartethyia model aliases to keep Amp shorthand mappings stable across provider updates.",
+        text: "Use Cloviela model aliases to keep Amp shorthand mappings stable across provider updates.",
       },
     ],
     guideSteps: [
@@ -682,7 +682,7 @@ export const TOOL_REGISTRY = {
       {
         step: 5,
         title: "Add Shorthands",
-        desc: "Map Amp shorthand names to Cartethyia aliases in your local config.",
+        desc: "Map Amp shorthand names to Cloviela aliases in your local config.",
       },
     ],
     codeBlock: {
@@ -697,7 +697,7 @@ amp --model "{{model}}"`,
     id: "qwen",
     name: "Qwen Code",
     color: "#10B981",
-    description: "Alibaba Qwen Code CLI — OpenAI-compatible via Cartethyia",
+    description: "Alibaba Qwen Code CLI — OpenAI-compatible via Cloviela",
     configType: "guide" as const,
     surface: "chat" as const,
     docsUrl: "https://qwenlm.github.io/qwen-code-docs/en/users/configuration/model-providers/",

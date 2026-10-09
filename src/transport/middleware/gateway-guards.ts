@@ -6,7 +6,7 @@ import type { TrustedProxyBoundary } from "../../config";
 import { resolveClientIdentity } from "../../security/ip-boundary";
 import type { ProxyRequestStateStore } from "../request/state";
 import { fastPathname } from "../request/pathname";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { requestToken, resolveApiKeyAuthorization } from "../../security/api-key-auth";
 import {
   deniedClientRouter,
@@ -26,7 +26,7 @@ import { shutdownNotice } from "../shutdown-notice";
  */
 
 export function createApiKeyAuthenticationMiddleware(deps: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly stateStore: ProxyRequestStateStore;
   /**
    * Model-abuse ban gate. A banned IP or key is refused here, before the

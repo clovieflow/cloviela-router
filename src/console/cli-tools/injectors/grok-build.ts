@@ -63,7 +63,7 @@ export const grokBuildSpec: InjectorSpec = {
 
   messages: {
     applied: "Grok Build settings applied",
-    reset: "Cartethyia settings removed from Grok Build",
+    reset: "Cloviela settings removed from Grok Build",
     resetMissing: "No config file to reset",
   },
 };

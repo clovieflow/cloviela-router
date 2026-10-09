@@ -18,7 +18,7 @@ import type { ValidatedNetworkBindingFactory } from "../../network/pool/resolver
 import type { ByokUpstreamHost } from "../../providers/operations/provider-catalog-service";
 import type { AdmissionLease } from "../../security/admission/contracts";
 import type { RouteCandidate, Reservation, RouteSnapshotService } from "../routing/route-model";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { acquireAttemptLeases, releaseAttemptLeases } from "./leases";
 import type { AttemptLeaseSource, AttemptLeases } from "./leases";
 import { metrics } from "../../observability/metrics";
@@ -56,7 +56,7 @@ interface AttemptContext<TAdapter> {
 
 /** Collaborators shared by every dispatch route. */
 interface AttemptLoopDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly poolSelector?: NetworkPoolSelector;
   readonly networkBindingFactory?: ValidatedNetworkBindingFactory;
   readonly snapshotService?: RouteSnapshotService;

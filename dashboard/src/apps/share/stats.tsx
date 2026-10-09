@@ -43,7 +43,7 @@ const ShareStatsContext = createContext<{
 }>({ data: null, loading: true, unit: RAW_TOKEN_SCALE, cycleUnit: () => undefined });
 
 /** The viewer's chosen token unit, remembered across reloads. */
-const TOKEN_UNIT_STORAGE_KEY = "cartethyia:share-token-unit";
+const TOKEN_UNIT_STORAGE_KEY = "cloviela:share-token-unit";
 
 /**
  * Reads the remembered unit. Every failure path answers the default — the exact

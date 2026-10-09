@@ -36,8 +36,8 @@ Treat theme, backdrop, responsive layout, and model grouping as UI behavior to v
 - `Dialog` sizes come from `DialogSize` (`sm 420 / md 640 / lg 880 / xl 1160`);
   arbitrary `width={...}` px is legacy. `expanded` caps at 1160; on
   `max-width: 640px` panels become near-full-viewport bottom sheets.
-- `localStorage` keys are namespaced `cartethyia:<area>:<name>`
-  (`cartethyia:provider:<id>:thinking-effort`, `cartethyia:overview:low-stress`).
+- `localStorage` keys are namespaced `cloviela:<area>:<name>`
+  (`cloviela:provider:<id>:thinking-effort`, `cloviela:overview:low-stress`).
   Read defensively (`typeof window` guard, vocabulary check, typed fallback);
   never throw on stored junk.
 

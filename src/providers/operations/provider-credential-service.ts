@@ -1,7 +1,7 @@
 // Provider credentials: decrypts stored account rows into dispatchable ResolvedCredentials.
 import { eq } from "drizzle-orm";
 
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { providerAccounts, providerOauthStates } from "../../persistence/schema";
 import { decryptCredentialToString } from "../../security/crypto";
 import { GatewayError } from "../../transport/gateway-error";
@@ -81,7 +81,7 @@ export interface AccountWithFreshness {
  * Non-OAuth accounts and accounts without OAuth state have no due time.
  */
 export async function loadAccountWithFreshness(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   skewMs?: number,
 ): Promise<AccountWithFreshness | undefined> {
@@ -128,7 +128,7 @@ export interface ResolveCredentialOAuth {
 
 /** Resolves the credential for a specific provider-account id, decrypting at read time. */
 export async function resolveCredentialForAccount(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   providerId: string,
   accountId: string,
   oauth?: ResolveCredentialOAuth,
@@ -198,7 +198,7 @@ export async function resolveCredentialForAccount(
 }
 
 export async function resolveAccountSecretString(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   providerId: string,
   accountId: string,
   oauth?: ResolveCredentialOAuth,
@@ -209,7 +209,7 @@ export async function resolveAccountSecretString(
 
 /** Decrypts the stored provider tokens after refreshing an expired OAuth access token. */
 export async function resolveAccountCredentialsForExport(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   providerId: string,
   accountId: string,
   oauth?: ResolveCredentialOAuth,
@@ -255,7 +255,7 @@ export async function resolveAccountCredentialsForExport(
 
 /** Binds token decryption and refresh behavior for the provider-account export route. */
 export function createAccountExportCredentialsResolver(deps: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly resolveRefresher: (providerId: string) => Promise<OAuthTokenRefresher | undefined>;
   readonly refreshService: Pick<OAuthRefreshService, "ensureFreshAccessToken">;
 }): (
@@ -274,7 +274,7 @@ export function createAccountExportCredentialsResolver(deps: {
  * quota sweep, avoiding a stale-token fallback when OAuth refresh is due.
  */
 export function createAccountSecretResolver(deps: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly resolveRefresher: (providerId: string) => Promise<OAuthTokenRefresher | undefined>;
   readonly refreshService: Pick<OAuthRefreshService, "ensureFreshAccessToken">;
 }): (providerId: string, accountId: string) => Promise<string> {

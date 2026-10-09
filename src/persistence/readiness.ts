@@ -1,7 +1,7 @@
 // Boot readiness: cached probe over database connectivity, applied migrations, and Redis.
 import { sql } from "drizzle-orm";
 import { readMigrationLedgerStatus } from "./postgres";
-import type { CartethyiaDatabase } from "./postgres";
+import type { ClovielaDatabase } from "./postgres";
 import type { RedisBackend, RedisClient } from "./redis";
 import { withTimeout } from "../runtime/timeout";
 
@@ -16,7 +16,7 @@ import { withTimeout } from "../runtime/timeout";
 const READINESS_MEMO_TTL_MS = 5_000;
 
 interface ReadinessMemoKey {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly redis: RedisClient | undefined;
   readonly redisBackend: RedisBackend;
   readonly timeoutMs: number;
@@ -61,7 +61,7 @@ export interface ReadinessCheckResult {
  * caching boundary and tests can reason about one entry point.
  */
 async function runReadinessChecks(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   redis: RedisClient | undefined,
   redisBackend: RedisBackend,
   timeoutMs: number = 5000,
@@ -180,7 +180,7 @@ async function runReadinessChecks(
  * databases or a different backend/timeout never see a stale result.
  */
 export async function checkReadiness(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   redis: RedisClient | undefined,
   redisBackend: RedisBackend,
   timeoutMs: number = 5000,

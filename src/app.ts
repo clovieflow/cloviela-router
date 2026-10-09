@@ -17,7 +17,7 @@ import type { CanonicalAdapter } from "./transport/middleware/request-context";
 import type { ApiKeyAuthorizationSnapshot } from "./security/api-key-auth";
 import { getDbHandle, isPgHandle } from "./persistence/postgres";
 import { resolveRedisClient } from "./persistence/redis";
-import type { CartethyiaDatabase } from "./persistence/postgres";
+import type { ClovielaDatabase } from "./persistence/postgres";
 import type { ProviderAdapter } from "./providers/provider-registry";
 import type { OAuthTokenRefresher, OAuthRefreshService } from "./providers/authentication/oauth-refresh-service";
 import { withTimeout } from "./runtime/timeout";
@@ -93,7 +93,7 @@ export interface GatewayShellDeps {
  */
 export interface ProductionAppDeps {
   readonly mode: "production";
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly proxyPreparer: ProxyRequestPreparer;
   readonly resolveProviderAdapter: (providerId: string) => Promise<ProviderAdapter | undefined>;
   readonly providerAdapters?: ReadonlyMap<string, ProviderAdapter>;
@@ -316,14 +316,14 @@ export function createGatewayApp(deps: GatewayAppDeps) {
       // Pool gauges describe the external server's connection budget; the
       // embedded backend has no pool to report.
       if (isPgHandle(handle)) {
-        metrics.cartethyia_pg_pool_total.set(handle.pool.totalCount);
-        metrics.cartethyia_pg_pool_idle.set(handle.pool.idleCount);
-        metrics.cartethyia_pg_pool_waiting.set(handle.pool.waitingCount);
+        metrics.cloviela_pg_pool_total.set(handle.pool.totalCount);
+        metrics.cloviela_pg_pool_idle.set(handle.pool.idleCount);
+        metrics.cloviela_pg_pool_waiting.set(handle.pool.waitingCount);
       }
       // No client means the memory backend, which is always up; a real client
       // reports its own readiness so the scrape never throws.
       const redisClient = resolveRedisClient();
-      metrics.cartethyia_redis_up.set(redisClient === undefined || redisClient.status === "ready" ? 1 : 0);
+      metrics.cloviela_redis_up.set(redisClient === undefined || redisClient.status === "ready" ? 1 : 0);
       return new Response(metrics.render(), {
         headers: { "content-type": "text/plain; version=0.0.4" },
       });

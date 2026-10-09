@@ -38,7 +38,7 @@ import { classifyTerminalOutcome } from "../failure-policy";
 import type { CanonicalEvent, CanonicalRequest, UsageRecord } from "../canonical-model";
 import type { ProviderAdapter, ResolvedCredential } from "../../providers/provider-registry";
 import type { ValidatedNetworkBindingFactory } from "../../network/pool/resolver";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { Reservation, RouteCandidate, RouteSnapshotService } from "../routing/route-model";
 import type { AdmissionLease } from "../../security/admission/contracts";
 import type { NetworkPoolSelector } from "../../network/pool/selector";
@@ -67,7 +67,7 @@ import { drainAbortReason } from "../shutdown-notice";
 
 /** Collaborators the streaming branch reads from the dispatch handler. */
 export interface StreamingDispatchDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly networkBindingFactory?: ValidatedNetworkBindingFactory | undefined;
   readonly poolSelector?: NetworkPoolSelector | undefined;
   readonly snapshotService?: RouteSnapshotService | undefined;
@@ -434,8 +434,8 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
   /**
    * Max time between upstream events before the stream is declared
    * stalled, and max time to the first client-visible chunk. Both are
-   * resolved from config once per stream (`CARTETHYIA_STREAM_STALL_TIMEOUT_MS`
-   * defaults to 360s, `CARTETHYIA_STREAM_FIRST_CHUNK_TIMEOUT_MS` to 200s).
+   * resolved from config once per stream (`CLOVIELA_STREAM_STALL_TIMEOUT_MS`
+   * defaults to 360s, `CLOVIELA_STREAM_FIRST_CHUNK_TIMEOUT_MS` to 200s).
    * The stall bound is sized to stay *above* every legitimate long
    * silence: provider-side reasoning/long-context generation can hold
    * silence for minutes (Codex/o1-style hidden reasoning up to ~5 min),
@@ -464,7 +464,7 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
         : streamStallTimeoutMs;
     stallTimer = setTimeout(() => {
       // The bound that expired is silence *from the upstream*, so the
-      // origin is the upstream's: labelling it `cartethyia` reported a
+      // origin is the upstream's: labelling it `cloviela` reported a
       // provider that stopped sending as a gateway defect.
       state.abortController.abort(
         new GatewayError("deadline_exceeded", 504, "upstream stream stalled", {}, "upstream"),
@@ -619,7 +619,7 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
                     504,
                     "request deadline exceeded",
                     {},
-                    "cartethyia",
+                    "cloviela",
                   )
                 : undefined;
           const closeFailure = drainFailure ?? deadlineFailure;
@@ -785,7 +785,7 @@ export async function dispatchStreamingAttempt(input: StreamingDispatchInput): P
               504,
               "request deadline exceeded",
               {},
-              "cartethyia",
+              "cloviela",
             )
           : undefined;
     // A drain aborts the controller too. When it races the upstream

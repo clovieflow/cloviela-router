@@ -124,7 +124,7 @@ unambiguously; a bare id works only when it resolves to exactly one target.
 Errors use one envelope across every surface:
 
 ```json
-{"error":{"origin":"cartethyia|upstream|network","code":"...","message":"...","details":{}}}
+{"error":{"origin":"cloviela|upstream|network","code":"...","message":"...","details":{}}}
 ```
 
 Useful codes: `authentication_failed`, `model_not_found`, `ambiguous_model`,

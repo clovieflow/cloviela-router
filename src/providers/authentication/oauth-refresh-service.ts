@@ -22,7 +22,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { providerAccounts, providerOauthStates } from "../../persistence/schema";
 import { decryptCredentialToString, encryptCredential } from "../../security/crypto";
 import { invalidateCredentialCache } from "../operations/provider-credential-service";
@@ -131,7 +131,7 @@ type AccountRow = AccountWithFreshnessRow;
 
 /** Acquires the refresh lease for `accountId`, or returns false if another live lease holds it. */
 async function acquireLease(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   owner: string,
 ): Promise<boolean> {
@@ -152,7 +152,7 @@ async function acquireLease(
 
 /** Releases the lease without mutating credential state (used for transient failures). */
 async function releaseLease(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   owner: string,
 ): Promise<void> {
@@ -169,7 +169,7 @@ async function releaseLease(
 
 /** Persists a successful refresh and releases the lease, fenced on still holding it. */
 async function persistRefreshed(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   owner: string,
   result: OAuthTokenRefreshResult,
@@ -240,7 +240,7 @@ function buildRefreshContext(row: AccountRow, includeAccessToken: boolean): OAut
  * fenced on the lease.
  */
 async function disableAccount(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   owner: string,
   message: string,
@@ -283,7 +283,7 @@ async function disableAccount(
  * as a broken/re-auth account. Not lease-fenced: a non-destructive annotation
  * that any process may write, and the credential is not touched.
  */
-async function markStaticToken(db: CartethyiaDatabase, accountId: string): Promise<void> {
+async function markStaticToken(db: ClovielaDatabase, accountId: string): Promise<void> {
   await db
     .update(providerAccounts)
     .set({
@@ -359,7 +359,7 @@ function failureStatus(error: unknown): number | undefined {
  * credential is decoded, never verified — the same structural-only trust the
  * dispatch path already places in the stored token.
  */
-export async function reconcileStaticTokenAccounts(db: CartethyiaDatabase): Promise<number> {
+export async function reconcileStaticTokenAccounts(db: ClovielaDatabase): Promise<number> {
   const candidates = await db
     .select({
       id: providerAccounts.id,
@@ -415,7 +415,7 @@ export async function reconcileStaticTokenAccounts(db: CartethyiaDatabase): Prom
  * see is one whose token dies silently, which is the failure this guards.
  */
 export async function loadDueOAuthAccounts(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   skewMs?: number,
 ): Promise<readonly { readonly id: string; readonly providerId: string }[]> {
   const rows = await db
@@ -452,10 +452,10 @@ export class OAuthRefreshService {
   /** Bound on concurrently tracked single-flight refreshes; keys are account ids, so the real bound is the account count. */
   private static readonly MAX_INFLIGHT = 1_000;
 
-  readonly #db: CartethyiaDatabase;
+  readonly #db: ClovielaDatabase;
   readonly #inFlight = new Map<string, Promise<string | null>>();
 
-  constructor(db: CartethyiaDatabase) {
+  constructor(db: ClovielaDatabase) {
     this.#db = db;
   }
 

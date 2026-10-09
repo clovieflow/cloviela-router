@@ -1,7 +1,7 @@
 /**
  * Labels for the Usage request table and its detail drawer.
  */
-const PROBE_USER_AGENT = "Cartethyia Probe";
+const PROBE_USER_AGENT = "Cloviela Probe";
 
 export interface UsageKeyIdentity {
   readonly apiKeyId?: string | undefined;

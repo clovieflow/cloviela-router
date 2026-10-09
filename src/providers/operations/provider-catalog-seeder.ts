@@ -1,12 +1,12 @@
 /** Durable materialization of bundled provider model metadata. */
 import { and, eq, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { models } from "../../persistence/schema";
 import type { ModelDefinition } from "../provider-registry";
 
 /** Persists compiled provider model metadata and reconciles drifted capability flags. */
 export async function seedBundledModels(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   builtinModels: ReadonlyMap<string, readonly ModelDefinition[]>,
 ): Promise<void> {
   for (const [providerId, definitions] of builtinModels) {

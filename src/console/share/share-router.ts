@@ -5,7 +5,7 @@
 
 import { Elysia } from "elysia";
 import { and, eq, isNull, or } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { apiKeys, models, providers } from "../../persistence/schema";
 import { PublicModelCatalogStore } from "../providers/catalog/public-model-store";
 import { canonicalClientIpKey } from "../../security/ip-boundary";
@@ -50,7 +50,7 @@ export interface ShareModelInfo {
 }
 
 export interface ShareRouterOptions {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly shareStore: ShareLinkStore;
   /** Resolves the normalized client IP through the trusted-proxy boundary. */
   readonly resolveClientIp: (request: Request) => string | null;
@@ -126,7 +126,7 @@ function snapshotForShare(row: ShareLinkPolicy): ApiKeyAuthorizationSnapshot {
  * the page renders the id without a spec rather than inventing one.
  */
 async function modelInfoForShare(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   row: ShareLinkPolicy,
   allowedModels: readonly string[],
 ): Promise<Record<string, ShareModelInfo>> {
@@ -169,7 +169,7 @@ function normalizeShareCapabilities(
 }
 
 /** Resolves the models a share recipient may use. */
-async function modelsForShare(db: CartethyiaDatabase, row: ShareLinkPolicy): Promise<string[]> {
+async function modelsForShare(db: ClovielaDatabase, row: ShareLinkPolicy): Promise<string[]> {
   const snapshot = snapshotForShare(row);
   // A whitelist grants only its listed names, so the list is authoritative. A
   // blacklist grants everything except its names, so the full catalog is the
@@ -211,7 +211,7 @@ async function modelsForShare(db: CartethyiaDatabase, row: ShareLinkPolicy): Pro
  * the fetched snapshot disagree.
  */
 async function resolveFamilyStats(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   shareStore: ShareLinkStore,
   stats: ShareStatsPort,
   token: string,

@@ -1,6 +1,7 @@
 // Console authentication, sessions, lockouts, first-boot setup, and audit.
 import { randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, ne, sql } from "drizzle-orm";
+import { envValue } from "../../env-compat";
 import type { ConsoleSession, ConsoleUser } from "../../persistence/schema";
 import { log } from "../../observability/logger";
 import {
@@ -12,14 +13,14 @@ import {
   tenants,
 } from "../../persistence/schema";
 import { hashSecret, encryptCredential } from "../../security/crypto";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { DEFAULT_API_KEY_LABEL } from "../domains/api-keys/contracts";
 import { resolveDefaultGatewayApiKey } from "../../config";
 import { TENANT_KEY_SCOPES, type AccessDecision } from "../../security/access-control";
 import { isRecord } from "../../protocol/primitives";
 
 // ---- auth-core.ts ----
-// Persistence types use CartethyiaDatabase (persistence/postgres.ts), the
+// Persistence types use ClovielaDatabase (persistence/postgres.ts), the
 // single Postgres boundary. The Drizzle transaction callback receives a
 // PgTransaction and is cast at that one boundary — same pattern as
 // providers/operations/account-health-service.ts.
@@ -97,7 +98,7 @@ export function assertMutationApplied(
 }
 
 export class ConsoleUserStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async findByUsername(username: string): Promise<unknown | undefined> {
     const rows = await this.db.select().from(consoleUsers).where(eq(consoleUsers.username, username)).limit(1);
@@ -114,13 +115,13 @@ export class ConsoleUserStore {
   }
 }
 
-export async function readUsers(db: CartethyiaDatabase, username?: string): Promise<unknown[]> {
+export async function readUsers(db: ClovielaDatabase, username?: string): Promise<unknown[]> {
   const store = new ConsoleUserStore(db);
   if (username === undefined) return store.findAny();
   const user = await store.findByUsername(username);
   return user ? [user] : [];
 }
-export async function readUser(db: CartethyiaDatabase, userId: string): Promise<unknown> {
+export async function readUser(db: ClovielaDatabase, userId: string): Promise<unknown> {
   return new ConsoleUserStore(db).findById(userId);
 }
 
@@ -188,7 +189,7 @@ const SESSION_MAX_AGE_SECONDS = 48 * 60 * 60;
 
 function shouldUseSecureSessionCookie(): boolean {
   if (process.env.NODE_ENV === "production") return true;
-  return process.env.CARTETHYIA_PUBLIC_ORIGIN?.startsWith("https://") === true;
+  return envValue("CLOVIELA_PUBLIC_ORIGIN")?.startsWith("https://") === true;
 }
 
 export const defaultSessionCookiePolicy: SessionCookiePolicy = {
@@ -203,7 +204,7 @@ function newSessionToken(): string {
 }
 
 export class ConsoleSessionStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async create(newSession: {
     id: string;
@@ -245,7 +246,7 @@ export class ConsoleSessionStore {
   async deleteOtherSessions(
     userId: string,
     exceptSessionId: string,
-    scope?: CartethyiaDatabase,
+    scope?: ClovielaDatabase,
   ): Promise<number> {
     const db = scope ?? this.db;
     const removed = await returningRows(
@@ -264,7 +265,7 @@ export class ConsoleSessionService {
   private readonly store: ConsoleSessionStore;
 
   constructor(
-    db: CartethyiaDatabase,
+    db: ClovielaDatabase,
     private readonly cookiePolicy: SessionCookiePolicy,
   ) {
     this.store = new ConsoleSessionStore(db);
@@ -312,14 +313,14 @@ export class ConsoleSessionService {
   async deleteOtherSessions(
     userId: string,
     exceptSessionId: string,
-    scope?: CartethyiaDatabase,
+    scope?: ClovielaDatabase,
   ): Promise<number> {
     return this.store.deleteOtherSessions(userId, exceptSessionId, scope);
   }
 }
 
 export class ConsoleLockoutStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async getLockedUntil(ip: string): Promise<Date | null | undefined> {
     const rows = await this.db
@@ -372,7 +373,7 @@ export class ConsoleLockoutService {
   private readonly store: ConsoleLockoutStore;
 
   constructor(
-    private readonly db: CartethyiaDatabase,
+    private readonly db: ClovielaDatabase,
     maxFailures = 5,
     lockoutDurationMs = 60 * 60 * 1000,
   ) {
@@ -449,14 +450,14 @@ export class ConsoleLockoutService {
 
 
 
-const FIRST_BOOT_SETUP_LOCK = sql`SELECT pg_advisory_xact_lock(hashtext('cartethyia:first_boot_setup'))`;
+const FIRST_BOOT_SETUP_LOCK = sql`SELECT pg_advisory_xact_lock(hashtext('cloviela:first_boot_setup'))`;
 
 export class FirstBootSetupService {
   private setupInFlight: Promise<void> | undefined;
-  private readonly db: CartethyiaDatabase;
+  private readonly db: ClovielaDatabase;
 
   constructor(
-    db: CartethyiaDatabase,
+    db: ClovielaDatabase,
     private readonly credentialService: ConsoleCredentialService,
   ) {
     this.db = db;
@@ -470,7 +471,7 @@ export class FirstBootSetupService {
   /**
    * First-boot initialization: creates the default tenant, the first
    * platform-admin console user, the default gateway API key from
-   * `CARTETHYIA_API_KEY` (when set), and the tenant's default Filter Sanitize
+   * `CLOVIELA_API_KEY` (when set), and the tenant's default Filter Sanitize
    * rules — all in one transaction guarded by a PostgreSQL advisory
    * transaction lock, so two concurrent first-boot requests cannot each
    * create an admin.
@@ -500,7 +501,7 @@ export class FirstBootSetupService {
     username?: string,
     displayName?: string,
   ): Promise<void> {
-    const create = async (db: CartethyiaDatabase): Promise<void> => {
+    const create = async (db: ClovielaDatabase): Promise<void> => {
       const existing = await readUsers(db);
       if (existing.length > 0) throw new Error("Setup already completed");
 
@@ -571,7 +572,7 @@ export class FirstBootSetupService {
     // `typeof` probe skipped the lock and ran the setup unserialized.
     await this.db.transaction(async (transaction) => {
       await transaction.execute(FIRST_BOOT_SETUP_LOCK);
-      await create(transaction as unknown as CartethyiaDatabase);
+      await create(transaction as unknown as ClovielaDatabase);
     });
   }
 }
@@ -614,9 +615,9 @@ function stripAuditDetail(detail: Record<string, unknown>): Record<string, unkno
 }
 
 export class AuditRecorder {
-  private readonly db: CartethyiaDatabase;
+  private readonly db: ClovielaDatabase;
 
-  constructor(db: CartethyiaDatabase) {
+  constructor(db: ClovielaDatabase) {
     this.db = db;
   }
 

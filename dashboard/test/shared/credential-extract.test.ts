@@ -301,7 +301,7 @@ describe("parseCredentialBatch — single entries", () => {
   });
 });
 
-describe("parseCredentialBatch — Cartethyia's own export row", () => {
+describe("parseCredentialBatch — Cloviela's own export row", () => {
   test("an export row is recognised and its accessToken used as the secret", () => {
     // The `EXPORT_ROW_FIELDS` rule: a row carrying `credentialKind`, `providerId`,
     // and `accessToken` is a `ProviderAccountExport`. Without it the row would be
@@ -398,7 +398,7 @@ describe("parseCredentialBatch — arrays and wrappers", () => {
   });
 
   test("the `accounts` wrapper is unwrapped into one entry per row", () => {
-    // Cartethyia's own export is `{ exportedAt, accounts: [...] }`. Without the
+    // Cloviela's own export is `{ exportedAt, accounts: [...] }`. Without the
     // unwrap the whole export re-imported as a single opaque account.
     const blob = JSON.stringify({
       exportedAt: "2026-01-01T00:00:00Z",

@@ -14,7 +14,7 @@
  * belongs to its tenant and is never borrowed across tenants.
  */
 import { eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../persistence/postgres";
+import type { ClovielaDatabase } from "../persistence/postgres";
 import { networkPools } from "../persistence/schema";
 import type { ValidatedFetch } from "../network/outbound-fetch";
 import type { ValidatedNetworkBindingFactory } from "../network/pool/resolver";
@@ -27,7 +27,7 @@ import type { ValidatedNetworkBindingFactory } from "../network/pool/resolver";
  * back to direct egress — the same path the sweep used before this existed.
  */
 export function checkinEgressForPass(args: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly networkBindingFactory: ValidatedNetworkBindingFactory;
 }): (accountId: string, tenantId?: string | null) => Promise<ValidatedFetch> {
   const { db, networkBindingFactory } = args;

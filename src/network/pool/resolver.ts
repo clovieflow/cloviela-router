@@ -4,7 +4,7 @@
  * names once through the SSRF policy and hands dispatch a validated fetch
  * (direct or pool-bound).
  */
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import {
   isAddressAllowed,
   resolveAllAddresses,
@@ -33,7 +33,7 @@ export interface PoolAgentResolverDeps {
   readonly ssrfPolicy?: SsrfPolicy;
   readonly resolveFn?: (hostname: string, signal: AbortSignal) => Promise<readonly string[]>;
   /** Database used to load pool rows. */
-  readonly db?: CartethyiaDatabase;
+  readonly db?: ClovielaDatabase;
 }
 
 function destroyAgent(agent: unknown): void {

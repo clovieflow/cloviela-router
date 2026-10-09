@@ -49,7 +49,7 @@ const ZAI_CUSTOMER_INFO_URL = `${ZAI_BIZ_BASE}/api/biz/customer/getCustomerInfo`
  * again reuses the key it created the first time instead of accumulating rows
  * in the operator's Z.AI account.
  */
-const ZAI_KEY_NAME = "cartethyia" as const;
+const ZAI_KEY_NAME = "cloviela" as const;
 
 /**
  * Z.AI wraps its responses in `{ code, msg, data, success }`, with `code: 0`
@@ -71,7 +71,7 @@ function unwrapEnvelope(body: unknown, operation: string): unknown {
       code === "200";
     if (root.success === false || !ok) {
       const message = nonEmptyTrimmedString(root.msg) ?? `${operation} failed`;
-      // `cartethyia` origin so the dialog shows the provider's own reason
+      // `cloviela` origin so the dialog shows the provider's own reason
       // instead of the generic "check the console log" fallback.
       throw new GatewayError("authentication_failed", 400, `Z.AI ${message}`, { providerId: "zcode" });
     }

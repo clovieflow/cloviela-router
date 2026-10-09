@@ -8,7 +8,7 @@
  * name a column that does not exist.
  *
  * Detection is by shape, not by a flag, because the user imports one file and
- * the file says what it is: our own backups carry `app: "cartethyia"`, and a
+ * the file says what it is: our own backups carry `app: "cloviela"`, and a
  * 9Router export carries the table names it dumps (`providerConnections`,
  * `providerNodes`, `apiKeys`, …).
  */
@@ -98,7 +98,7 @@ export function detectFormat(input: unknown): DetectedFormat {
   return {
     kind: "unknown",
     reason:
-      "unrecognized backup: expected a Cartethyia backup (app: \"cartethyia\") or a router export " +
+      "unrecognized backup: expected a Cloviela backup (app: \"cloviela\") or a router export " +
       "carrying providerConnections/providerNodes/apiKeys/combos",
   };
 }
@@ -124,7 +124,7 @@ export function validateRestorePayload(payload: unknown, tenantId: string): Rest
   if (!isPlainObject(payload)) return { ok: false, error: "backup must be a JSON object" };
   if (payload.app !== BACKUP_APP) {
     // Name the foreign app when there is one: "this is for something else" is a
-    // far more useful message than "the field must equal cartethyia".
+    // far more useful message than "the field must equal cloviela".
     const foreign = typeof payload.app === "string" && payload.app.length > 0 ? payload.app : null;
     return {
       ok: false,

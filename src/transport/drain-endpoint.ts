@@ -11,7 +11,7 @@
  * route gives a scriptable graceful stop there, and a second, signal-free path
  * everywhere else.
  *
- * It is off unless `CARTETHYIA_DRAIN_TOKEN` is set, and gated twice:
+ * It is off unless `CLOVIELA_DRAIN_TOKEN` is set, and gated twice:
  * the request must come from loopback, and it must carry the token compared in
  * constant time. The peer check is independent of the secret, so a leaked token
  * alone cannot stop a remote gateway. The drain runs after the 202 is flushed,

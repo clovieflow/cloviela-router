@@ -536,7 +536,7 @@ function CustomProvidersSection({
   // stay mounted (badges stay fresh) — only the grid is concealed.
   const [hidden, setHidden] = useState(() => {
     try {
-      return window.localStorage.getItem("cartethyia.customProvidersHidden") === "1";
+      return window.localStorage.getItem("cloviela.customProvidersHidden") === "1";
     } catch {
       return false;
     }
@@ -546,7 +546,7 @@ function CustomProvidersSection({
     setHidden((value) => {
       const next = !value;
       try {
-        window.localStorage.setItem("cartethyia.customProvidersHidden", next ? "1" : "0");
+        window.localStorage.setItem("cloviela.customProvidersHidden", next ? "1" : "0");
       } catch {
         // Private mode: the toggle still works for this session.
       }

@@ -6,14 +6,14 @@
  * owner instead of silently changing the egress policy.
  */
 import { eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { networkPools } from "../../persistence/schema";
 import { decryptCredentialToString } from "../../security/crypto";
 import { deriveKind, PoolBindingError, splitEndpointConfig } from "./agent";
 import type { NetworkPoolLoader, NetworkPoolRow } from "./resolver";
 
 export class DrizzleNetworkPoolLoader implements NetworkPoolLoader {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async load(poolId: string): Promise<NetworkPoolRow | undefined> {
     const rows = await this.db

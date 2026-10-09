@@ -104,7 +104,7 @@ export const clineSpec: InjectorSpec = {
 
   messages: {
     applied: "Cline settings applied successfully",
-    reset: "Cartethyia settings removed from Cline",
+    reset: "Cloviela settings removed from Cline",
   },
 };
 

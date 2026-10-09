@@ -129,7 +129,7 @@ export function RelayDeployModal({
           label="Project name (optional)"
           id="relay-project"
           value={projectName}
-          placeholder="e.g. cartethyia-relay"
+          placeholder="e.g. cloviela-relay"
           onChange={(event) => setProjectName(event.target.value)}
         />
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

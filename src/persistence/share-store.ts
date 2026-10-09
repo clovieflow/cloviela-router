@@ -5,7 +5,7 @@ import { createHash, randomInt } from "node:crypto";
 // stable link, and is never selected by a public lookup.
 
 import { and, desc, eq, isNull, isNotNull, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "./postgres";
+import type { ClovielaDatabase } from "./postgres";
 import { apiKeys, shareLinks, type ShareLinkKind, type ApiKeyModelAccessMode } from "./schema";
 
 /** Hashes a share bearer token for storage and lookup. */
@@ -250,7 +250,7 @@ export interface ShareLinkStore {
 
 /** SQLSTATE/constraint extraction is local so only the IP uniqueness violation becomes a conflict. */
 export class DrizzleShareLinkStore implements ShareLinkStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async create(input: {
     apiKeyId: string;

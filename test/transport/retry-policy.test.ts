@@ -287,7 +287,7 @@ describe("shouldCooldownPool — the IP-scoped rate-limit signal", () => {
     // A gateway-origin 429 is our own admission decision. Cooling the tenant's
     // proxy pool because we throttled the tenant would blame the network for a
     // quota the tenant exhausted.
-    for (const origin of ["cartethyia", "network"] as const) {
+    for (const origin of ["cloviela", "network"] as const) {
       expect(
         shouldCooldownPool(
           new GatewayError("accounts_rate_limited", 429, "x", { rateLimitScope: "provider" }, origin),

@@ -121,7 +121,7 @@ export function createFileInjector(spec: InjectorSpec): ToolInjector {
         settingsPath: path,
         message:
           spec.messages?.reset ??
-          `Cartethyia settings removed from ${spec.displayName ?? spec.toolId}`,
+          `Cloviela settings removed from ${spec.displayName ?? spec.toolId}`,
       };
     },
 

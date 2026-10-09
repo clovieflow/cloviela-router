@@ -9,7 +9,7 @@
  * authorization snapshot.
  */
 import { and, eq, isNull, or } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import { modelAliases, modelCombos, models, providerAccounts, providers } from "../../../persistence/schema";
 import { isModelAllowed, listIncludes, type ApiKeyAuthorizationSnapshot } from "../../../security/api-key-auth";
 import { providerSupportsWebSearch } from "../../../providers/provider-metadata";
@@ -280,7 +280,7 @@ export function shadowsAliasOrCombo(
 }
 
 export class PublicModelCatalogStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async metadataForNames(
     tenantId: string,
@@ -439,7 +439,7 @@ export class PublicModelCatalogStore {
           id: a.alias,
           object: "model" as const,
           created: now,
-          owned_by: "cartethyia",
+          owned_by: "cloviela",
           context_length: target.contextLimit ?? DEFAULT_CONTEXT_LIMIT,
           max_completion_tokens: target.outputLimit ?? DEFAULT_OUTPUT_LIMIT,
           ...(capabilities ? { capabilities } : {}),
@@ -458,7 +458,7 @@ export class PublicModelCatalogStore {
           id: c.name,
           object: "model" as const,
           created: now,
-          owned_by: "cartethyia",
+          owned_by: "cloviela",
           context_length: target.contextLimit ?? DEFAULT_CONTEXT_LIMIT,
           max_completion_tokens: target.outputLimit ?? DEFAULT_OUTPUT_LIMIT,
           ...(capabilities ? { capabilities } : {}),

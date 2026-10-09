@@ -18,7 +18,7 @@ import {
   buildPgliteHandle,
   createPgliteClient,
 } from "../../src/persistence/db-pglite";
-import type { CartethyiaDatabase } from "../../src/persistence/postgres";
+import type { ClovielaDatabase } from "../../src/persistence/postgres";
 import { getDb } from "../../src/persistence/postgres";
 import {
   modelAliases,
@@ -37,7 +37,7 @@ function sortedRows(rows: readonly Record<string, unknown>[]): string[] {
 dbDescribe("backup portability across backends", () => {
   let world: GatewayWorld;
   let liteClient: PGlite | undefined;
-  let liteDb: CartethyiaDatabase | undefined;
+  let liteDb: ClovielaDatabase | undefined;
 
   afterAll(async () => {
     await world?.cleanup();

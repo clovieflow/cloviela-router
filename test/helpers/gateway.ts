@@ -22,7 +22,7 @@
 import { createGatewayApp } from "../../src/app";
 import type { App } from "../../src/app";
 import { createDefaultProviderRegistry } from "../../src/providers/default-registry";
-import type { CartethyiaDatabase } from "../../src/persistence/postgres";
+import type { ClovielaDatabase } from "../../src/persistence/postgres";
 import { getDb } from "../../src/persistence/postgres";
 import type { ReadinessCheckResult } from "../../src/persistence/readiness";
 import type {
@@ -158,7 +158,7 @@ function defaultEvents(request: CanonicalRequest): readonly CanonicalEvent[] {
           event_id: "msg_test",
           model: request.model,
         };
-  const text: ContentPart = { kind: "text", text: "Hello from Cartethyia" };
+  const text: ContentPart = { kind: "text", text: "Hello from Cloviela" };
   const terminal: CanonicalEvent = {
     type: "terminal",
     sequence_number: 2,
@@ -284,7 +284,7 @@ const TEST_PEER_ADDRESS = "127.0.0.1";
 /** Everything a suite needs to drive and inspect one gateway instance. */
 export interface TestGateway {
   readonly app: App;
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   /**
    * The app-owned pool selector the dispatch path really acquires slots from.
    * The harness used to expose an orphan `ProxyRequestStateStore` that the app
@@ -470,7 +470,7 @@ export async function createTestGateway(
       const headers = new Headers(rest.headers);
       if (clientIp !== undefined) headers.set("x-forwarded-for", clientIp);
       return app.handle(
-        new Request(`http://cartethyia.test${path}`, { ...rest, headers }),
+        new Request(`http://cloviela.test${path}`, { ...rest, headers }),
       );
     },
     async json(path, body, init = {}) {
@@ -480,7 +480,7 @@ export async function createTestGateway(
       if (token !== undefined) headers.set("authorization", `Bearer ${token}`);
       if (clientIp !== undefined) headers.set("x-forwarded-for", clientIp);
       return app.handle(
-        new Request(`http://cartethyia.test${path}`, {
+        new Request(`http://cloviela.test${path}`, {
           ...rest,
           method: rest.method ?? "POST",
           headers,

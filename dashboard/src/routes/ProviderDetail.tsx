@@ -100,10 +100,10 @@ export default function ProviderDetail(): ReactNode {
   // supports reasoning is often exactly what the test is trying to find out.
   // Persisted per provider so navigating away and back restores the last
   // choice, while different providers keep their own preference.
-  const CARTETHYIA_PROVIDER_THINKING_KEY = (pid: string) => `cartethyia:provider:${pid}:thinking-effort`;
+  const CLOVIELA_PROVIDER_THINKING_KEY = (pid: string) => `cloviela:provider:${pid}:thinking-effort`;
   const readThinkingEffort = (pid: string): ProbeReasoningEffort => {
     if (typeof window === "undefined" || !window.localStorage) return "auto";
-    const raw = window.localStorage.getItem(CARTETHYIA_PROVIDER_THINKING_KEY(pid));
+    const raw = window.localStorage.getItem(CLOVIELA_PROVIDER_THINKING_KEY(pid));
     if (raw === null) return "auto";
     const trimmed = raw.trim().toLowerCase();
     const allowed: readonly string[] = PROBE_REASONING_EFFORTS;
@@ -117,7 +117,7 @@ export default function ProviderDetail(): ReactNode {
   }, [id]);
   useEffect(() => {
     if (typeof window === "undefined" || !window.localStorage || !id) return;
-    window.localStorage.setItem(CARTETHYIA_PROVIDER_THINKING_KEY(id), thinkingEffort);
+    window.localStorage.setItem(CLOVIELA_PROVIDER_THINKING_KEY(id), thinkingEffort);
   }, [id, thinkingEffort]);
   const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -306,7 +306,7 @@ export default function ProviderDetail(): ReactNode {
     // `opener` is severed (noopener equivalent) while retaining the handle
     // needed to navigate/close the window; `window.open` with a literal
     // `noopener` feature would return null instead.
-    const blankPopup = window.open("about:blank", "cartethyia-oauth", "popup,width=720,height=820");
+    const blankPopup = window.open("about:blank", "cloviela-oauth", "popup,width=720,height=820");
     if (blankPopup) {
       blankPopup.opener = null;
       oauthPopupRef.current = blankPopup;
@@ -320,7 +320,7 @@ export default function ProviderDetail(): ReactNode {
             blankPopup.location.href = authorizeUrl;
             target = blankPopup;
           } else {
-            target = window.open(authorizeUrl, "cartethyia-oauth", "popup,width=720,height=820");
+            target = window.open(authorizeUrl, "cloviela-oauth", "popup,width=720,height=820");
             if (target) {
               target.opener = null;
               oauthPopupRef.current = target;

@@ -12,7 +12,7 @@ const backendTarget = process.env.VITE_BACKEND_URL ?? "http://127.0.0.1:12800";
  */
 function multiPageRouting(): Plugin {
   return {
-    name: "cartethyia-multi-page-routing",
+    name: "cloviela-multi-page-routing",
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
         const pathname = req.url?.split("?")[0] ?? "";

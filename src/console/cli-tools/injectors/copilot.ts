@@ -27,7 +27,7 @@ interface CopilotEntry {
 function buildCopilotEntry(input: ApplyInput): CopilotEntry {
   const url = `${ensureV1Suffix(input.endpoint)}/chat/completions#models.ai.azure.com`;
   return {
-    name: "Cartethyia",
+    name: "Cloviela",
     vendor: "azure",
     apiKey: input.apiKey,
     models: input.modelIds.map((id) => ({
@@ -64,7 +64,7 @@ export const copilotSpec: InjectorSpec = {
   async readStatus(path) {
     const config = await readJsonFile(path);
     const entry = Array.isArray(config)
-      ? ((config as CopilotEntry[]).find((e) => e?.name === "Cartethyia") ?? null)
+      ? ((config as CopilotEntry[]).find((e) => e?.name === "Cloviela") ?? null)
       : null;
     return {
       configured: entry !== null,
@@ -78,7 +78,7 @@ export const copilotSpec: InjectorSpec = {
     const existing = await readJsonFile(path);
     const config = Array.isArray(existing) ? [...(existing as CopilotEntry[])] : [];
     const entry = buildCopilotEntry(input);
-    const idx = config.findIndex((e) => e?.name === "Cartethyia");
+    const idx = config.findIndex((e) => e?.name === "Cloviela");
     if (idx >= 0) config[idx] = entry;
     else config.push(entry);
     await writeJsonFile(path, config);
@@ -87,7 +87,7 @@ export const copilotSpec: InjectorSpec = {
   async reset(path) {
     const existing = await readJsonFile(path);
     if (!existing || !Array.isArray(existing)) return false;
-    const config = (existing as CopilotEntry[]).filter((e) => e?.name !== "Cartethyia");
+    const config = (existing as CopilotEntry[]).filter((e) => e?.name !== "Cloviela");
     await writeJsonFile(path, config);
   },
 
@@ -101,7 +101,7 @@ export const copilotSpec: InjectorSpec = {
 
   messages: {
     applied: "Copilot settings applied — reload VS Code to take effect",
-    reset: "Cartethyia removed from Copilot config",
+    reset: "Cloviela removed from Copilot config",
     resetMissing: "No config file to reset",
   },
 };

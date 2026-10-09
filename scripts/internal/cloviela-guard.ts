@@ -42,11 +42,11 @@ export function isInside(child: string, parent: string): boolean {
 export interface GuardInputs {
   /** Temp root this run owns; everything writable must live under it. */
   readonly root: string;
-  /** Data directory handed to `CARTETHYIA_DATA_DIR`. */
+  /** Data directory handed to `CLOVIELA_DATA_DIR`. */
   readonly dataDir: string;
-  /** Install-id directory handed to `CARTETHYIA_INSTALL_ID_DIR`. */
+  /** Install-id directory handed to `CLOVIELA_INSTALL_ID_DIR`. */
   readonly installIdDir: string;
-  /** Telemetry payload directory handed to `CARTETHYIA_TELEMETRY_PAYLOAD_DIR`. */
+  /** Telemetry payload directory handed to `CLOVIELA_TELEMETRY_PAYLOAD_DIR`. */
   readonly telemetryDir: string;
   /** PostgreSQL URL for the Full store, when selected. */
   readonly databaseUrl: string | undefined;
@@ -65,7 +65,7 @@ export const HARNESS_DB_PREFIX = "rikka_e2e_";
 
 /**
  * Redis logical indexes reserved for harness runs. Index 15 belongs to the
- * repository's own test suite (`CARTETHYIA_TEST_REDIS_URL`), so a harness run
+ * repository's own test suite (`CLOVIELA_TEST_REDIS_URL`), so a harness run
  * must never select it.
  */
 export const HARNESS_REDIS_INDEXES: readonly number[] = [13, 14];
@@ -194,7 +194,7 @@ const FORWARDED_NAMES: readonly string[] = [
 
 /**
  * Builds the complete environment for a child. The harness never merges
- * `process.env`: a developer's `CARTETHYIA_*`, `DATABASE_URL`, `REDIS_URL`,
+ * `process.env`: a developer's `CLOVIELA_*`, `DATABASE_URL`, `REDIS_URL`,
  * proxy variables or provider credentials must not leak into a run that is
  * supposed to be disposable.
  */
@@ -223,18 +223,18 @@ export function childEnvironment(inputs: ChildEnvInputs): Record<string, string>
     CODEX_HOME: join(home, ".codex"),
     CLAUDE_CONFIG_DIR: join(home, ".claude"),
     GEMINI_CONFIG_DIR: join(home, ".gemini"),
-    CARTETHYIA_TEST_HOME_ROOT: inputs.root,
-    CARTETHYIA_DATA_DIR: inputs.dataDir,
-    CARTETHYIA_INSTALL_ID_DIR: inputs.installIdDir,
-    CARTETHYIA_TELEMETRY_PAYLOAD_DIR: inputs.telemetryDir,
-    CARTETHYIA_ENCRYPTION_KEY: inputs.encryptionKey,
-    CARTETHYIA_PUBLIC_ORIGIN: inputs.publicOrigin,
+    CLOVIELA_TEST_HOME_ROOT: inputs.root,
+    CLOVIELA_DATA_DIR: inputs.dataDir,
+    CLOVIELA_INSTALL_ID_DIR: inputs.installIdDir,
+    CLOVIELA_TELEMETRY_PAYLOAD_DIR: inputs.telemetryDir,
+    CLOVIELA_ENCRYPTION_KEY: inputs.encryptionKey,
+    CLOVIELA_PUBLIC_ORIGIN: inputs.publicOrigin,
     PORT: String(inputs.port),
-    CARTETHYIA_BIND_HOST: "127.0.0.1",
+    CLOVIELA_BIND_HOST: "127.0.0.1",
     // Private upstreams are allowed only because the mock server is loopback.
     // The harness separately asserts that no non-loopback egress happens.
-    CARTETHYIA_ALLOW_PRIVATE_UPSTREAMS: "true",
-    CARTETHYIA_ALLOWED_NETWORKS: "127.0.0.1/32,::1/128",
+    CLOVIELA_ALLOW_PRIVATE_UPSTREAMS: "true",
+    CLOVIELA_ALLOWED_NETWORKS: "127.0.0.1/32,::1/128",
     ...inputs.extra,
   };
 }

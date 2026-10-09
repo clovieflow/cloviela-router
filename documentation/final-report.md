@@ -1,9 +1,9 @@
 # Cloviela Router — final report
 
-**Source:** Cartethyia `dev` @ `382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`
+**Source:** Cloviela `dev` @ `382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`
 (GPL-3.0-only). **Repository:** `clovieflow/cloviela-router`.
 **Product:** private-first, local-friendly, production-ready Rikka Takarada
-personal AI gateway with the complete Cartethyia routing/protocol core.
+personal AI gateway with the complete Cloviela routing/protocol core.
 
 ## Gate results — all run in this session
 
@@ -46,7 +46,7 @@ each is now proven fixed by the same boundary.
 4. **P1 — Account creation for an unknown provider returned 500** instead of
    404. Reproduced; fixed; verified 500 → `404 provider_not_found`.
 5. **P1 — Private-first binding.** The listener bound every interface by
-   default. Now `127.0.0.1` unless `CARTETHYIA_BIND_HOST` opts out.
+   default. Now `127.0.0.1` unless `CLOVIELA_BIND_HOST` opts out.
 6. **P1 — The dependency pair was broken for any real start.** TypeBox `1.3.24`
    removed a compiler shape Elysia `2.0.0-beta.16` reads; a fresh install bound
    the port and then crashed compiling the login route. Pinned together and

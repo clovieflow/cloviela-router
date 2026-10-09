@@ -138,7 +138,7 @@ class KiloAdapter extends OpenAICompatibleAdapter {
       return headers;
     }
     headers.authorization = `Bearer ${credential.accessToken}`;
-    // The upstream's own header name, not ours: renaming the Cartethyia
+    // The upstream's own header name, not ours: renaming the Cloviela
     // provider id does not rename a field the upstream reads.
     if (credential.orgId !== undefined) headers["X-Kilocode-OrganizationID"] = credential.orgId;
     return headers;

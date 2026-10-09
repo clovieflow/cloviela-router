@@ -5,7 +5,7 @@ import type { InjectorSpec } from "../contracts";
 
 
 // Factory Droid injector spec.
-const DROID_PREFIX = "custom:Cartethyia";
+const DROID_PREFIX = "custom:Cloviela";
 
 interface DroidCustomModel {
   id: string;
@@ -21,7 +21,7 @@ interface DroidSettings {
   [k: string]: unknown;
 }
 
-function isCartethyiaDroidModel(m: { id?: string } | null | undefined): boolean {
+function isClovielaDroidModel(m: { id?: string } | null | undefined): boolean {
   return typeof m?.id === "string" && m.id.startsWith(DROID_PREFIX);
 }
 
@@ -34,7 +34,7 @@ export const droidSpec: InjectorSpec = {
 
   async readStatus(path) {
     const settings = (await readJsonFile(path)) as DroidSettings | null;
-    const ours = (settings?.customModels ?? []).filter(isCartethyiaDroidModel);
+    const ours = (settings?.customModels ?? []).filter(isClovielaDroidModel);
     if (ours.length === 0) {
       return { configured: false, currentEndpoint: null, rawApiKey: null, currentModels: null };
     }
@@ -50,7 +50,7 @@ export const droidSpec: InjectorSpec = {
   async apply(input, path) {
     const existing = ((await readJsonFile(path)) as DroidSettings | null) ?? {};
     const settings: DroidSettings = { ...existing };
-    const kept = (settings.customModels ?? []).filter((m) => !isCartethyiaDroidModel(m));
+    const kept = (settings.customModels ?? []).filter((m) => !isClovielaDroidModel(m));
     const baseUrl = ensureV1Suffix(input.endpoint);
     const apiKey = input.apiKey || "your_api_key";
     const added = input.modelIds.map((m): DroidCustomModel => ({
@@ -69,7 +69,7 @@ export const droidSpec: InjectorSpec = {
     const settings = (await readJsonFile(path)) as DroidSettings | null;
     if (!settings) return false;
     if (settings.customModels) {
-      settings.customModels = settings.customModels.filter((m) => !isCartethyiaDroidModel(m));
+      settings.customModels = settings.customModels.filter((m) => !isClovielaDroidModel(m));
       if (settings.customModels.length === 0) delete settings.customModels;
     }
     await writeJsonFile(path, settings);
@@ -90,7 +90,7 @@ export const droidSpec: InjectorSpec = {
 
   messages: {
     applied: "Factory Droid settings applied",
-    reset: "Cartethyia settings removed from Factory Droid",
+    reset: "Cloviela settings removed from Factory Droid",
   },
 };
 

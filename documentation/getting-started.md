@@ -42,21 +42,21 @@ personal or local use. It does not require PostgreSQL or Redis.
 PGlite stores the database under:
 
 ```text
-<CARTETHYIA_DATA_DIR>/pglite
+<CLOVIELA_DATA_DIR>/pglite
 ```
 
-When `CARTETHYIA_DATA_DIR` is unset, the default is:
+When `CLOVIELA_DATA_DIR` is unset, the default is:
 
 | Operating system | Default data directory |
 |---|---|
-| Windows | `%APPDATA%\Cartethyia` |
-| macOS | `~/Library/Application Support/Cartethyia` |
-| Linux | `$XDG_DATA_HOME/Cartethyia`, or `~/.local/share/Cartethyia` |
+| Windows | `%APPDATA%\Cloviela` |
+| macOS | `~/Library/Application Support/Cloviela` |
+| Linux | `$XDG_DATA_HOME/Cloviela`, or `~/.local/share/Cloviela` |
 
-The `Cartethyia` directory name is deliberately retained. It is a persisted
+The `Cloviela` directory name is deliberately retained. It is a persisted
 compatibility contract inherited from upstream: an installation created before
 the Cloviela Router rename keeps reading and writing the same Lite database. Set
-`CARTETHYIA_DATA_DIR` to relocate it.
+`CLOVIELA_DATA_DIR` to relocate it.
 
 ### Full
 
@@ -64,8 +64,8 @@ Full is recommended for VPS deployments, sharing, selling, and higher workloads.
 Set:
 
 ```dotenv
-CARTETHYIA_DB_MODE=full
-DATABASE_URL=postgres://user:password@host:5432/cartethyia
+CLOVIELA_DB_MODE=full
+DATABASE_URL=postgres://user:password@host:5432/cloviela
 ```
 
 The PostgreSQL server must be reachable from the Cloviela Router process. Redis is
@@ -98,14 +98,14 @@ bun setup
 `bun setup` does the following:
 
 1. creates `.env` from `.env.example` when it does not exist;
-2. generates `CARTETHYIA_ENCRYPTION_KEY` when it is missing or still a placeholder;
+2. generates `CLOVIELA_ENCRYPTION_KEY` when it is missing or still a placeholder;
 3. creates `.env.test` from `.env.test.example` when needed;
 4. prepares the Lite data directory, or checks PostgreSQL in Full mode;
 5. checks Redis only when `REDIS_URL` is configured;
-6. checks Docker Compose when `CARTETHYIA_SETUP_MODE=docker` is selected.
+6. checks Docker Compose when `CLOVIELA_SETUP_MODE=docker` is selected.
 
 The generated local `.env` defaults to Lite. To use Full, edit `.env` and set
-`CARTETHYIA_DB_MODE=full` together with a reachable `DATABASE_URL`, then run:
+`CLOVIELA_DB_MODE=full` together with a reachable `DATABASE_URL`, then run:
 
 ```bash
 bun setup --non-interactive
@@ -131,7 +131,7 @@ bun doctor
 
 ## 5. Configure encryption
 
-`CARTETHYIA_ENCRYPTION_KEY` is a required 256-bit secret. It encrypts stored
+`CLOVIELA_ENCRYPTION_KEY` is a required 256-bit secret. It encrypts stored
 provider credentials and API keys. Treat it like a password and keep it outside
 version control.
 
@@ -209,7 +209,7 @@ Full mode requires an external PostgreSQL reachable through `DATABASE_URL`; the
 Compose file does not bundle PostgreSQL. To run the app container with Lite:
 
 ```dotenv
-CARTETHYIA_DB_MODE=lite
+CLOVIELA_DB_MODE=lite
 # DATABASE_URL is not needed in Lite mode.
 # REDIS_URL=redis://redis:6379  # omit or leave empty for in-memory coordination
 ```
@@ -221,7 +221,7 @@ application uses the in-memory backend when `REDIS_URL` is empty.
 ## 8. Migrations and backups
 
 Numbered migrations under `migrations/` run automatically at boot and are
-recorded in `cartethyia_schema_migrations`.
+recorded in `cloviela_schema_migrations`.
 
 To move an installation from Lite to Full:
 
@@ -236,7 +236,7 @@ passwords and store them securely.
 
 ## 9. Test database
 
-Database-backed tests use the isolated URL in `CARTETHYIA_TEST_DATABASE_URL`,
+Database-backed tests use the isolated URL in `CLOVIELA_TEST_DATABASE_URL`,
 not the development `DATABASE_URL`. The setup command creates `.env.test` from
 `.env.test.example` when it is missing.
 

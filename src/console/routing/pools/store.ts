@@ -1,6 +1,6 @@
 // Drizzle-backed console persistence for network pools.
 import { and, asc, eq, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import { networkPools, poolRoutingSettings } from "../../../persistence/schema";
 import {
   DEFAULT_POOL_STRATEGY,
@@ -56,7 +56,7 @@ export class DrizzleNetworkPoolStore implements NetworkPoolStore {
   private readonly poolAgents: PoolAgentResolver;
 
   constructor(
-    private readonly db: CartethyiaDatabase,
+    private readonly db: ClovielaDatabase,
     private readonly ssrfPolicy: SsrfPolicy = {},
   ) {
     this.poolAgents = new PoolAgentResolver(new DrizzleNetworkPoolLoader(db), { ssrfPolicy, db });

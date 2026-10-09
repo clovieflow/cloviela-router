@@ -1,5 +1,5 @@
 /**
- * Converts a 9Router database export into a Cartethyia backup payload.
+ * Converts a 9Router database export into a Cloviela backup payload.
  *
  * The input is the JSON that router's own "download database backup" action
  * produces: top-level arrays keyed `providerConnections`, `providerNodes`,
@@ -351,7 +351,7 @@ export function convert9RouterBackup(input: unknown, tenantId: string): Conversi
     warnings.push("custom pricing overrides were not imported; model pricing comes from the built-in catalog");
   }
   if (typeof source.settings === "object" && source.settings !== null && Object.keys(source.settings).length > 0) {
-    warnings.push("router settings were not imported; review your Cartethyia settings separately");
+    warnings.push("router settings were not imported; review your Cloviela settings separately");
   }
 
   const payload: BackupPayload = {

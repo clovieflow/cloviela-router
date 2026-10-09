@@ -29,7 +29,7 @@ function homeDirectory(): string {
 }
 
 export function getCodexInstallIdPath(homeDir = homeDirectory()): string {
-  return installIdPath("codex", join(homeDir, ".cartethyia"));
+  return installIdPath("codex", join(homeDir, ".cloviela"));
 }
 
 /**
@@ -103,7 +103,7 @@ export function getCodexResidency(options: CodexResidencyOptions): string | unde
  * - `keyring` → OS credential store (platform keyring)
  * - `auto`    → prefer keyring when available, otherwise file
  *
- * Cartethyia models this store policy explicitly so account-type decisions
+ * Cloviela models this store policy explicitly so account-type decisions
  * (ChatGPT-OAuth vs API-key) remain non-fungible even though both dispatch
  * over the Responses wire family. Enterprise scoped tokens and workload-
  * identity federation are ChatGPT-OAuth-family credentials, not API-key.
@@ -136,7 +136,7 @@ interface CodexStoreResolution {
  * Resolve a requested store value against platform capability.
  *
  * `hasKeyring` indicates whether the OS credential store is available in this
- * environment. Cartethyia never probes the keyring directly; the caller supplies
+ * environment. Cloviela never probes the keyring directly; the caller supplies
  * the capability flag (derived from an explicit feature check or test fake).
  */
 export function resolveCodexStore(

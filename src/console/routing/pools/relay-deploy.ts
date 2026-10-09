@@ -2,7 +2,7 @@
  * Hosted relay deployment: deploy a small relay worker to Cloudflare Workers,
  * Vercel, or Deno Deploy, then register its URL as an HTTP network pool.
  *
- * Cartethyia already knows how to *use* a hosted relay: a pool whose endpoint
+ * Cloviela already knows how to *use* a hosted relay: a pool whose endpoint
  * host is `*.workers.dev` / `*.vercel.app` / `*.deno.dev` is classified as an
  * application relay and dialed with `x-relay-target` / `x-relay-path` headers
  * (see `network/pool/agent.ts` and `network/outbound-fetch.ts`). This module
@@ -35,7 +35,7 @@ export const RELAY_TARGETS: readonly RelayTarget[] = ["cloudflare", "vercel", "d
  * The same handler body runs on Workers and Vercel Edge (`export default {
  * fetch }`); the Deno entry wraps it in `Deno.serve`.
  */
-export const RELAY_WORKER_SOURCE = `// Cartethyia hosted relay.
+export const RELAY_WORKER_SOURCE = `// Cloviela hosted relay.
 //
 // Forwards a request to the origin named by the x-relay-target header, at the
 // path named by x-relay-path. Deployed to Cloudflare Workers / Vercel Edge.

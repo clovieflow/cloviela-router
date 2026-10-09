@@ -242,7 +242,7 @@ describe("rewrite depth bound: one bound for both transports of the same content
         authHeader: "x-api-key",
         baseUrl: "https://example.test",
         endpointPath: "/v1/messages",
-        gatewayUserAgent: "cartethyia/test",
+        gatewayUserAgent: "cloviela/test",
       });
 
     const ordinary = build(nestedJsonString(5));

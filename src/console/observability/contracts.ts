@@ -32,7 +32,7 @@ export interface SystemHealthResponse {
   memory_bytes: number;
   /**
    * RSS as a percentage of {@link memory_limit_bytes}: the operator-configured
-   * `CARTETHYIA_MEMORY_LIMIT_BYTES` when set, otherwise the container/cgroup
+   * `CLOVIELA_MEMORY_LIMIT_BYTES` when set, otherwise the container/cgroup
    * limit, otherwise the host's total memory. It is never measured against
    * `heap_total_bytes` — that is a JS-heap reservation, not a memory budget.
    */
@@ -197,7 +197,7 @@ export interface UsageRequestItem {
   status: string;
   errorKind?: string;
   /**
-   * Which layer failed: `cartethyia` (the gateway), `upstream` (the provider),
+   * Which layer failed: `cloviela` (the gateway), `upstream` (the provider),
    * or `network`. Absent for rows written before the column existed.
    */
   errorOrigin?: string;
@@ -223,7 +223,7 @@ export interface UsageRequestDetail extends UsageRequestItem {
   payloads?: {
     request?: unknown;
     response?: unknown;
-    /** Body Cartethyia returned to the client (post-translation). */
+    /** Body Cloviela returned to the client (post-translation). */
     clientResponse?: unknown;
     providerRequest?: unknown;
     providerResponse?: unknown;

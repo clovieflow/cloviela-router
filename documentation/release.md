@@ -21,11 +21,11 @@ bun run build
 
 ## Test database
 
-Backend suites that touch persistence read `CARTETHYIA_TEST_DATABASE_URL` from
+Backend suites that touch persistence read `CLOVIELA_TEST_DATABASE_URL` from
 `.env.test`. The runner (`scripts/ci-run-tests.ts`) starts every worker with a
 disposable sandbox: `HOME`, `USERPROFILE`, `TMPDIR`/`TMP`/`TEMP`, the `XDG_*`
 directories, `APPDATA`/`LOCALAPPDATA`, `CODEX_HOME`, and `CLAUDE_CONFIG_DIR`
-all point inside one temporary root, and `CARTETHYIA_TEST_HOME_ROOT` names it.
+all point inside one temporary root, and `CLOVIELA_TEST_HOME_ROOT` names it.
 The CLI-tool injectors refuse any write outside that root, including through a
 symlink or a dangling symlink. This guard exists because those injectors edit
 real client configuration files in normal operation.

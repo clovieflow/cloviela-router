@@ -112,7 +112,7 @@ function withCredential(url: URL, credential: string | undefined): URL {
  * Hosted relay front doors expose an application HTTP endpoint rather than
  * an RFC CONNECT proxy. Keep this classification beside the pool factory so
  * the dispatch and health-check paths cannot accidentally tunnel them with
- * CONNECT. This mirrors the supported relay-host policy in Cartethyia 21.
+ * CONNECT. This mirrors the supported relay-host policy in Cloviela 21.
  */
 function isRelayHost(hostname: string): boolean {
   const normalized = hostname.trim().toLowerCase().replace(/\.$/, "");

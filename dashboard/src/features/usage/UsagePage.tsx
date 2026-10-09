@@ -87,7 +87,7 @@ const BREAKDOWN_ROW_HEIGHT = 49;
 
 /**
  * Payload panels shown in the request inspector. The client leg (what the
- * client sent / what Cartethyia produced / what the client actually received)
+ * client sent / what Cloviela produced / what the client actually received)
  * comes first; the provider leg (what was forwarded upstream / what the
  * upstream returned) follows so proxy and server legs are readable separately.
  * Provider internals stay redacted and bounded at the source
@@ -398,7 +398,7 @@ function errorMessageFor(errorKind: string | undefined): string {
  * provider — which is the whole point of recording `error_origin`.
  */
 function originLabel(errorOrigin: string | undefined): string {
-  if (errorOrigin === "cartethyia") return "Gateway";
+  if (errorOrigin === "cloviela") return "Gateway";
   if (errorOrigin === "upstream") return "Upstream";
   if (errorOrigin === "network") return "Network";
   return "";
@@ -786,7 +786,7 @@ function RequestDetailDrawer({
     return found?.label || `${accountId.slice(0, 8)}…`;
   };
   const apiKeyName = detail?.apiKeyLabel ?? (detail?.apiKeyId ? `${detail.apiKeyId.slice(0, 8)}…` : "—");
-  const isProbe = detail?.userAgent === "Cartethyia Probe";
+  const isProbe = detail?.userAgent === "Cloviela Probe";
   const displayApiKeyName = isProbe ? "Probe" : apiKeyName;
   const [copiedRequestId, setCopiedRequestId] = useState(false);
   const [copiedPayload, setCopiedPayload] = useState<PayloadKind | null>(null);
@@ -1282,7 +1282,7 @@ export default function Usage(): ReactNode {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hideProviderName, setHideProviderName] = useState(() => {
     try {
-      return localStorage.getItem("cartethyia:usage:hide-provider") === "true";
+      return localStorage.getItem("cloviela:usage:hide-provider") === "true";
     } catch {
       return false;
     }
@@ -1291,7 +1291,7 @@ export default function Usage(): ReactNode {
     setHideProviderName((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem("cartethyia:usage:hide-provider", String(next));
+        localStorage.setItem("cloviela:usage:hide-provider", String(next));
       } catch {}
       return next;
     });

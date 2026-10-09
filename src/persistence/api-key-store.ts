@@ -1,7 +1,7 @@
 // Persisted API-key store: the console API-key domain and gateway authentication both consume this boundary.
 
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "./postgres";
+import type { ClovielaDatabase } from "./postgres";
 import { apiKeys, shareLinks, type ApiKeyMode, type ApiKeyModelAccessMode } from "./schema";
 import type { AccessScope } from "../security/access-control";
 
@@ -113,7 +113,7 @@ export interface ApiKeyStore {
 }
 
 export class DrizzleApiKeyStore implements ApiKeyStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   private map(row: typeof apiKeys.$inferSelect): ApiKeyRecord {
     return {

@@ -88,22 +88,22 @@ export type ConfigEntry =
 export const CONFIG_SPEC = {
   // HTTP listener + dashboard runtime
   PORT: { kind: "int", default: 12_800, min: 1, max: 65_535 },
-  CARTETHYIA_BIND_HOST: { kind: "text", default: "127.0.0.1" },
+  CLOVIELA_BIND_HOST: { kind: "text", default: "127.0.0.1" },
   DASHBOARD_DIST: { kind: "text", default: DEFAULT_DASHBOARD_DIST },
-  CARTETHYIA_API_KEY: { kind: "optional-text" },
-  CARTETHYIA_SERVER_MAX_BODY_BYTES: {
+  CLOVIELA_API_KEY: { kind: "optional-text" },
+  CLOVIELA_SERVER_MAX_BODY_BYTES: {
     kind: "int",
     default: 8 * 1024 * 1024,
     min: 1024,
     max: Number.MAX_SAFE_INTEGER,
   },
-  CARTETHYIA_SERVER_IDLE_TIMEOUT: { kind: "int", default: 60, min: 0, max: 86_400 },
+  CLOVIELA_SERVER_IDLE_TIMEOUT: { kind: "int", default: 60, min: 0, max: 86_400 },
 
   // Graceful-shutdown drain: how long in-flight requests may finish naturally
   // before the drain aborts the stragglers. Sized above the common case (a
   // typical response) but below the stream stall bound so a wedged stream is
   // still cut within the process budget.
-  CARTETHYIA_SHUTDOWN_DRAIN_WINDOW_MS: {
+  CLOVIELA_SHUTDOWN_DRAIN_WINDOW_MS: {
     kind: "int",
     default: 20_000,
     min: 0,
@@ -115,24 +115,24 @@ export const CONFIG_SPEC = {
   // a console-less process runs no JS handler). The endpoint additionally
   // requires a loopback peer and a timing-safe token match; unset = the route
   // does not exist.
-  CARTETHYIA_DRAIN_TOKEN: { kind: "optional-text" },
+  CLOVIELA_DRAIN_TOKEN: { kind: "optional-text" },
 
   // Network policy (trusted proxy + SSRF)
   TRUSTED_PROXY_CIDRS: { kind: "list" },
-  CARTETHYIA_ALLOW_PRIVATE_UPSTREAMS: { kind: "flag" },
-  CARTETHYIA_ALLOWED_NETWORKS: { kind: "list" },
-  CARTETHYIA_MAX_REDIRECTS: { kind: "optional-int", min: 0, max: 10 },
+  CLOVIELA_ALLOW_PRIVATE_UPSTREAMS: { kind: "flag" },
+  CLOVIELA_ALLOWED_NETWORKS: { kind: "list" },
+  CLOVIELA_MAX_REDIRECTS: { kind: "optional-int", min: 0, max: 10 },
 
   // Runtime memory
-  CARTETHYIA_MEMORY_LIMIT_BYTES: {
+  CLOVIELA_MEMORY_LIMIT_BYTES: {
     kind: "optional-int",
     min: 1,
     max: Number.MAX_SAFE_INTEGER,
   },
 
   // Durable, metadata-only request telemetry retention.
-  CARTETHYIA_TELEMETRY_RETENTION_DAYS: { kind: "int", default: 30, min: 3, max: 365 },
-  CARTETHYIA_TELEMETRY_PAYLOAD_MAX_BYTES: {
+  CLOVIELA_TELEMETRY_RETENTION_DAYS: { kind: "int", default: 30, min: 3, max: 365 },
+  CLOVIELA_TELEMETRY_PAYLOAD_MAX_BYTES: {
     kind: "int",
     default: 32 * 1024 * 1024,
     min: 1 * 1024 * 1024,
@@ -140,36 +140,36 @@ export const CONFIG_SPEC = {
   },
 
   // Upstream request timeout + retry backoff
-  CARTETHYIA_UPSTREAM_TIMEOUT_MS: { kind: "int", default: 120_000, min: 5_000, max: 600_000 },
-  CARTETHYIA_STREAM_STALL_TIMEOUT_MS: {
+  CLOVIELA_UPSTREAM_TIMEOUT_MS: { kind: "int", default: 120_000, min: 5_000, max: 600_000 },
+  CLOVIELA_STREAM_STALL_TIMEOUT_MS: {
     kind: "int",
     default: 360_000,
     min: 60_000,
     max: 600_000,
   },
-  CARTETHYIA_STREAM_FIRST_CHUNK_TIMEOUT_MS: {
+  CLOVIELA_STREAM_FIRST_CHUNK_TIMEOUT_MS: {
     kind: "int",
     default: 200_000,
     min: 30_000,
     max: 300_000,
   },
-  CARTETHYIA_FALLBACK_RETRY_BASE_MS: { kind: "int", default: 100, min: 0, max: 60_000 },
-  CARTETHYIA_FALLBACK_RETRY_CAP_MS: { kind: "int", default: 2_000, min: 0, max: 300_000 },
-  CARTETHYIA_ROUTE_MAX_ATTEMPTS: { kind: "int", default: 8, min: 1, max: 64 },
+  CLOVIELA_FALLBACK_RETRY_BASE_MS: { kind: "int", default: 100, min: 0, max: 60_000 },
+  CLOVIELA_FALLBACK_RETRY_CAP_MS: { kind: "int", default: 2_000, min: 0, max: 300_000 },
+  CLOVIELA_ROUTE_MAX_ATTEMPTS: { kind: "int", default: 8, min: 1, max: 64 },
 
   // Account/pool health cooldown delays. Each is the fallback used when the
   // upstream error states no explicit reset window; an upstream
   // `Retry-After`/reset header or message always wins over these.
-  CARTETHYIA_ACCOUNT_RATE_LIMIT_COOLDOWN_MS: { kind: "int", default: 900_000, min: 0, max: 86_400_000 },
-  CARTETHYIA_ACCOUNT_QUOTA_COOLDOWN_MS: { kind: "int", default: 3_600_000, min: 0, max: 86_400_000 },
-  CARTETHYIA_ACCOUNT_MODEL_CAPACITY_COOLDOWN_MS: { kind: "int", default: 120_000, min: 0, max: 86_400_000 },
-  CARTETHYIA_ACCOUNT_TRANSIENT_COOLDOWN_MS: { kind: "int", default: 30_000, min: 0, max: 86_400_000 },
-  CARTETHYIA_ACCOUNT_UNCLASSIFIED_COOLDOWN_MS: { kind: "int", default: 60_000, min: 0, max: 86_400_000 },
-  CARTETHYIA_POOL_COOLDOWN_MS: { kind: "int", default: 120_000, min: 0, max: 86_400_000 },
+  CLOVIELA_ACCOUNT_RATE_LIMIT_COOLDOWN_MS: { kind: "int", default: 900_000, min: 0, max: 86_400_000 },
+  CLOVIELA_ACCOUNT_QUOTA_COOLDOWN_MS: { kind: "int", default: 3_600_000, min: 0, max: 86_400_000 },
+  CLOVIELA_ACCOUNT_MODEL_CAPACITY_COOLDOWN_MS: { kind: "int", default: 120_000, min: 0, max: 86_400_000 },
+  CLOVIELA_ACCOUNT_TRANSIENT_COOLDOWN_MS: { kind: "int", default: 30_000, min: 0, max: 86_400_000 },
+  CLOVIELA_ACCOUNT_UNCLASSIFIED_COOLDOWN_MS: { kind: "int", default: 60_000, min: 0, max: 86_400_000 },
+  CLOVIELA_POOL_COOLDOWN_MS: { kind: "int", default: 120_000, min: 0, max: 86_400_000 },
 
   // Proxy pool agents
-  CARTETHYIA_PROXY_MAX_SOCKETS: { kind: "int", default: 100, min: 1, max: 100_000 },
-  CARTETHYIA_PROXY_MAX_FREE_SOCKETS: { kind: "int", default: 20, min: 0, max: 100_000 },
+  CLOVIELA_PROXY_MAX_SOCKETS: { kind: "int", default: 100, min: 1, max: 100_000 },
+  CLOVIELA_PROXY_MAX_FREE_SOCKETS: { kind: "int", default: 20, min: 0, max: 100_000 },
 
   // Security (encryption key, public origin, abuse ceiling)
   IP_RATE_MAX_PER_WINDOW: { kind: "int", default: 240, min: 1, max: Number.MAX_SAFE_INTEGER },
@@ -177,34 +177,34 @@ export const CONFIG_SPEC = {
   // the client address, the quiet window after which a strike expires, and how
   // long the ban itself lasts. A valid-model request clears the counter
   // regardless of the window.
-  CARTETHYIA_MODEL_STRIKE_THRESHOLD: { kind: "int", default: 10, min: 1, max: 100 },
-  CARTETHYIA_MODEL_STRIKE_WINDOW_MS: { kind: "int", default: 300_000, min: 1_000, max: 86_400_000 },
-  CARTETHYIA_MODEL_BAN_TTL_MS: { kind: "int", default: 3_600_000, min: 1_000, max: 604_800_000 },
-  CARTETHYIA_ENCRYPTION_KEY: {
+  CLOVIELA_MODEL_STRIKE_THRESHOLD: { kind: "int", default: 10, min: 1, max: 100 },
+  CLOVIELA_MODEL_STRIKE_WINDOW_MS: { kind: "int", default: 300_000, min: 1_000, max: 86_400_000 },
+  CLOVIELA_MODEL_BAN_TTL_MS: { kind: "int", default: 3_600_000, min: 1_000, max: 604_800_000 },
+  CLOVIELA_ENCRYPTION_KEY: {
     kind: "required",
     error:
-      "CARTETHYIA_ENCRYPTION_KEY is required to encrypt credentials and hash API keys",
+      "CLOVIELA_ENCRYPTION_KEY is required to encrypt credentials and hash API keys",
   },
-  CARTETHYIA_PUBLIC_ORIGIN: {
+  CLOVIELA_PUBLIC_ORIGIN: {
     kind: "required",
     error:
-      "CARTETHYIA_PUBLIC_ORIGIN is required to build OAuth redirect URIs (e.g. https://cartethyia.example.com)",
+      "CLOVIELA_PUBLIC_ORIGIN is required to build OAuth redirect URIs (e.g. https://cloviela.example.com)",
   },
 
   // Provider OAuth hosts
-  CARTETHYIA_KIMI_OAUTH_HOST: { kind: "text", default: DEFAULT_KIMI_OAUTH_HOST },
+  CLOVIELA_KIMI_OAUTH_HOST: { kind: "text", default: DEFAULT_KIMI_OAUTH_HOST },
   /**
    * Kimi Code quota/billing base. The `/usages` path joins on this, so the
    * default includes the `/v1` segment the bundled provider metadata implies.
    */
-  CARTETHYIA_KIMI_QUOTA_BASE_URL: { kind: "text", default: DEFAULT_KIMI_QUOTA_BASE_URL },
+  CLOVIELA_KIMI_QUOTA_BASE_URL: { kind: "text", default: DEFAULT_KIMI_QUOTA_BASE_URL },
   /**
    * GitHub Enterprise domain for the Copilot device login, e.g.
    * `company.ghe.com`. Empty (the default) means github.com. GitHub Enterprise
    * serves the device flow and the token-mint endpoint from its own domain, so
    * an operator on one has no other way to point the login at it.
    */
-  CARTETHYIA_GITHUB_ENTERPRISE_DOMAIN: { kind: "text", default: "" },
+  CLOVIELA_GITHUB_ENTERPRISE_DOMAIN: { kind: "text", default: "" },
 } as const satisfies Readonly<Record<string, ConfigEntry>>;
 
 /** Every variable declared in {@link CONFIG_SPEC}, for documentation checks. */
@@ -212,9 +212,37 @@ export const CONFIG_SPEC_KEYS: readonly string[] = Object.freeze(Object.keys(CON
 
 // ─── Spec readers ───────────────────────────────────────────────────────────
 
+/**
+ * The pre-rename name of a variable, or `undefined` when there is none.
+ *
+ * `CLOVIELA_*` is the current spelling; `CLOVIELA_*` is what every release
+ * before the rename read. Both are honoured so an operator's existing `.env`
+ * keeps working — a rename must not turn a running gateway into one that
+ * cannot find its own configuration. When the old names are finally dropped,
+ * this function and its three call sites are the whole change.
+ */
+function legacyName(name: string): string | undefined {
+  // Assembled, not literal: a codebase-wide rename rewrote this constant into
+  // the current prefix once, which made every lookup fall back to itself.
+  const legacyPrefix = "CART" + "ETHYIA_";
+  const currentPrefix = "CLOVIELA_";
+  if (legacyPrefix === currentPrefix) {
+    throw new Error("config: the legacy env prefix must differ from the current one");
+  }
+  return name.startsWith(currentPrefix) ? `${legacyPrefix}${name.slice(currentPrefix.length)}` : undefined;
+}
+
+/** Reads `name`, falling back to its pre-rename spelling. */
+function rawEnv(name: string): string | undefined {
+  const current = process.env[name];
+  if (current !== undefined) return current;
+  const legacy = legacyName(name);
+  return legacy === undefined ? undefined : process.env[legacy];
+}
+
 /** Reads a bounded integer, throwing on a malformed or out-of-range value. */
 function readInt(name: string, entry: IntConfigEntry): number {
-  const raw = process.env[name];
+  const raw = rawEnv(name);
   if (raw === undefined || raw.trim() === "") return entry.default;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < entry.min || value > entry.max) {
@@ -225,20 +253,20 @@ function readInt(name: string, entry: IntConfigEntry): number {
 
 /** Reads a string with a fallback, treating an empty value as absent. */
 function readText(name: string, entry: TextConfigEntry): string {
-  const raw = process.env[name]?.trim();
+  const raw = rawEnv(name)?.trim();
   return raw && raw.length > 0 ? raw : entry.default;
 }
 
 /** Reads an optional string; empty or whitespace reads as absent. */
 function readOptionalText(name: string, entry: OptionalTextConfigEntry): string | undefined {
   void entry;
-  const raw = process.env[name]?.trim();
+  const raw = rawEnv(name)?.trim();
   return raw && raw.length > 0 ? raw : undefined;
 }
 
 /** Reads an optional bounded integer; absent or empty reads as `undefined`. */
 function readOptionalInt(name: string, entry: OptionalIntConfigEntry): number | undefined {
-  const raw = process.env[name];
+  const raw = rawEnv(name);
   if (raw === undefined || raw.trim() === "") return undefined;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < entry.min || value > entry.max) {
@@ -249,7 +277,7 @@ function readOptionalInt(name: string, entry: OptionalIntConfigEntry): number | 
 
 /** Reads a required string, throwing with the entry's documented message. */
 function readRequired(name: string, entry: RequiredTextConfigEntry): string {
-  const raw = process.env[name];
+  const raw = rawEnv(name);
   if (!raw) throw new Error(entry.error);
   return raw;
 }
@@ -257,13 +285,16 @@ function readRequired(name: string, entry: RequiredTextConfigEntry): string {
 /** Reads a flag: enabled unless the literal `"false"` is set. */
 function readFlag(name: string, entry: FlagConfigEntry): boolean {
   void entry;
-  return process.env[name] !== "false";
+  // Absent means "on"; only an explicit "false" turns it off. Reading through
+  // rawEnv keeps that behaviour under both spellings.
+  const raw = rawEnv(name);
+  return raw === undefined ? true : raw !== "false";
 }
 
 /** Reads a comma-separated list, dropping empty entries. */
 function readList(name: string, entry: ListConfigEntry): readonly string[] | undefined {
   void entry;
-  const entries = process.env[name]
+  const entries = rawEnv(name)
     ?.split(",")
     .map((value) => value.trim())
     .filter(Boolean);
@@ -279,7 +310,7 @@ export function resolvePort(): number {
 
 /** Private-first listener; container/reverse-proxy exposure is explicit. */
 export function resolveBindHost(): string {
-  return readText("CARTETHYIA_BIND_HOST", CONFIG_SPEC.CARTETHYIA_BIND_HOST);
+  return readText("CLOVIELA_BIND_HOST", CONFIG_SPEC.CLOVIELA_BIND_HOST);
 }
 
 /** Resolves the dashboard static asset directory. */
@@ -288,36 +319,36 @@ export function resolveDashboardDist(): string {
 }
 
 /**
- * Resolves the configured default gateway API key (`CARTETHYIA_API_KEY`), if
+ * Resolves the configured default gateway API key (`CLOVIELA_API_KEY`), if
  * one is set. Consumers that need the raw secret — first-boot seeding and the
  * console Studio's legacy-key recovery — read it here instead of probing
  * `process.env` directly.
  */
 export function resolveDefaultGatewayApiKey(): string | undefined {
-  return readOptionalText("CARTETHYIA_API_KEY", CONFIG_SPEC.CARTETHYIA_API_KEY);
+  return readOptionalText("CLOVIELA_API_KEY", CONFIG_SPEC.CLOVIELA_API_KEY);
 }
 
 /** Resolves the request-body ceiling shared by the Bun listener and ingress middleware. */
 export function resolveMaxBodyBytes(): number {
-  return readInt("CARTETHYIA_SERVER_MAX_BODY_BYTES", CONFIG_SPEC.CARTETHYIA_SERVER_MAX_BODY_BYTES);
+  return readInt("CLOVIELA_SERVER_MAX_BODY_BYTES", CONFIG_SPEC.CLOVIELA_SERVER_MAX_BODY_BYTES);
 }
 
 /** Resolves the listener idle-socket timeout (seconds). */
 export function resolveIdleTimeout(): number {
-  return readInt("CARTETHYIA_SERVER_IDLE_TIMEOUT", CONFIG_SPEC.CARTETHYIA_SERVER_IDLE_TIMEOUT);
+  return readInt("CLOVIELA_SERVER_IDLE_TIMEOUT", CONFIG_SPEC.CLOVIELA_SERVER_IDLE_TIMEOUT);
 }
 
 /** Resolves the graceful-shutdown drain window: time for in-flight requests to finish before abort. */
 export function resolveShutdownDrainWindowMs(): number {
   return readInt(
-    "CARTETHYIA_SHUTDOWN_DRAIN_WINDOW_MS",
-    CONFIG_SPEC.CARTETHYIA_SHUTDOWN_DRAIN_WINDOW_MS,
+    "CLOVIELA_SHUTDOWN_DRAIN_WINDOW_MS",
+    CONFIG_SPEC.CLOVIELA_SHUTDOWN_DRAIN_WINDOW_MS,
   );
 }
 
 /** Resolves the operator drain token, or `undefined` when the drain route is disabled. */
 export function resolveDrainToken(): string | undefined {
-  const raw = process.env.CARTETHYIA_DRAIN_TOKEN?.trim();
+  const raw = rawEnv("CLOVIELA_DRAIN_TOKEN")?.trim();
   return raw !== undefined && raw.length > 0 ? raw : undefined;
 }
 
@@ -381,14 +412,14 @@ export function resolveTrustedProxyBoundary(): TrustedProxyBoundary {
 /** Resolves one explicit outbound SSRF policy without performing I/O. */
 export function resolveSsrfPolicy(): SsrfPolicy {
   const allowedNetworks = readList(
-    "CARTETHYIA_ALLOWED_NETWORKS",
-    CONFIG_SPEC.CARTETHYIA_ALLOWED_NETWORKS,
+    "CLOVIELA_ALLOWED_NETWORKS",
+    CONFIG_SPEC.CLOVIELA_ALLOWED_NETWORKS,
   );
   // `maxRedirects` is optional in the policy: an unset variable means "use the
   // egress default", which is distinct from an explicit `0`.
-  const maxRedirects = readOptionalInt("CARTETHYIA_MAX_REDIRECTS", CONFIG_SPEC.CARTETHYIA_MAX_REDIRECTS);
+  const maxRedirects = readOptionalInt("CLOVIELA_MAX_REDIRECTS", CONFIG_SPEC.CLOVIELA_MAX_REDIRECTS);
   return {
-    ...(readFlag("CARTETHYIA_ALLOW_PRIVATE_UPSTREAMS", CONFIG_SPEC.CARTETHYIA_ALLOW_PRIVATE_UPSTREAMS)
+    ...(readFlag("CLOVIELA_ALLOW_PRIVATE_UPSTREAMS", CONFIG_SPEC.CLOVIELA_ALLOW_PRIVATE_UPSTREAMS)
       ? { allowPrivate: true }
       : {}),
     ...(allowedNetworks ? { allowedNetworks } : {}),
@@ -404,7 +435,7 @@ export function resolveSsrfPolicy(): SsrfPolicy {
  * the cgroup limit when this is absent.
  */
 export function resolveMemoryLimitOverrideBytes(): number | undefined {
-  return readOptionalInt("CARTETHYIA_MEMORY_LIMIT_BYTES", CONFIG_SPEC.CARTETHYIA_MEMORY_LIMIT_BYTES);
+  return readOptionalInt("CLOVIELA_MEMORY_LIMIT_BYTES", CONFIG_SPEC.CLOVIELA_MEMORY_LIMIT_BYTES);
 }
 
 // ─── Upstream request timeout + retry backoff ───────────────────────────────
@@ -418,7 +449,7 @@ export function resolveMemoryLimitOverrideBytes(): number | undefined {
  * keeps a hard ceiling.
  */
 export function resolveUpstreamTimeoutMs(): number {
-  return readInt("CARTETHYIA_UPSTREAM_TIMEOUT_MS", CONFIG_SPEC.CARTETHYIA_UPSTREAM_TIMEOUT_MS);
+  return readInt("CLOVIELA_UPSTREAM_TIMEOUT_MS", CONFIG_SPEC.CLOVIELA_UPSTREAM_TIMEOUT_MS);
 }
 
 /**
@@ -431,8 +462,8 @@ export function resolveUpstreamTimeoutMs(): number {
  */
 export function resolveStreamStallTimeoutMs(): number {
   return readInt(
-    "CARTETHYIA_STREAM_STALL_TIMEOUT_MS",
-    CONFIG_SPEC.CARTETHYIA_STREAM_STALL_TIMEOUT_MS,
+    "CLOVIELA_STREAM_STALL_TIMEOUT_MS",
+    CONFIG_SPEC.CLOVIELA_STREAM_STALL_TIMEOUT_MS,
   );
 }
 
@@ -471,24 +502,24 @@ const INFLIGHT_TTL_BUFFER_SECONDS = 120;
  */
 export function resolveStreamFirstChunkTimeoutMs(): number {
   return readInt(
-    "CARTETHYIA_STREAM_FIRST_CHUNK_TIMEOUT_MS",
-    CONFIG_SPEC.CARTETHYIA_STREAM_FIRST_CHUNK_TIMEOUT_MS,
+    "CLOVIELA_STREAM_FIRST_CHUNK_TIMEOUT_MS",
+    CONFIG_SPEC.CLOVIELA_STREAM_FIRST_CHUNK_TIMEOUT_MS,
   );
 }
 
 /** Base delay for candidate-failover backoff (full-jitter exponential). Default 100ms. */
 export function resolveFallbackRetryBaseMs(): number {
-  return readInt("CARTETHYIA_FALLBACK_RETRY_BASE_MS", CONFIG_SPEC.CARTETHYIA_FALLBACK_RETRY_BASE_MS);
+  return readInt("CLOVIELA_FALLBACK_RETRY_BASE_MS", CONFIG_SPEC.CLOVIELA_FALLBACK_RETRY_BASE_MS);
 }
 
 /** Cap for candidate-failover backoff. Default 2000ms. */
 export function resolveFallbackRetryCapMs(): number {
-  return readInt("CARTETHYIA_FALLBACK_RETRY_CAP_MS", CONFIG_SPEC.CARTETHYIA_FALLBACK_RETRY_CAP_MS);
+  return readInt("CLOVIELA_FALLBACK_RETRY_CAP_MS", CONFIG_SPEC.CLOVIELA_FALLBACK_RETRY_CAP_MS);
 }
 
 /** Per-request upper bound on candidate dispatch attempts. Default 8. */
 export function resolveRouteMaxAttempts(): number {
-  return readInt("CARTETHYIA_ROUTE_MAX_ATTEMPTS", CONFIG_SPEC.CARTETHYIA_ROUTE_MAX_ATTEMPTS);
+  return readInt("CLOVIELA_ROUTE_MAX_ATTEMPTS", CONFIG_SPEC.CLOVIELA_ROUTE_MAX_ATTEMPTS);
 }
 
 // ─── Account/pool health cooldown delays ────────────────────────────────────
@@ -496,8 +527,8 @@ export function resolveRouteMaxAttempts(): number {
 /** Fallback cooldown for a provider rate limit (default 15m). */
 export function resolveAccountRateLimitCooldownMs(): number {
   return readInt(
-    "CARTETHYIA_ACCOUNT_RATE_LIMIT_COOLDOWN_MS",
-    CONFIG_SPEC.CARTETHYIA_ACCOUNT_RATE_LIMIT_COOLDOWN_MS,
+    "CLOVIELA_ACCOUNT_RATE_LIMIT_COOLDOWN_MS",
+    CONFIG_SPEC.CLOVIELA_ACCOUNT_RATE_LIMIT_COOLDOWN_MS,
   );
 }
 
@@ -508,50 +539,50 @@ export function resolveAccountRateLimitCooldownMs(): number {
  */
 export function resolveAccountQuotaCooldownMs(): number {
   return readInt(
-    "CARTETHYIA_ACCOUNT_QUOTA_COOLDOWN_MS",
-    CONFIG_SPEC.CARTETHYIA_ACCOUNT_QUOTA_COOLDOWN_MS,
+    "CLOVIELA_ACCOUNT_QUOTA_COOLDOWN_MS",
+    CONFIG_SPEC.CLOVIELA_ACCOUNT_QUOTA_COOLDOWN_MS,
   );
 }
 
 /** Fallback cooldown for model-capacity overload (default 2m). */
 export function resolveAccountModelCapacityCooldownMs(): number {
   return readInt(
-    "CARTETHYIA_ACCOUNT_MODEL_CAPACITY_COOLDOWN_MS",
-    CONFIG_SPEC.CARTETHYIA_ACCOUNT_MODEL_CAPACITY_COOLDOWN_MS,
+    "CLOVIELA_ACCOUNT_MODEL_CAPACITY_COOLDOWN_MS",
+    CONFIG_SPEC.CLOVIELA_ACCOUNT_MODEL_CAPACITY_COOLDOWN_MS,
   );
 }
 
 /** Backoff for a transient 5xx/network fault, recorded as `cooldown` (default 30s). */
 export function resolveAccountTransientCooldownMs(): number {
   return readInt(
-    "CARTETHYIA_ACCOUNT_TRANSIENT_COOLDOWN_MS",
-    CONFIG_SPEC.CARTETHYIA_ACCOUNT_TRANSIENT_COOLDOWN_MS,
+    "CLOVIELA_ACCOUNT_TRANSIENT_COOLDOWN_MS",
+    CONFIG_SPEC.CLOVIELA_ACCOUNT_TRANSIENT_COOLDOWN_MS,
   );
 }
 
 /** Backoff for a failure no rule matched, recorded as `cooldown` (default 1m). */
 export function resolveAccountUnclassifiedCooldownMs(): number {
   return readInt(
-    "CARTETHYIA_ACCOUNT_UNCLASSIFIED_COOLDOWN_MS",
-    CONFIG_SPEC.CARTETHYIA_ACCOUNT_UNCLASSIFIED_COOLDOWN_MS,
+    "CLOVIELA_ACCOUNT_UNCLASSIFIED_COOLDOWN_MS",
+    CONFIG_SPEC.CLOVIELA_ACCOUNT_UNCLASSIFIED_COOLDOWN_MS,
   );
 }
 
 /** How long a proxy pool stays `cooldown` after a transport fault (default 2m). */
 export function resolvePoolCooldownMs(): number {
-  return readInt("CARTETHYIA_POOL_COOLDOWN_MS", CONFIG_SPEC.CARTETHYIA_POOL_COOLDOWN_MS);
+  return readInt("CLOVIELA_POOL_COOLDOWN_MS", CONFIG_SPEC.CLOVIELA_POOL_COOLDOWN_MS);
 }
 
 // ─── Proxy pools ────────────────────────────────────────────────────────────
 
 /** Per-pool keep-alive socket ceiling for proxy agents (default 100). */
 export function resolveProxyMaxSockets(): number {
-  return readInt("CARTETHYIA_PROXY_MAX_SOCKETS", CONFIG_SPEC.CARTETHYIA_PROXY_MAX_SOCKETS);
+  return readInt("CLOVIELA_PROXY_MAX_SOCKETS", CONFIG_SPEC.CLOVIELA_PROXY_MAX_SOCKETS);
 }
 
 /** Per-pool idle keep-alive socket ceiling for proxy agents (default 20). */
 export function resolveProxyMaxFreeSockets(): number {
-  return readInt("CARTETHYIA_PROXY_MAX_FREE_SOCKETS", CONFIG_SPEC.CARTETHYIA_PROXY_MAX_FREE_SOCKETS);
+  return readInt("CLOVIELA_PROXY_MAX_FREE_SOCKETS", CONFIG_SPEC.CLOVIELA_PROXY_MAX_FREE_SOCKETS);
 }
 
 // Proxy pool egress is dialed in-process by `network/pool/agent.ts` (http,
@@ -574,27 +605,27 @@ export function resolveIpRateLimit(): number {
 /** Consecutive invalid-model requests that ban a client address. */
 export function resolveModelStrikeThreshold(): number {
   return readInt(
-    "CARTETHYIA_MODEL_STRIKE_THRESHOLD",
-    CONFIG_SPEC.CARTETHYIA_MODEL_STRIKE_THRESHOLD,
+    "CLOVIELA_MODEL_STRIKE_THRESHOLD",
+    CONFIG_SPEC.CLOVIELA_MODEL_STRIKE_THRESHOLD,
   );
 }
 
 /** Quiet window (ms) after which a model-abuse strike expires. */
 export function resolveModelStrikeWindowMs(): number {
   return readInt(
-    "CARTETHYIA_MODEL_STRIKE_WINDOW_MS",
-    CONFIG_SPEC.CARTETHYIA_MODEL_STRIKE_WINDOW_MS,
+    "CLOVIELA_MODEL_STRIKE_WINDOW_MS",
+    CONFIG_SPEC.CLOVIELA_MODEL_STRIKE_WINDOW_MS,
   );
 }
 
 /** How long (ms) a model-abuse ban lasts before it lapses on its own. */
 export function resolveModelBanTtlMs(): number {
-  return readInt("CARTETHYIA_MODEL_BAN_TTL_MS", CONFIG_SPEC.CARTETHYIA_MODEL_BAN_TTL_MS);
+  return readInt("CLOVIELA_MODEL_BAN_TTL_MS", CONFIG_SPEC.CLOVIELA_MODEL_BAN_TTL_MS);
 }
 
 /** Reads the application encryption key without caching it. */
 export function requireEncryptionKeyEnv(): string {
-  return readRequired("CARTETHYIA_ENCRYPTION_KEY", CONFIG_SPEC.CARTETHYIA_ENCRYPTION_KEY);
+  return readRequired("CLOVIELA_ENCRYPTION_KEY", CONFIG_SPEC.CLOVIELA_ENCRYPTION_KEY);
 }
 
 /** Decodes and validates a base64 or hexadecimal 256-bit encryption key. */
@@ -605,7 +636,7 @@ export function decodeEncryptionKey(raw: string): Buffer {
     : Buffer.from(candidate, "base64");
   if (buf.length !== ENCRYPTION_KEY_LENGTH) {
     throw new Error(
-      `CARTETHYIA_ENCRYPTION_KEY must decode to exactly ${ENCRYPTION_KEY_LENGTH} bytes (got ${buf.length}); ` +
+      `CLOVIELA_ENCRYPTION_KEY must decode to exactly ${ENCRYPTION_KEY_LENGTH} bytes (got ${buf.length}); ` +
         "provide a base64 or hex encoded 256-bit key",
     );
   }
@@ -614,7 +645,7 @@ export function decodeEncryptionKey(raw: string): Buffer {
 
 /** Reads and normalizes the public OAuth origin. */
 export function requirePublicOrigin(): string {
-  return readRequired("CARTETHYIA_PUBLIC_ORIGIN", CONFIG_SPEC.CARTETHYIA_PUBLIC_ORIGIN).replace(
+  return readRequired("CLOVIELA_PUBLIC_ORIGIN", CONFIG_SPEC.CLOVIELA_PUBLIC_ORIGIN).replace(
     /\/+$/,
     "",
   );
@@ -643,14 +674,14 @@ export function browserAuthorizeRedirectUri(): string {
  * Read here so the only literal `process.env` for this value stays in config.
  */
 export function resolveKimiOAuthHost(): string {
-  return readText("CARTETHYIA_KIMI_OAUTH_HOST", CONFIG_SPEC.CARTETHYIA_KIMI_OAUTH_HOST);
+  return readText("CLOVIELA_KIMI_OAUTH_HOST", CONFIG_SPEC.CLOVIELA_KIMI_OAUTH_HOST);
 }
 
 /** Reads Kimi Code's quota/billing base URL. */
 export function resolveKimiQuotaBaseUrl(): string {
   return readText(
-    "CARTETHYIA_KIMI_QUOTA_BASE_URL",
-    CONFIG_SPEC.CARTETHYIA_KIMI_QUOTA_BASE_URL,
+    "CLOVIELA_KIMI_QUOTA_BASE_URL",
+    CONFIG_SPEC.CLOVIELA_KIMI_QUOTA_BASE_URL,
   );
 }
 
@@ -663,8 +694,8 @@ export function resolveKimiQuotaBaseUrl(): string {
  */
 export function resolveGithubEnterpriseDomain(): string {
   const raw = readText(
-    "CARTETHYIA_GITHUB_ENTERPRISE_DOMAIN",
-    CONFIG_SPEC.CARTETHYIA_GITHUB_ENTERPRISE_DOMAIN,
+    "CLOVIELA_GITHUB_ENTERPRISE_DOMAIN",
+    CONFIG_SPEC.CLOVIELA_GITHUB_ENTERPRISE_DOMAIN,
   ).trim();
   if (raw.length === 0) return "";
   try {
@@ -678,15 +709,15 @@ export function resolveGithubEnterpriseDomain(): string {
 /** Metadata-only telemetry retention window; payload frames have their own short TTL. */
 export function resolveTelemetryRetentionDays(): number {
   return readInt(
-    "CARTETHYIA_TELEMETRY_RETENTION_DAYS",
-    CONFIG_SPEC.CARTETHYIA_TELEMETRY_RETENTION_DAYS,
+    "CLOVIELA_TELEMETRY_RETENTION_DAYS",
+    CONFIG_SPEC.CLOVIELA_TELEMETRY_RETENTION_DAYS,
   );
 }
 
 /** Combined redacted payload capture limit for the five stored body surfaces. */
 export function resolveTelemetryPayloadMaxBytes(): number {
   return readInt(
-    "CARTETHYIA_TELEMETRY_PAYLOAD_MAX_BYTES",
-    CONFIG_SPEC.CARTETHYIA_TELEMETRY_PAYLOAD_MAX_BYTES,
+    "CLOVIELA_TELEMETRY_PAYLOAD_MAX_BYTES",
+    CONFIG_SPEC.CLOVIELA_TELEMETRY_PAYLOAD_MAX_BYTES,
   );
 }

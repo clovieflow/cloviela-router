@@ -262,7 +262,7 @@ export class CliToolService {
   }
 
   /**
-   * Applies Cartethyia configuration to a tool, by whichever paths the request
+   * Applies Cloviela configuration to a tool, by whichever paths the request
    * asks for and the tool supports.
    *
    * Two independent delivery paths, because they solve different problems:

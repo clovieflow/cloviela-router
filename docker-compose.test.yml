@@ -2,18 +2,18 @@ services:
   postgres-test:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: cartethyia_test
-      POSTGRES_PASSWORD: cartethyia_test
-      POSTGRES_DB: cartethyia_test
+      POSTGRES_USER: cloviela_test
+      POSTGRES_PASSWORD: cloviela_test
+      POSTGRES_DB: cloviela_test
     ports:
       - "127.0.0.1:55432:5432"
     volumes:
-      - cartethyia_test_pgdata:/var/lib/postgresql/data
+      - cloviela_test_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cartethyia_test -d cartethyia_test"]
+      test: ["CMD-SHELL", "pg_isready -U cloviela_test -d cloviela_test"]
       interval: 2s
       timeout: 3s
       retries: 15
 
 volumes:
-  cartethyia_test_pgdata:
+  cloviela_test_pgdata:

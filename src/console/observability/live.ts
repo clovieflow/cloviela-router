@@ -14,7 +14,7 @@ import type { ProxyRequestStateStore } from "../../transport/request/state";
 import type { InFlightSnapshot } from "../../transport/request/inflight";
 import type { NetworkPoolSelector } from "../../network/pool/selector";
 import { eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { networkPools } from "../../persistence/schema";
 import { subscribePoolHealth } from "../../network/pool-health-machine";
 import { poolByteSnapshot } from "../../network/pool/byte-accounting";
@@ -23,7 +23,7 @@ import { consoleSseResponse, createConsoleSseStream } from "./sse";
 export interface LiveConfig {
   readonly accessResolver: ConsoleAccessResolver;
   readonly poolSelector?: NetworkPoolSelector;
-  readonly db?: CartethyiaDatabase;
+  readonly db?: ClovielaDatabase;
   /**
    * Owns the live in-flight gauge. Optional so reduced compositions (route-only
    * shell, console stubs) mount the pool/health endpoints without the gauge;
@@ -35,7 +35,7 @@ export interface LiveConfig {
 const EMPTY_IN_FLIGHT: InFlightSnapshot = { inFlight: 0, uniqueIps: 0 };
 
 async function tenantPoolIds(
-  db: CartethyiaDatabase | undefined,
+  db: ClovielaDatabase | undefined,
   tenantId: string | null,
 ): Promise<ReadonlySet<string> | undefined> {
   if (!db) return undefined;

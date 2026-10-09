@@ -131,8 +131,8 @@ async function doctor(): Promise<void> {
   const dbMode = resolveDbMode(envVars);
   const required =
     dbMode === "lite"
-      ? ["CARTETHYIA_ENCRYPTION_KEY"]
-      : ["DATABASE_URL", "CARTETHYIA_ENCRYPTION_KEY"];
+      ? ["CLOVIELA_ENCRYPTION_KEY"]
+      : ["DATABASE_URL", "CLOVIELA_ENCRYPTION_KEY"];
   const missing: string[] = [];
 
   for (const key of required) {

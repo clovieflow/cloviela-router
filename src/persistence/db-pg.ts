@@ -9,11 +9,11 @@ import {
   requireConnectionUrl,
   type ConnectionUrlCandidate,
 } from "./connection-url";
-import { fullSchema, type CartethyiaDatabase, type DatabaseHandle } from "./db-handle";
+import { fullSchema, type ClovielaDatabase, type DatabaseHandle } from "./db-handle";
 import {
   LEDGER_DDL,
-  MIGRATION_LEDGER_TABLE,
   migrationFiles,
+  resolveLedgerTable,
   resolveMigrationsFolder,
 } from "./migrate";
 import { basename } from "node:path";
@@ -91,7 +91,7 @@ export function requireDatabaseUrl(): string {
       "app service's Variables tab (DATABASE_URL=${{ Postgres.DATABASE_URL }}), spelling the service " +
       "name exactly — a reference to a service that does not exist resolves to an empty string. " +
       "PGHOST, PGPORT, PGUSER, PGPASSWORD and PGDATABASE are accepted as an alternative. " +
-      "Cartethyia never infers a Docker or Laragon connection automatically.",
+      "Cloviela never infers a Docker or Laragon connection automatically.",
   });
 }
 
@@ -106,7 +106,7 @@ export function poolMaxFromEnv(): number {
 
 declare global {
   // eslint-disable-next-line no-var -- globalThis augmentation requires `var`
-  var __cartethyiaPool: Pool | undefined;
+  var __clovielaPool: Pool | undefined;
 }
 
 /** Postgres session tuning applied to every checked-out client. Kept as
@@ -121,7 +121,7 @@ const SESSION_IDLE_IN_TXN_TIMEOUT_MS = Number(
 const SESSION_LOCK_TIMEOUT_MS = Number(process.env.DATABASE_LOCK_TIMEOUT_MS ?? 5_000);
 
 export function getPool(): Pool {
-  if (globalThis.__cartethyiaPool) return globalThis.__cartethyiaPool;
+  if (globalThis.__clovielaPool) return globalThis.__clovielaPool;
   const pool = new Pool({
     connectionString: requireDatabaseUrl(),
     max: poolMaxFromEnv(),
@@ -143,7 +143,7 @@ export function getPool(): Pool {
   pool.on("error", (err) => {
     log.error("[postgres] pool error (idle client)", err);
   });
-  globalThis.__cartethyiaPool = pool;
+  globalThis.__clovielaPool = pool;
   return pool;
 }
 
@@ -153,7 +153,7 @@ export function getPool(): Pool {
  * the test owns the lifetime and must clear it with `closeDb()`.
  */
 export function setPoolForTesting(testPool: Pool): void {
-  globalThis.__cartethyiaPool = testPool;
+  globalThis.__clovielaPool = testPool;
 }
 
 /** Applies numbered SQL files in order under one cross-process advisory lock. */
@@ -164,10 +164,11 @@ export async function applySqlMigrations(
   const files = migrationFiles(folder);
   const client = await pool.connect();
   try {
-    await client.query(`SELECT pg_advisory_lock(hashtext('cartethyia:migrations'))`);
+    await client.query(`SELECT pg_advisory_lock(hashtext('cloviela:migrations'))`);
     await createMigrationLedger(client);
+    const ledger = await resolveLedgerTable((sql) => client.query(sql));
     const appliedRows = await client.query<{ migration_id: string }>(
-      `SELECT migration_id FROM ${MIGRATION_LEDGER_TABLE}`,
+      `SELECT migration_id FROM ${ledger}`,
     );
     const applied = new Set(appliedRows.rows.map((row) => row.migration_id));
 
@@ -179,7 +180,7 @@ export async function applySqlMigrations(
       try {
         await client.query(sql);
         await client.query(
-          `INSERT INTO ${MIGRATION_LEDGER_TABLE} (migration_id) VALUES ($1)`,
+          `INSERT INTO ${ledger} (migration_id) VALUES ($1)`,
           [migrationId],
         );
         await client.query("COMMIT");
@@ -195,7 +196,7 @@ export async function applySqlMigrations(
   } finally {
     // Advisory unlock during migration teardown is best-effort.
     await client
-      .query(`SELECT pg_advisory_unlock(hashtext('cartethyia:migrations'))`)
+      .query(`SELECT pg_advisory_unlock(hashtext('cloviela:migrations'))`)
       .catch(() => {});
     client.release();
   }
@@ -207,7 +208,7 @@ async function createMigrationLedger(client: PoolClient): Promise<void> {
 
 export function createPgHandle(): PgHandle {
   const pool = getPool();
-  const db: CartethyiaDatabase = drizzle(pool, { schema: fullSchema });
+  const db: ClovielaDatabase = drizzle(pool, { schema: fullSchema });
   return {
     kind: "pg",
     pool,

@@ -14,7 +14,7 @@ import { OpenAICompatibleAdapter } from "../compatible-adapter";
 import { resolveByokWireProfile } from "./byok-wire-profile";
 import { BUNDLED_PROVIDER_MODULES } from "../default-registry";
 import { getCachedModels } from "./model-catalog-cache";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { providers } from "../../persistence/schema";
 import type { CompatibilityProfile } from "../provider-metadata";
 import { resolveCustomCliHeaders } from "./custom-cli-headers";
@@ -32,7 +32,7 @@ import type { SsrfPolicy } from "../../config";
  * race the fixtures other suites are mid-way through installing. Retirement is
  * {@link retireUnbundledProviders}, run once on the boot path.
  */
-export async function seedBundledProviders(db: CartethyiaDatabase): Promise<void> {
+export async function seedBundledProviders(db: ClovielaDatabase): Promise<void> {
   const rows = BUNDLED_PROVIDER_MODULES.map((provider) => ({
     id: provider.id,
     wireFamilyDefault: provider.wireFamilyDefault,
@@ -85,7 +85,7 @@ export async function seedBundledProviders(db: CartethyiaDatabase): Promise<void
  * delete there would race the fixtures other suites are installing. This runs
  * once on the boot path, where no such fixture exists.
  */
-export async function retireUnbundledProviders(db: CartethyiaDatabase): Promise<number> {
+export async function retireUnbundledProviders(db: ClovielaDatabase): Promise<number> {
   const bundledIds = BUNDLED_PROVIDER_MODULES.map((provider) => provider.id);
   if (bundledIds.length === 0) return 0;
   const retired = await db
@@ -181,7 +181,7 @@ function byokFingerprint(
  */
 export async function registerByokProviders(
   registry: ProviderRegistry,
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   ssrfPolicy: SsrfPolicy = {},
 ): Promise<ReadonlyMap<string, ByokUpstreamHost>> {
   const rows = await db
@@ -294,7 +294,7 @@ export async function registerByokProviders(
  */
 export async function syncByokProvider(
   registry: ProviderRegistry,
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   providerId: string,
   ssrfPolicy: SsrfPolicy = {},
 ): Promise<ByokUpstreamHost | undefined> {
@@ -337,7 +337,7 @@ export async function syncByokProvider(
  */
 export async function reconcileByokProviders(
   registry: ProviderRegistry,
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   ssrfPolicy: SsrfPolicy = {},
 ): Promise<{ readonly hosts: ReadonlyMap<string, ByokUpstreamHost>; readonly removed: number }> {
   const hosts = await registerByokProviders(registry, db, ssrfPolicy);

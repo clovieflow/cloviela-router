@@ -1,3 +1,4 @@
+import { envValue } from "../../env-compat";
 /**
  * Shared filesystem operations for CLI tool injectors.
  *
@@ -57,7 +58,7 @@ function canonicalizeThroughSymlinks(target: string): string {
 
 /** Test injectors must never write outside the runner's disposable sandbox. */
 function assertTestWritePath(path: string): void {
-  const sandbox = process.env.CARTETHYIA_TEST_HOME_ROOT;
+  const sandbox = envValue("CLOVIELA_TEST_HOME_ROOT");
   if (!sandbox) {
     if (process.env.NODE_ENV === "test")
       throw new Error("CLI test writes require the isolated bun run test harness");
@@ -161,11 +162,11 @@ export function stripV1Suffix(url: string): string {
 }
 
 /**
- * Whether an endpoint URL points at a local Cartethyia instance.
+ * Whether an endpoint URL points at a local Cloviela instance.
  *
  * The match is anchored to the **hostname**, parsed rather than substring-
  * scanned. The previous unanchored `/localhost|127\.0\.0\.1|0\.0\.0\.0|
- * cartethyia/i` test matched anywhere in the string, so `https://notlocalhost.com`,
+ * cloviela/i` test matched anywhere in the string, so `https://notlocalhost.com`,
  * `https://mylocalhostproxy.net` and even `https://evil.com/localhost` were all
  * reported as local — and this value is what the dashboard shows the operator
  * as "configured", so a tool pointed at a remote host read as pointed at this
@@ -182,8 +183,12 @@ export function isLocalEndpoint(url: string | null | undefined): boolean {
   if (normalized === "localhost" || normalized === "::1") return true;
   if (normalized === "0.0.0.0") return true;
   if (/^127\./.test(normalized)) return true;
-  // A Cartethyia *hostname*, not a path or query that happens to spell it.
-  return normalized === "cartethyia" || normalized.startsWith("cartethyia.");
+  // A gateway *hostname*, not a path or query that happens to spell it. The
+  // pre-rename name counts too: a deployment whose DNS entry still says the old
+  // name is this same gateway, and treating it as a third party would break
+  // its own clients.
+  const names = ["cloviela", "cartethyia"];
+  return names.some((name) => normalized === name || normalized.startsWith(`${name}.`));
 }
 
 /**

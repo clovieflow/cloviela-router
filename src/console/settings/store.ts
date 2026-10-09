@@ -1,6 +1,6 @@
 // Drizzle-backed console persistence for runtime settings.
 import { eq, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { consoleSettings, type ConsoleSettingsPreferences } from "../../persistence/schema";
 import type { RedisBackend } from "../../persistence/redis";
 import { bumpSettingsRevision } from "../../persistence/tenant-preferences";
@@ -99,7 +99,7 @@ function mapRuntimeSettingsRow(
 
 export class DrizzleRuntimeSettingsStore implements RuntimeSettingsStore {
   constructor(
-    private readonly db: CartethyiaDatabase,
+    private readonly db: ClovielaDatabase,
     private readonly redisBackend: RedisBackend,
   ) {}
 
