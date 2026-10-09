@@ -2,7 +2,7 @@
  * Shared Claude Messages wire helpers for API-key adapters.
  *
  * Three adapters speak Anthropic Messages with an operator-owned credential:
- * the plain Anthropic adapter (`x-api-key`), OpRoute's (formerly InferHub) Claude-backed models
+ * the plain Anthropic adapter (`x-api-key`), OpRoute's Claude-backed models
  * (Bearer), and — for header validation only — the [CC] OAuth adapter.
  * Everything except the auth header, the optional payload hook, and the base
  * URL is identical, so request projection, quirks, URL assembly, JSON

@@ -1,4 +1,4 @@
-// Hybrid: the Messages-wire leg (`InferhubMessagesAdapter`, Claude Messages
+// Hybrid: the Messages-wire leg (`OpRouteMessagesAdapter`, Claude Messages
 // envelope + Bearer auth + breakpoint cache stamping) is a non-OpenAI wire and
 // stays bespoke; the chat leg is a declarative spec row.
 import type {
@@ -20,10 +20,10 @@ import { buildClaudeMessagesRequest, filterClaudeCustomHeaders } from "./claude-
 import { isRecord } from "../../protocol/primitives";
 import { sendClaudeMessagesRequest } from "../../protocol/transport/messages";
 
-const INFERHUB_CACHE_CONTROL = { type: "ephemeral", ttl: "1h" } as const;
+const OPROUTE_CACHE_CONTROL = { type: "ephemeral", ttl: "1h" } as const;
 
 /**
- * Inferhub's streaming bridge ignores `cache_control` on `system` and on
+ * OpRoute's streaming bridge ignores `cache_control` on `system` and on
  * non-text message blocks (`tool_result`, `tool_use`, thinking). A `text`
  * block in `messages` is required for a stream cache hit. Agent turns
  * often end on `tool_result`, so the shared Claude encoder's "last cacheable
@@ -32,7 +32,7 @@ const INFERHUB_CACHE_CONTROL = { type: "ephemeral", ttl: "1h" } as const;
  * stable prefix (tools + system + first user) stays addressable as the
  * transcript grows.
  */
-export function ensureInferhubMessagesTextBreakpoints(
+export function ensureOpRouteMessagesTextBreakpoints(
   payload: Record<string, unknown>,
 ): Record<string, unknown> {
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
@@ -56,7 +56,7 @@ export function ensureInferhubMessagesTextBreakpoints(
     if (!isRecord(block)) return;
     message.content[loc.blockIndex] = {
       ...block,
-      cache_control: { ...INFERHUB_CACHE_CONTROL },
+      cache_control: { ...OPROUTE_CACHE_CONTROL },
     };
   };
 
@@ -78,7 +78,7 @@ export function ensureInferhubMessagesTextBreakpoints(
   const marker = {
     type: "text",
     text: " ",
-    cache_control: { ...INFERHUB_CACHE_CONTROL },
+    cache_control: { ...OPROUTE_CACHE_CONTROL },
   };
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
@@ -93,27 +93,27 @@ export function ensureInferhubMessagesTextBreakpoints(
   return payload;
 }
 
-export const INFERHUB_BASE_URL = providerBaseUrl("inferhub");
-export const INFERHUB_PROVIDER_ID = "inferhub" as const;
+export const OPROUTE_BASE_URL = providerBaseUrl("inferhub");
+export const OPROUTE_PROVIDER_ID = "inferhub" as const;
 
 /**
- * Chat + Responses legs of InferHub. Claude-backed models are routed to
- * `InferhubMessagesAdapter` by wire family instead (see
- * `createInferhubAdapter`), so this spec declares chat + responses.
+ * Chat + Responses legs of OpRoute. Claude-backed models are routed to
+ * `OpRouteMessagesAdapter` by wire family instead (see
+ * `createOpRouteAdapter`), so this spec declares chat + responses.
  * Responses serves the GPT-5/6 + o-series rows: verified live against
  * `POST /v1/responses` (native reasoning + tool_use survive; the chat wire
  * answers too but strips reasoning server-side).
  */
-const INFERHUB_CHAT_SPEC: ApiKeyProviderSpec = {
-  provider_id: INFERHUB_PROVIDER_ID,
+const OPROUTE_CHAT_SPEC: ApiKeyProviderSpec = {
+  provider_id: OPROUTE_PROVIDER_ID,
   endpoint_paths_by_wire_family: { responses: "/responses" },
-  // InferHub is explicitly provisioned for the gateway identity; bespoke
+  // OpRoute is explicitly provisioned for the gateway identity; bespoke
   // first-party adapters (Codex, Claude Code) are untouched by this flag.
   gatewayUserAgent: true,
 };
 
-/** InferHub — full marketplace catalog from your paste (80+ models, 4 providers ag/cc/cb/cbcn/cx/ocg/ali/mimo/zai). Context sizes via websearch (Claude 1M/200k, Gemini 1M). */
-const INFERHUB_MODELS_RAW: readonly {
+/** OpRoute — full marketplace catalog from your paste (80+ models, 4 providers ag/cc/cb/cbcn/cx/ocg/ali/mimo/zai). Context sizes via websearch (Claude 1M/200k, Gemini 1M). */
+const OPROUTE_MODELS_RAW: readonly {
   id: string;
   contextLimit: number;
   outputLimit: number;
@@ -186,28 +186,28 @@ const INFERHUB_MODELS_RAW: readonly {
   { id: "zai/glm-5.3-flash", contextLimit: 1000000, outputLimit: 131072 },
 ] as const;
 /**
- * Claude-backed inferhub models (`*claude-*` across `ag/`/`cb/`/`cc/`) speak
+ * Claude-backed OpRoute models (`*claude-*` across `ag/`/`cb/`/`cc/`) speak
  * native Anthropic Messages on `/v1/messages` — including `thinking_delta`
  * blocks when the canonical request carries reasoning intent. The chat wire
  * strips thinking server-side, so these models must never go through chat.
  */
-export function isInferhubClaudeModel(modelId: string): boolean {
+export function isOpRouteClaudeModel(modelId: string): boolean {
   return modelId.toLowerCase().includes("claude-");
 }
 
 /**
- * Messages-wire leg for Claude-backed inferhub models. Same Claude pipeline
- * as the plain Anthropic adapter, but inferhub authenticates with a Bearer
+ * Messages-wire leg for Claude-backed OpRoute models. Same Claude pipeline
+ * as the plain Anthropic adapter, but OpRoute authenticates with a Bearer
  * key (verified against `/v1/messages` directly) instead of `x-api-key`.
  */
-export class InferhubMessagesAdapter implements ProviderAdapter {
-  readonly provider_id = INFERHUB_PROVIDER_ID;
+export class OpRouteMessagesAdapter implements ProviderAdapter {
+  readonly provider_id = OPROUTE_PROVIDER_ID;
   private readonly fetchFn: typeof fetch;
   private readonly baseUrl: string;
 
   constructor(fetchImpl?: typeof fetch, baseUrl?: string) {
     this.fetchFn = fetchImpl ?? globalThis.fetch;
-    this.baseUrl = (baseUrl ?? INFERHUB_BASE_URL ?? "").replace(/\/+$/, "");
+    this.baseUrl = (baseUrl ?? OPROUTE_BASE_URL ?? "").replace(/\/+$/, "");
   }
 
   async *dispatch(
@@ -219,18 +219,18 @@ export class InferhubMessagesAdapter implements ProviderAdapter {
       throw new GatewayError(
         "capability_unsupported",
         400,
-        `inferhub messages leg supports messages only, got ${candidate.wire_family}`,
+        `OpRoute messages leg supports messages only, got ${candidate.wire_family}`,
       );
     }
     if (context.credential.credential_kind !== "api_key") {
       throw new GatewayError(
         "invalid_request",
         400,
-        `inferhub: api_key credential required (got credential_kind=${context.credential.credential_kind})`,
+        `OpRoute: api_key credential required (got credential_kind=${context.credential.credential_kind})`,
       );
     }
     if (context.credential.secret === undefined || context.credential.secret.length === 0) {
-      throw new GatewayError("invalid_request", 400, "inferhub: API key is missing a secret value");
+      throw new GatewayError("invalid_request", 400, "OpRoute: API key is missing a secret value");
     }
     const apiKey = new TextDecoder().decode(context.credential.secret);
     const customHeaders = filterClaudeCustomHeaders({
@@ -242,8 +242,8 @@ export class InferhubMessagesAdapter implements ProviderAdapter {
       credential: { secret: apiKey, customHeaders },
       baseUrl: this.baseUrl,
       endpointPath: candidate.endpoint_path,
-      mutatePayload: ensureInferhubMessagesTextBreakpoints,
-      // Same explicit provisioning as the chat leg: inferhub's messages leg
+      mutatePayload: ensureOpRouteMessagesTextBreakpoints,
+      // Same explicit provisioning as the chat leg: OpRoute's messages leg
       // carries the gateway identity; bespoke first-party paths never do.
       gatewayUserAgent: GATEWAY_USER_AGENT,
     });
@@ -258,23 +258,23 @@ export class InferhubMessagesAdapter implements ProviderAdapter {
   }
 }
 
-export function createInferhubAdapter(fetchImpl?: typeof fetch): ProviderAdapter {
-  const chat = createApiKeyAdapter(INFERHUB_CHAT_SPEC, fetchImpl);
-  const messages = new InferhubMessagesAdapter(fetchImpl);
+export function createOpRouteAdapter(fetchImpl?: typeof fetch): ProviderAdapter {
+  const chat = createApiKeyAdapter(OPROUTE_CHAT_SPEC, fetchImpl);
+  const messages = new OpRouteMessagesAdapter(fetchImpl);
   // Branch by candidate wire family: Claude-backed models resolve to
-  // messages rows (see INFERHUB_MODELS below) and get native thinking +
+  // messages rows (see OPROUTE_MODELS below) and get native thinking +
   // tool_use; everything else stays on the OpenAI-compatible chat wire.
   // The text-tool-call wrapper stays outermost: turn 2+ tool history still
-  // needs text mode because inferhub's bridge drops `tool_use_id`.
+  // needs text mode because OpRoute's bridge drops `tool_use_id`.
   const branched: ProviderAdapter = {
-    provider_id: INFERHUB_PROVIDER_ID,
+    provider_id: OPROUTE_PROVIDER_ID,
     dispatch(
       request: CanonicalRequest,
       candidate: ProviderDispatchTarget,
       context: ProviderDispatchContext,
     ): AsyncIterable<CanonicalEvent> {
       // Agent harnesses reuse long session prefixes turn after turn without
-      // sending a cache opt-in; inferhub bills cache reads far below fresh
+      // sending a cache opt-in; OpRoute bills cache reads far below fresh
       // input, so default to a stable-prefix breakpoint when the client did
       // not say otherwise. Explicit hints (including per-block breakpoints)
       // always win. Other providers are untouched by this default.
@@ -286,17 +286,17 @@ export function createInferhubAdapter(fetchImpl?: typeof fetch): ProviderAdapter
   };
   // ag/* agent models emit text-based <tool_call> blocks instead of wire
   // tool calls; translate them to canonical tool_call_delta events.
-  return withInferhubTextToolCalls(branched);
+  return withOpRouteTextToolCalls(branched);
 }
 
-/** InferHub exposes no quota surface; the account test is key validity. */
-export async function fetchInferhubQuota(
+/** OpRoute exposes no quota surface; the account test is key validity. */
+export async function fetchOpRouteQuota(
   credential: string,
   fetcher: FetchLike,
 ): Promise<ProviderQuotaResult> {
-  return probeApiKeyConnectivity(INFERHUB_PROVIDER_ID, credential, fetcher);
+  return probeApiKeyConnectivity(OPROUTE_PROVIDER_ID, credential, fetcher);
 }
-export const INFERHUB_MODELS: readonly ModelDefinition[] = INFERHUB_MODELS_RAW.map((e) =>
+export const OPROUTE_MODELS: readonly ModelDefinition[] = OPROUTE_MODELS_RAW.map((e) =>
   defineModel({
     id: e.id,
     ctx: e.contextLimit,
@@ -306,7 +306,7 @@ export const INFERHUB_MODELS: readonly ModelDefinition[] = INFERHUB_MODELS_RAW.m
     // Claude-backed models resolve to messages rows so thinking blocks and
     // native tool_use survive; the chat wire strips both server-side.
     // GPT-5/6 + o-series resolve to responses rows for the same reason.
-    ...(isInferhubClaudeModel(e.id)
+    ...(isOpRouteClaudeModel(e.id)
       ? { wireFamily: "messages" as const }
       : isResponsesNativeModelId(e.id)
         ? { wireFamily: "responses" as const }
@@ -342,9 +342,9 @@ function parseBlock(block: string): Omit<ExtractedCall, "id"> & { id?: string } 
 }
 
 /**
- * Streaming-safe extractor for inferhub's text-based tool convention.
+ * Streaming-safe extractor for OpRoute's text-based tool convention.
  *
- * Some inferhub agent models (`ag/*`) emit tool calls as raw text blocks
+ * Some OpRoute agent models (`ag/*`) emit tool calls as raw text blocks
  * (`<tool_call>{"name": ..., "arguments": {...}}</tool_call>`) instead of
  * structured wire tool calls. Feed text deltas through {@link push} in order;
  * released text never contains a complete or partial block, so downstream
@@ -460,7 +460,7 @@ function isTextDelta(event: CanonicalEvent): event is Extract<CanonicalEvent, { 
 }
 
 /**
- * Inferhub `ag/*` agent models speak a text tool convention natively, but
+ * OpRoute `ag/*` agent models speak a text tool convention natively, but
  * their OpenAI→Claude bridge drops structured tool results (`tool_use_id:
  * Field required`). From the second turn on (history carries tool parts),
  * continue the loop in the model's own tongue: history tool calls/results
@@ -478,7 +478,7 @@ function resultBlockText(content: readonly ContentPart[] | string): string {
     })
     .join("\n");
 }
-export function toInferhubTextModeRequest(request: CanonicalRequest): CanonicalRequest | undefined {
+export function toOpRouteTextModeRequest(request: CanonicalRequest): CanonicalRequest | undefined {
   if (!AGENT_MODEL_PATTERN.test(request.model)) return undefined;
   if (
     !request.messages.some((message) =>
@@ -515,12 +515,12 @@ export function toInferhubTextModeRequest(request: CanonicalRequest): CanonicalR
   return { ...rest, messages };
 }
 /**
- * Wrap an inferhub adapter dispatch so raw `<tool_call>` text blocks become
+ * Wrap an OpRoute adapter dispatch so raw `<tool_call>` text blocks become
  * canonical `tool_call_delta` events. Skips extraction entirely when the
  * request declares no tools (or forbids them): without declared tools the
  * block is prose, and inventing calls would break the client.
  */
-export async function* extractInferhubTextToolCalls(
+export async function* extractOpRouteTextToolCalls(
   request: CanonicalRequest,
   source: AsyncIterable<CanonicalEvent>,
   dropResultBlocks = false,
@@ -573,8 +573,8 @@ export async function* extractInferhubTextToolCalls(
   }
 }
 
-/** Wrap a factory-built inferhub adapter with the agent text convention. */
-export function withInferhubTextToolCalls(base: ProviderAdapter): ProviderAdapter {
+/** Wrap a factory-built OpRoute adapter with the agent text convention. */
+export function withOpRouteTextToolCalls(base: ProviderAdapter): ProviderAdapter {
   return {
     provider_id: base.provider_id,
     dispatch(
@@ -582,9 +582,9 @@ export function withInferhubTextToolCalls(base: ProviderAdapter): ProviderAdapte
       candidate: ProviderDispatchTarget,
       context: ProviderDispatchContext,
     ): AsyncIterable<CanonicalEvent> {
-      const textMode = toInferhubTextModeRequest(request);
+      const textMode = toOpRouteTextModeRequest(request);
       const effective = textMode ?? request;
-      return extractInferhubTextToolCalls(
+      return extractOpRouteTextToolCalls(
         request,
         base.dispatch(effective, candidate, context),
         textMode !== undefined,

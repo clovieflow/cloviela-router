@@ -37,8 +37,32 @@ function testEnv(name: string): string | undefined {
 
 export const testDatabaseUrl = testEnv("CLOVIELA_TEST_DATABASE_URL");
 
-/** Isolated Redis URL, or `undefined` when the suite must skip. */
-export const testRedisUrl = testEnv("CLOVIELA_TEST_REDIS_URL");
+/**
+ * Isolated Redis URL, or `undefined` when the suite must skip.
+ *
+ * `.env.test` always names a Redis URL, so the variable being set says nothing
+ * about whether a server is listening — and the suites that read it went ahead
+ * and failed to connect instead of skipping. The URL is therefore only
+ * returned when something actually answers on it.
+ */
+function liveRedisUrl(url: string | undefined): string | undefined {
+  if (url === undefined) return undefined;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname || "127.0.0.1";
+    const port = Number(parsed.port || 6379);
+    const probe = Bun.spawnSync([
+      "bash",
+      "-c",
+      `exec 3<>/dev/tcp/${host}/${port} && echo ok`,
+    ]);
+    return probe.exitCode === 0 ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export const testRedisUrl = liveRedisUrl(testEnv("CLOVIELA_TEST_REDIS_URL"));
 
 if (!testDatabaseUrl) {
   console.info(

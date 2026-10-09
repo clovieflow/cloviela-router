@@ -190,7 +190,7 @@ export function classifyAccountError(
     mutatesAccount,
   });
 
-  // A price refusal is a verdict on the *request*, not on the account. inferhub
+  // A price refusal is a verdict on the *request*, not on the account. OpRoute
   // answers 402 with `no provider's ask matches your max-per-mtok bid`: the
   // caller's own price ceiling was below every upstream ask, which says nothing
   // about the credential or its balance. Classified as quota it cooled a

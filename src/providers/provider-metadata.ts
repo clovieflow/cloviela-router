@@ -141,7 +141,7 @@ const RAW_BUNDLED_PROVIDER_METADATA = [
   },
   { id: "hermes", displayName: "Nous Research", baseUrl: "https://inference-api.nousresearch.com/v1", credentialUrl: "https://portal.nousresearch.com" },
   { id: "bai", displayName: "B.AI", baseUrl: "https://api.b.ai/v1", credentialUrl: "https://b.ai" },
-  // Renamed from InferHub. The id is deliberately unchanged: it is already
+  // The provider was renamed. Its id is deliberately unchanged: it is already
   // stored on the provider row of every installation, and routing, accounts
   // and telemetry all reference it. Only the name and endpoint moved.
   { id: "inferhub", displayName: "OpRoute", baseUrl: "https://oproute.web.id/v1", defaultBypassProxy: true, hasAdapterUserAgent: true },

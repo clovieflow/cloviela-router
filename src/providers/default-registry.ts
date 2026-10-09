@@ -365,9 +365,9 @@ export const PROVIDER_CAPABILITIES = {
     loadAuthentication: oauthCapability(() => import("./integrations/qoder-oauth"), "qoderOAuthClient"),
   },
   inferhub: {
-    loadAdapter: async () => (await import("./integrations/inferhub")).createInferhubAdapter(),
-    loadModels: async () => (await import("./integrations/inferhub")).INFERHUB_MODELS,
-    loadQuotaCollector: quotaCapability(() => import("./integrations/inferhub"), "fetchInferhubQuota"),
+    loadAdapter: async () => (await import("./integrations/inferhub")).createOpRouteAdapter(),
+    loadModels: async () => (await import("./integrations/inferhub")).OPROUTE_MODELS,
+    loadQuotaCollector: quotaCapability(() => import("./integrations/inferhub"), "fetchOpRouteQuota"),
   },
   hermes: {
     loadAdapter: async () => createApiKeyAdapter((await import("./integrations/hermes")).HERMES_SPEC),

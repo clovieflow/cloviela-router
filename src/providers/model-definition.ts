@@ -130,7 +130,7 @@ function defaultEndpoint(wireFamily: ModelDefinition["wireFamily"]): string {
  * `/v1/responses` in ~2s with its gateway routing prefix intact, and the
  * codex/openai static catalogs already carry these families as responses-wire.
  *
- * Both the static inferhub catalog and the tolerant `/models` discovery path
+ * Both the static OpRoute catalog and the tolerant `/models` discovery path
  * classify wire family from the raw id, so the rule is stated once here: a
  * gateway that lists one of these families must not pin it to the chat wire.
  */
