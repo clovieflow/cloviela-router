@@ -32,9 +32,14 @@ pick() {
 pick STATE_DIR CLOVIELA_DATA_DIR CARTETHYIA_DATA_DIR /app/data
 pick PAYLOAD_DIR CLOVIELA_TELEMETRY_PAYLOAD_DIR CARTETHYIA_TELEMETRY_PAYLOAD_DIR /app/data
 
-# A relative payload directory is resolved against /app so it stays inside the
-# volume; the state directory is the database location and must be absolute.
-case "$STATE_DIR" in /*) ;; *) STATE_DIR="/app/data" ;; esac
+# Both directories resolve against /app when the operator gave a relative
+# path, which is what the application does too: it opens `CLOVIELA_DATA_DIR`
+# verbatim, so a relative value lands under the process's working directory
+# (`/app`). Substituting a fixed `/app/data` here instead would chown one
+# directory while the gateway wrote to another — the database would be created
+# under root ownership and the process, already dropped to 10001, could not
+# open it.
+case "$STATE_DIR" in /*) ;; *) STATE_DIR="/app/$STATE_DIR" ;; esac
 case "$PAYLOAD_DIR" in /*) ;; *) PAYLOAD_DIR="/app/$PAYLOAD_DIR" ;; esac
 
 # A mounted volume arrives owned by root, while the application runs as 10001.
