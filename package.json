@@ -12,29 +12,31 @@
     "bun": ">=1.4.0"
   },
   "scripts": {
-    "dev": "bun run dev:stack",
-    "dev:watch": "bun run scripts/dev/supervisor.ts",
-    "test": "bun run scripts/ci-run-tests.ts",
     "build": "bun run dashboard:build && bun run build:aot && bun run build:binary",
-    "setup": "bun run scripts/commands/setup.ts",
-    "start": "bun run scripts/commands/start-production.ts",
+    "build:aot": "bun run scripts/build/aot.ts",
+    "build:binary": "bun run scripts/build/binary.ts",
+    "cli": "bun run scripts/cli.ts",
+    "cloviela": "bun run scripts/cli.ts",
+    "dashboard:build": "bun run --cwd dashboard build",
+    "dashboard:dev": "bun run --cwd dashboard dev",
+    "dashboard:test": "bun run scripts/ci-run-tests.ts --scope dashboard",
+    "dashboard:typecheck": "bun run --cwd dashboard typecheck",
+    "dev": "bun run dev:stack",
+    "dev:backend": "bun run --hot src/main.ts",
+    "dev:stack": "concurrently -n BACKEND,DASHBOARD -c cyan,magenta --kill-others-on-fail \"bun run dev:backend\" \"bun run dashboard:dev\"",
+    "dev:watch": "bun run scripts/dev/supervisor.ts",
     "doctor": "bun run scripts/commands/doctor.ts",
     "restart": "bun run scripts/commands/restart.ts",
-    "build:aot": "bun run scripts/build/aot.ts",
-    "dev:stack": "concurrently -n BACKEND,DASHBOARD -c cyan,magenta --kill-others-on-fail \"bun run dev:backend\" \"bun run dashboard:dev\"",
-    "typecheck": "tsc --noEmit",
-    "test:watch": "bun run scripts/ci-run-tests.ts --watch",
-    "test-db:up": "docker compose -f docker-compose.test.yml up -d --wait postgres-test",
-    "dev:backend": "bun run --hot src/main.ts",
-    "build:binary": "bun run scripts/build/binary.ts",
-    "test:backend": "bun run scripts/ci-run-tests.ts --scope backend",
-    "test-db:down": "docker compose -f docker-compose.test.yml down",
-    "dashboard:dev": "bun run --cwd dashboard dev",
+    "setup": "bun run scripts/commands/setup.ts",
+    "start": "bun run scripts/commands/start-production.ts",
+    "test": "bun run scripts/ci-run-tests.ts",
     "test-db:check": "bun run scripts/commands/test-db-check.ts",
-    "dashboard:test": "bun run scripts/ci-run-tests.ts --scope dashboard",
+    "test-db:down": "docker compose -f docker-compose.test.yml down",
     "test-db:reset": "docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d --wait postgres-test",
-    "dashboard:build": "bun run --cwd dashboard build",
-    "dashboard:typecheck": "bun run --cwd dashboard typecheck"
+    "test-db:up": "docker compose -f docker-compose.test.yml up -d --wait postgres-test",
+    "test:backend": "bun run scripts/ci-run-tests.ts --scope backend",
+    "test:watch": "bun run scripts/ci-run-tests.ts --watch",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.1",
@@ -59,5 +61,8 @@
     "concurrently": "^10.0.5",
     "openai": "7.30.1",
     "typescript": "5.9.2"
+  },
+  "bin": {
+    "cloviela": "scripts/cli.ts"
   }
 }
