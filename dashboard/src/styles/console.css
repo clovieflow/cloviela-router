@@ -3808,23 +3808,30 @@
  * so it stays legible without dimming the illustration as a whole.
  */
 /*
- * Height note, measured rather than chosen. The illustration is 1280x400 and
- * the subject's head occupies most of its height; at a 800px-wide column the
- * browser shows only `height x 1.6` source pixels, so a 132px strip displays
- * 211 of 400 and slices the face through the eyes. 224px displays 358px — the
- * whole head with the shoulders starting — and that is the floor at which the
- * subject reads as a character instead of a crop.
+ * Height, measured rather than chosen — and capped against the column width,
+ * not fixed.
  *
- * The reference design's strip is shorter because its artwork was drawn for
- * that ratio. This asset was not, and cropping a face to match a number is the
- * wrong trade; the strip stays as thin as the artwork allows.
+ * The scene is 1600x640 (2.5:1). With `object-fit: cover` the image scales by
+ * WIDTH, so a fixed height shows a smaller and smaller slice as the column
+ * grows: 70% of the artwork at 800px, 47% at 1200px, 24% at 2300px. On a wide
+ * monitor that zoomed the face straight out of frame, which is what a fixed
+ * 224px produced.
+ *
+ * `max-height` in `vw` keeps the crop proportional instead. At 1440px the hero
+ * is 224px and shows ~80% of the artwork; past that it grows with the viewport
+ * so the framing stays stable, and the `min-height` keeps it from collapsing
+ * on a short laptop. The artwork's own ratio is the ceiling: the hero never
+ * grows tall enough to push the metrics below the fold.
  */
 .cl-hero {
   position: relative;
   isolation: isolate;
   display: flex;
   align-items: center;
-  min-height: 224px;
+  min-height: 200px;
+  /* 0.16 x viewport ≈ 230px at 1440, 307px at 1920 — the range in which the
+     subject stays whole without the strip becoming a landing-page banner. */
+  height: clamp(200px, 16vw, 320px);
   padding: var(--space-7);
   overflow: hidden;
   border: 1px solid var(--border-subtle);
@@ -3901,6 +3908,7 @@
 @media (max-width: 720px) {
   .cl-hero {
     display: block;
+    height: auto;
     padding: 0;
   }
 

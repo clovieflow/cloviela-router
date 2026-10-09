@@ -32,7 +32,6 @@ import { Button } from "../components/ui/button";
 import { Stack } from "../components/ui/stack";
 import { ErrorState, LoadingState } from "../components/ui/state";
 import { ClipboardButton } from "../components/patterns/clipboard-button";
-import { ArtBanner } from "../components/rikka/art-surfaces";
 import { useReadiness, type ReadinessStep } from "../hooks/readiness";
 import { PageHead } from "../components/PageHead";
 import { useT } from "../shared/locale-context";
@@ -179,8 +178,6 @@ export default function Onboarding(): ReactNode {
         description={t("onboarding.subtitle")}
         art="welcome"
       />
-
-      <ArtBanner name="welcome" caption={t("onboarding.artAlt")} />
 
       {readiness.isError ? (
         <ErrorState
