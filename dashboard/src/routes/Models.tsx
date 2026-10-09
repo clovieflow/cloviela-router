@@ -396,7 +396,7 @@ export default function Models(): ReactNode {
 
       <Card>
         <CardHeader
-          title={t("models.title")}
+          title={t("models.catalogTitle")}
           subtitle={
             models.length === 0
               ? undefined

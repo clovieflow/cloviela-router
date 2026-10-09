@@ -22,7 +22,7 @@ not executed; not claimed.
 | R-14 Backup and restore with real persistence | PASS | portability suite passes on real PostgreSQL 18.4, and the live E2E backup family drives export → delete-all → import → post-restore dispatch with a wrong-password refusal, on both stores (DB-00265…DB-00282 green after the envelope rename fix) |
 | R-15 Authorization and log-redaction tests | PASS | credential redaction reproduced then verified; sandbox guard 6/6 |
 | R-16 No critical/high unresolved security bugs | PASS | all found P0s fixed and re-verified; see final report |
-| R-17 OMP GPT-Image-2 generated real files | PASS | 5 sources + 38 assets in `assets/manifest.json`; the README masthead is recorded as operator-supplied, not generated |
+| R-17 OMP GPT-Image-2 generated real files | PASS (earlier pass) | 5 sources + 39 assets in `assets/manifest.json`; the README masthead is operator-supplied. The 2026-10-09 frontend pass attempted a replacement hero and the chain failed (`gpt-image-2`, `gemini-3-pro-image` both exhausted) — recorded under `generationAttempts`, no file written, the existing `night`/`day` scenes serve the hero instead |
 | R-18 Rikka reference and derivatives inspected | PASS | source art visually inspected; identity consistent |
 | R-19 Every required UI page has backend integration | PASS | 17 routes audited live against the running gateway |
 | R-20 Night, day and system themes on real browsers | PASS | Rikka Day + Rikka Night verified in Chromium; system-follow resolves correctly |
@@ -42,6 +42,6 @@ not executed; not claimed.
 ## Summary
 
 - **PASS: 29**
-- **PASS (partial, scope stated): 3** — R-10, R-12, R-23
+- **PASS (partial, scope stated): 4** — R-10, R-12, R-17, R-23
 - **BLOCKED: 1** — R-04 (operator's original Codex `config.toml` body)
 - **UNVERIFIED: 1** — R-25 (Docker unavailable in this environment)
