@@ -1,5 +1,35 @@
 ## Cloviela Router
 
+- **Readiness read a different ledger than the runner wrote.** The migration
+  runner resolves which table holds a database's history, because an
+  installation that predates the rename keeps it in
+  `cartethyia_schema_migrations`. The readiness check queried the current table
+  directly, so a gateway that booted and served traffic reported
+  `migrations: "pending"` and refused itself. Both paths now resolve the same
+  ledger; the regression test reproduces the layout that triggers it — legacy
+  table populated, current table present and empty — which a freshly created
+  database cannot.
+- **Backups carried the pre-rename product name.** `BACKUP_APP` was left at
+  `cartethyia` when the product was renamed, while the validator's own error
+  text already said "expected a Cloviela backup". Exports now write `cloviela`,
+  and the importer accepts both spellings: changing the constant alone would
+  have refused every backup an operator already holds. A genuinely foreign file
+  is still refused by name.
+- **The container named itself after the previous product.** The image created
+  a `cartethyia` service account, exported `CARTETHYIA_*` variables and kept the
+  pre-rename workspace name in the lockfile. The account, its `--chown` flags
+  and the entrypoint's messages now say `cloviela`, and the environment exports
+  the current names, which the compatibility layer resolves with the previous
+  spelling still honoured as a fallback.
+- **An exported variable could not override the checked-in test defaults.**
+  `.env.test` was spread after `process.env`, so pointing the suite at a
+  different database appeared to work while every test still connected to the
+  one named in the file. The file now supplies the defaults and the environment
+  wins.
+- **The repository has a masthead.** A wide lockup sits above the README title,
+  registered in the asset manifest beside the other artwork as
+  operator-supplied rather than generated.
+
 - **A long stream could grow the retained transcript without bound.** The
   canonical event history appended every event for the whole stream regardless
   of the capture policy, independent of the cap applied later, and the client
