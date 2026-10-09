@@ -48,11 +48,20 @@ function loginFailureMessage(error: unknown, t: TranslateFn): string {
   return t("login.networkError");
 }
 
+/**
+ * The operator account name.
+ *
+ * Setup creates exactly one account, so the sign-in form asks only for the
+ * password and sends this name with the request. Keeping the field in the
+ * payload rather than removing it from the API means the server's contract,
+ * its lockout keying and its audit records are all unchanged.
+ */
+const DEFAULT_OPERATOR_USERNAME = "admin";
+
 export default function Login(): ReactNode {
   const t = useT();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -84,7 +93,8 @@ export default function Login(): ReactNode {
     try {
       const result = await consoleRequest<LoginResult>("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ username: username.trim(), password }),
+        // The account name is fixed by setup; the server still receives it.
+        body: JSON.stringify({ username: DEFAULT_OPERATOR_USERNAME, password }),
       });
       if (result.status !== "success") {
         if (result.requires_setup) {
@@ -137,16 +147,6 @@ export default function Login(): ReactNode {
           </div>
 
           <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <Input
-              label={t("login.username")}
-              id="login-username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              autoComplete="username"
-              placeholder="admin"
-            />
-
             <Input
               label={t("login.password")}
               id="login-password"

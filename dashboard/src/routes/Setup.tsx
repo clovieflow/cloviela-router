@@ -14,28 +14,36 @@ interface SetupResult {
   readonly message?: string;
 }
 
+/**
+ * The single operator account's name.
+ *
+ * Sign-in asks only for a password, so this is not a choice the operator
+ * makes — it is sent with the request so the server keeps creating the same
+ * account it always has.
+ */
+const DEFAULT_OPERATOR_USERNAME = "admin";
+
 export default function Setup(): ReactNode {
   const t = useT();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("admin");
   const [displayName, setDisplayName] = useState("");
   // Prefilled so a new installation can be opened immediately: the operator
-  // changes it here, or from Settings after signing in. It is deliberately a
-  // value the form's own 8-character rule accepts, and the field is a normal
-  // editable input — nothing about it is hidden from the person setting up.
-  const [password, setPassword] = useState("12345678");
-  const [confirm, setConfirm] = useState("12345678");
+  // changes it here, or from Settings after signing in. The field is a normal
+  // editable input — nothing is hidden from the person setting the gateway up.
+  //
+  // This is a deliberately weak default and the gateway treats it as one: the
+  // listener binds 127.0.0.1 unless an operator opts into 0.0.0.0, and the
+  // Settings screen warns while the password is still this value. Change it
+  // before exposing the console to anything but the local machine.
+  const [password, setPassword] = useState("123456");
+  const [confirm, setConfirm] = useState("123456");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!username.trim()) {
-      setError("Administrator username is required.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Administrator password must be at least 8 characters.");
+    if (password.length < 6) {
+      setError("Administrator password must be at least 6 characters.");
       return;
     }
     if (password !== confirm) {
@@ -48,7 +56,7 @@ export default function Setup(): ReactNode {
       const result = await consoleRequest<SetupResult>("/auth/setup", {
         method: "POST",
         body: JSON.stringify({
-          username: username.trim(),
+          username: DEFAULT_OPERATOR_USERNAME,
           password,
           ...(displayName.trim() ? { display_name: displayName.trim() } : {}),
         }),
@@ -88,16 +96,6 @@ export default function Setup(): ReactNode {
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <Input
-            label="Administrator Username"
-            id="setup-username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            autoComplete="username"
-            placeholder="e.g. admin, risun"
-          />
-
-          <Input
             label="Display Name"
             hint="(optional)"
             id="display-name"
@@ -109,11 +107,11 @@ export default function Setup(): ReactNode {
 
           <Input
             label="Master Password"
-            hint="(min. 8 chars)"
+            hint="(min. 6 chars)"
             id="setup-password"
             type="password"
             required
-            minLength={8}
+            minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
@@ -124,7 +122,7 @@ export default function Setup(): ReactNode {
             id="setup-confirm"
             type="password"
             required
-            minLength={8}
+            minLength={6}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password"

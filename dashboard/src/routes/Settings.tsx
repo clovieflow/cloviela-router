@@ -195,8 +195,35 @@ function PasswordChangeForm(): ReactNode {
     );
   };
 
+  // Two moments are worth interrupting for: the operator typed the shipped
+  // default as their CURRENT password, which means the account still has it,
+  // or they are about to set it as the new one. No API reports the stored
+  // password, so the form can only react to what is typed — which is exactly
+  // when the advice is useful.
+  const stillDefault = currentPassword === "123456" || newPassword === "123456";
+
   return (
     <Stack gap="10px">
+      {stillDefault ? (
+        <Inline
+          style={{
+            alignItems: "flex-start",
+            gap: "8px",
+            padding: "10px 12px",
+            borderRadius: "10px",
+            border: "1px solid var(--border-strong)",
+            background: "var(--surface-muted)",
+            fontSize: "12px",
+            lineHeight: 1.5,
+          }}
+        >
+          <span aria-hidden="true">⚠</span>
+          <span>
+            This is the default password every installation starts with. Anyone who can reach
+            this console knows it. Change it before exposing the gateway beyond this machine.
+          </span>
+        </Inline>
+      ) : null}
       <Input
         id="current-password"
         label="Current password"
