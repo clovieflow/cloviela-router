@@ -12,9 +12,14 @@ export type DbMode = "full" | "lite";
  * change behavior unless they opt in; anything else fails closed at boot.
  */
 export function resolveDbMode(env: NodeJS.ProcessEnv = process.env): DbMode {
-  const raw = (env.CLOVIELA_DB_MODE ?? "full").trim();
+  // Read through the compatibility helper: an operator's existing `.env` says
+  // CARTETHYIA_DB_MODE, and reading only the new name would silently fall back
+  // to `full` — turning a working Lite install into one that demands a
+  // PostgreSQL it does not have.
+  const configured = envValue("CLOVIELA_DB_MODE", env);
+  const raw = (configured ?? "full").trim();
   if (raw !== "full" && raw !== "lite") {
-    throw new Error(`CLOVIELA_DB_MODE must be lite or full (got "${env.CLOVIELA_DB_MODE}")`);
+    throw new Error(`CLOVIELA_DB_MODE must be lite or full (got "${configured}")`);
   }
   return raw;
 }
