@@ -223,7 +223,7 @@ All commands run against the integrated tree, in this session:
 |---|---|
 | `bun run typecheck` | **exit 0**, no errors |
 | `bun run dashboard:typecheck` | **exit 0**, no errors |
-| `bun run test:backend` | **2033 pass / 0 fail** (2023 parallel + 10 serial DDL, 78 files), stable across 3 consecutive runs |
+| `bun run test:backend` | **2104 pass / 0 fail** (2094 parallel across 81 files + 10 serial DDL across 4 files) |
 | `bun run dashboard:test` | **371 pass / 0 fail** (9 files) |
 | `bun run build` | dashboard → AOT → binary, all succeeded |
 | `dist/cloviela-router` | 85,700,688 bytes, `codesign --verify` valid, boots Lite and Full |
@@ -234,6 +234,63 @@ All commands run against the integrated tree, in this session:
 
 Baseline for comparison, same machine, upstream `dev` before changes:
 1756 pass / 38 fail without services, 1971 pass / 8 fail with services.
+
+## Bansos: subsidized access programs
+
+Every case below was executed against a running gateway — first the source run,
+then the compiled binary on a fresh state directory — and each found defect is
+named with the check that caught it.
+
+| Case | Command (abbreviated) | Result |
+|---|---|---|
+| Subsidized model reaches upstream | `POST /v1/chat/completions` with a Bansos key naming the public model | **200**, forwarded |
+| Unsubsidized model refused | same key, naming a model the program does not fund | **404** `model_not_allowed` |
+| `/v1/models` shows only the subsidy | `GET /v1/models` with the Bansos key | one entry, the program's model |
+| Published name translated | request names `bansos-model`; router plans `opencodeft/big-pickle` | reached upstream, no 404 |
+| Upstream id never leaked | `GET /console/api/bansos/portal/me` | `big-pickle` absent (grep, 0 hits) |
+| Token quota enforced | allowance 500; two calls at 252 tokens each | third call **429** `lifetime token budget exceeded` |
+| Rate limit enforced | participant `rpm = 2`; five rapid calls | calls 1–2 **200**, 3–5 **429** `rpm limit exceeded` |
+| Concurrency enforced | participant `concurrency = 1`; six parallel calls | one **200**, five **429** `capacity_exhausted` |
+| Suspension is immediate | set participant `suspended`, reuse an issued key | **403** |
+| Reactivation restores access | set participant `active`, reuse the same key | **200** |
+| Revocation is immediate | revoke key, reuse it | **401** |
+| Deleted key stops working | delete participant holding a live key | key **401** (was 200) |
+| `revoked` status is terminal | set participant `revoked` | gateway **403**, portal sign-in **401** |
+| Key ceiling enforced | `maxKeysPerParticipant = 2`, issue a third | **409** `key_limit_reached` |
+| Revoked keys free the ceiling | revoke one, issue again | **200** |
+| Provider scope enforced | pin program to a provider that does not serve the model | **404** |
+| Correct provider passes | pin to the serving provider | **200** |
+| Account allowlist enforced | name a foreign account id | **404** |
+| Portal session opens | `POST /bansos/portal/session` with a live key | **200**, token returned |
+| Portal session refuses a bad key | same, with a wrong key | **401** |
+| Portal session dies with its key | revoke the key, reuse the session | **401** |
+| Portal cannot reach the admin API | session token against `/bansos/programs`, `/api-keys` | **401** both |
+| `adminNotes` not exposed to participants | `GET /portal/me` | absent (grep, 0 hits) |
+| Admin console drives the whole flow | Chromium: sign in → Bansos → program → 3 tabs → revoke → issue | key created and spent: `/v1/models` 200, chat **200** |
+| Portal renders real data | Chromium: sign in at `/console/portal` | program, 2,162 tokens, live keys, public model name |
+| Production binary serves Bansos | fresh state dir, `CLOVIELA_DB_MODE=lite ./dist/cloviela-router` | migrations applied; program → participant → model → key → portal sign-in **200**; gateway **200**, unsubsidized **404** |
+
+Defects found by these runs, all fixed:
+
+1. A key issued with an empty `modelList` under `whitelist` mode permitted
+   **every** model on the gateway — the opposite of a subsidy.
+2. The program's published model names were compared against upstream ids and
+   never translated, so a correct request was refused.
+3. Revoked keys still counted against `maxKeysPerParticipant`, locking a
+   participant out permanently after a revoke-and-reissue.
+4. A subsidized key was subject to the model-abuse strike ban, which would cut
+   off every participant behind a shared IP after ten typo'd model names.
+5. `provider_id` and `provider_account_ids` were stored and documented as "the
+   provider this program may spend", then never read.
+6. A deleted key kept authenticating from the auth cache, because the cascade
+   removes the row without telling the cache.
+7. The portal's sign-in was refused with a CSRF error whenever the browser was
+   also signed into the console — the case an operator hits first.
+8. The dashboard's participant status type invented `expired` and omitted the
+   real `revoked`, so the terminal state had no label.
+
+Tests written for these invariants: `test/console/bansos-enforcement.test.ts`
+(17 cases) and `test/console/bansos-policy.test.ts`.
 
 ## Not verified in this environment
 

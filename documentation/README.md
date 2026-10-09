@@ -5,6 +5,8 @@ Start here if you are installing or running Cloviela Router:
 - [Getting started](getting-started.md) — requirements, setup, OS guidance, Docker,
   commands, migrations, and verification.
 - [Connecting clients](clients.md) — tested snippets for SDKs, curl, and CLI tools.
+- [Bansos](bansos.md) — subsidized access programs: programs, participants,
+  keys, the participant portal, and where each limit is enforced.
 - [Architecture](architecture.md) — the request lifecycle and module ownership.
 - [Security](security.md) — trust boundaries and credential handling.
 - [Release](release.md) — gates, evidence, and known limitations.

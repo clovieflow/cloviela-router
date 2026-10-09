@@ -1,3 +1,47 @@
+## 2.2.0-rikka.3
+
+- **Bansos: subsidized access programs.** An operator groups API keys under a
+  program, attaches a participant identity, and sets a ceiling that cannot be
+  widened — the strictest limit across program, participant and key always
+  wins. A program publishes its own model names and maps each to one upstream
+  id, so participants send `bansos-sonnet` while the gateway sends
+  `ag/claude-sonnet-4` and never reveals which upstream serves them. A program
+  may also pin the provider and accounts it is willing to pay, because the same
+  model id served by two providers is the ordinary case rather than a contrived
+  one.
+
+  Nothing about quota, rate limiting, concurrency or routing is re-implemented:
+  a Bansos key is an ordinary `api_keys` row, so it inherits the existing
+  admission, caching, revocation and telemetry paths unchanged.
+
+- **A participant portal.** Participants sign in at `/console/portal` with the
+  Bansos key they already hold, exchanged once for a session token kept in
+  `sessionStorage`. The key never becomes a cookie. Revoking a key ends its
+  portal sessions and its gateway access together — the session is bound to the
+  key and the key is re-checked on every request, so there is no window in
+  which one is live and the other is not.
+
+- **An administrator console for Bansos.** Programs, participants, subsidized
+  models, key issuance and revocation, per-participant usage and the audit
+  trail, built from the components the rest of the console uses so it inherits
+  the glass, the tokens and the responsive behaviour.
+
+- **A suspension is immediate.** Setting a participant to `suspended` or
+  `revoked` refuses every request on the next one, including keys already
+  issued, with no key rotation.
+
+Eight defects were found by exercising real boundaries rather than by reading
+the code, and every one is fixed: a key issued with an empty model allowlist
+permitted *every* model on the gateway; the program's published model names
+were never translated; revoked keys still counted against the participant's
+key ceiling; a subsidized key was subject to the model-abuse strike ban (which
+would cut off every participant behind a shared IP); `provider_id` and
+`provider_account_ids` were stored, documented as enforced, and never read; a
+deleted key kept authenticating from the auth cache; the portal's sign-in was
+refused with a CSRF error whenever the browser was also signed into the
+console; and the dashboard's participant status type invented `expired` while
+omitting the real `revoked`.
+
 ## 2.1.0-rikka.2
 
 - **Liquid Glass across the console.** The sidebar, topbar, every card and the

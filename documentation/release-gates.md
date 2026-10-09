@@ -17,8 +17,8 @@ not executed; not claimed.
 | R-09 Anthropic Messages smoke | PASS | live gateway → mock upstream, SSE with `message_stop` |
 | R-10 SSE / tool-calls / cancellation regressions | PASS | SSE terminal exactly once per stream verified live; cancellation now asserts real app-owned state (in-flight gauge, pool, admission, upstream abort signal) instead of an orphan store; large-stream retention bounded with truthful truncation metadata |
 | R-11 Provider CRUD and model discovery | PASS | create/delete provider + account + `GET /v1/models` (14 entries) through real HTTP |
-| R-12 Routing / health / quota / failover | PASS | backend suite 2032 pass covers routing/health/quota/failover; route simulator verified live over HTTP (read-only, cursor-stable, 404/422/401) |
-| R-13 API key issue / revoke / scope / rate limit | PASS | key issued via API, invalid key → 401 with **zero** upstream dispatches; suite covers revoke/scope/limits |
+| R-12 Routing / health / quota / failover | PASS | backend suite 2104 pass covers routing/health/quota/failover; route simulator verified live over HTTP (read-only, cursor-stable, 404/422/401) |
+| R-13 API key issue / revoke / scope / rate limit | PASS | key issued via API, invalid key → 401 with **zero** upstream dispatches; suite covers revoke/scope/limits; Bansos keys verified live for rpm (429 after 2), concurrency (429 after 1), token budget (429 after the allowance) and revocation (401) |
 | R-14 Backup and restore with real persistence | PASS | portability suite passes on real PostgreSQL 18.4, and the live E2E backup family drives export → delete-all → import → post-restore dispatch with a wrong-password refusal, on both stores (DB-00265…DB-00282 green after the envelope rename fix) |
 | R-15 Authorization and log-redaction tests | PASS | credential redaction reproduced then verified; sandbox guard 6/6 |
 | R-16 No critical/high unresolved security bugs | PASS | all found P0s fixed and re-verified; see final report |
@@ -38,10 +38,18 @@ not executed; not claimed.
 | R-30 Final report with exact passes/fails/skips/blocked | PASS | `final-report.md` |
 | R-31 Release branch commits contain reviewed real source and assets | PASS | 32 commits on `cloviela/release` (1 import + 31 of our own); no credentials staged; `.env` gitignored |
 | R-32 Public push succeeds if authorized | PASS | published as the standalone repo `clovieflow/cloviela-router` (not a GitHub fork, no parent), default branch `cloviela/release`; upstream `dev`/`SeeYouLater` untouched |
+| R-33 Bansos subsidy cannot be bypassed | PASS | live: unsubsidized model 404, wrong provider 404, foreign account 404, suspended participant 403, revoked participant 403, revoked key 401, deleted key 401; see the Bansos section of `release-evidence.md` |
+| R-34 Bansos quota and rate limits are enforced | PASS | live: rpm 2 → 429 after 2 calls; concurrency 1 → 429 on 5 of 6 parallel; allowance 500 → 429 after 504 consumed |
+| R-35 Participant portal is isolated from the operator console | PASS | portal session reaches `/bansos/programs` and `/api-keys` with 401; `adminNotes` and upstream model ids absent from every portal response (grep, 0 hits); revoking a key ends its portal sessions (401) |
+| R-36 Bansos runs in the production binary | PASS | fresh state dir, `CLOVIELA_DB_MODE=lite ./dist/cloviela-router`: migrations applied, program→participant→model→key created, portal sign-in 200, gateway 200, unsubsidized 404 |
 
 ## Summary
 
-- **PASS: 29**
+- **PASS: 33**
 - **PASS (partial, scope stated): 4** — R-10, R-12, R-17, R-23
 - **BLOCKED: 1** — R-04 (operator's original Codex `config.toml` body)
 - **UNVERIFIED: 1** — R-25 (Docker unavailable in this environment)
+
+R-33…R-36 cover the Bansos work, which is not part of the upstream specification:
+it was requested separately and is recorded here because the same release
+carries it.
