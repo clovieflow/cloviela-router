@@ -18,6 +18,7 @@ import {
   Server,
   Settings as SettingsIcon,
   ShieldAlert,
+  Gift,
   ScrollText,
   Timer,
   X,
@@ -89,6 +90,7 @@ export const navigationGroups: readonly NavGroupDef[] = [
       { labelKey: "nav.routing", path: "/combos", icon: Network },
       { labelKey: "nav.simulator", path: "/simulator", icon: Route },
       { labelKey: "nav.quota", path: "/quota", icon: ShieldAlert },
+      { labelKey: "nav.bansos", path: "/bansos", icon: Gift },
     ],
   },
   {
@@ -125,6 +127,7 @@ const titlesMap: Record<string, { title: MessageKey; sub: MessageKey }> = {
   "/quota": { title: "nav.quota", sub: "health.storage" },
   "/proxy": { title: "nav.networks", sub: "health.connectivity" },
   "/api-keys": { title: "nav.apiKeys", sub: "models.aliasSectionHint" },
+  "/bansos": { title: "bansos.title", sub: "bansos.subtitle" },
   "/console-log": { title: "nav.logs", sub: "health.gateway" },
   "/model-lab": { title: "nav.studio", sub: "help.clients" },
   "/cli-tools": { title: "nav.more", sub: "help.quickstartHint" },
@@ -166,6 +169,12 @@ function resolveRouteMeta(
       title: toolMatch[1],
       sub: t("help.quickstartHint"),
     };
+  }
+  // A program's own name is data, but the shell has no program list here, so
+  // the section title stands in and the page body names the program. Showing
+  // the raw uuid would be worse than the section label.
+  if (/^\/bansos\/[^/]+\/?$/.test(pathname)) {
+    return { title: t("bansos.title"), sub: t("bansos.subtitle") };
   }
   const meta = titlesMap[pathname] ?? CONSOLE_FALLBACK;
   return { title: t(meta.title), sub: t(meta.sub) };

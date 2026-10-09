@@ -67,6 +67,7 @@ const CliTools = lazyWithRetry(() => import("./routes/CliTools"), "cli-tools");
 const CliToolDetail = lazyWithRetry(() => import("./routes/CliToolDetail"), "cli-tool-detail");
 const ConsoleLogPage = lazyWithRetry(() => import("./features/logs/ConsoleLogPage"), "console-log");
 const Studio = lazyWithRetry(() => import("./routes/Studio"), "studio");
+const Bansos = lazyWithRetry(() => import("./routes/Bansos"), "bansos");
 const NotFound = lazyWithRetry(() => import("./routes/NotFound"), "not-found");
 
 /**
@@ -206,6 +207,8 @@ function ProtectedRoutes(): ReactNode {
           <Route path="/quota" element={<Quota />} />
           <Route path="/proxy" element={<Proxy />} />
           <Route path="/api-keys" element={<ApiKeys />} />
+          <Route path="/bansos" element={<Bansos />} />
+          <Route path="/bansos/:programId" element={<Bansos />} />
           <Route path="/console-log" element={<ConsoleLogPage />} />
           <Route path="/model-lab" element={<Studio />} />
           <Route path="/cli-tools" element={<CliTools />} />

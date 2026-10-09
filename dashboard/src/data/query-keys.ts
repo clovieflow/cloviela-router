@@ -64,6 +64,24 @@ export const queryKeys = {
   modelBans: {
     all: ["console", "model-bans"] as const,
   },
+  /**
+   * Bansos resources.
+   *
+   * Keyed by program or participant rather than globally so that editing one
+   * program does not invalidate another's participant list, usage report or
+   * audit log — three queries that would otherwise refetch on every save.
+   */
+  bansos: {
+    programs: ["console", "bansos", "programs"] as const,
+    program: (programId: string) => ["console", "bansos", "programs", programId] as const,
+    participants: (programId: string) =>
+      ["console", "bansos", "programs", programId, "participants"] as const,
+    models: (programId: string) => ["console", "bansos", "programs", programId, "models"] as const,
+    usage: (programId: string) => ["console", "bansos", "programs", programId, "usage"] as const,
+    audit: (programId: string) => ["console", "bansos", "programs", programId, "audit"] as const,
+    keys: (participantId: string) =>
+      ["console", "bansos", "participants", participantId, "keys"] as const,
+  },
   settings: {
 
     runtime: ["console", "settings", "runtime"] as const,
