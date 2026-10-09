@@ -39,6 +39,43 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
+/**
+ * Creates the target database when it is missing.
+ *
+ * The rename from `cartethyia_test` to `cloviela_test` changed a name in
+ * `.env.test` without creating anything, and every suite that needs the real
+ * thing then failed on `database "cloviela_test" does not exist` — a message
+ * that reads like a broken checkout rather than a missing one-line step. The
+ * check now makes the database it is about to verify, connecting to the
+ * server's own `postgres` database first.
+ *
+ * Only the database is created. Tables, roles and extensions stay the
+ * migrations' business, and an existing database is never touched.
+ */
+async function ensureDatabase(target: string): Promise<void> {
+  const parsed = new URL(target);
+  const name = parsed.pathname.replace(/^\//, "");
+  if (name.length === 0 || name === "postgres") return;
+
+  const adminUrl = new URL(target);
+  adminUrl.pathname = "/postgres";
+  const admin = new Client({ connectionString: adminUrl.toString(), connectionTimeoutMillis: 3_000 });
+  try {
+    await admin.connect();
+    const exists = await admin.query("select 1 from pg_database where datname = $1", [name]);
+    if (exists.rowCount === 0) {
+      // The name comes from the operator's own .env.test; it cannot be a
+      // bind parameter, so it is quoted as an identifier.
+      await admin.query(`CREATE DATABASE "${name.replace(/"/g, '""')}"`);
+      console.log(`  Created test database "${name}" (it did not exist).`);
+    }
+  } finally {
+    await admin.end().catch(() => undefined);
+  }
+}
+
+await ensureDatabase(databaseUrl).catch(() => undefined);
+
 const client = new Client({ connectionString: databaseUrl, connectionTimeoutMillis: 3_000 });
 try {
   await client.connect();
