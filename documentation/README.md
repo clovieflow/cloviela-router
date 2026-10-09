@@ -14,6 +14,11 @@ Start here if you are installing or running Cloviela Router:
 - [Final report](final-report.md) — delivered, blocked, and unverified.
 - [Performance](performance.md) — measured numbers and the hardware they came from.
 
+The [`audits/`](audits/) folder holds the working evidence behind those pages:
+the feature inventory, the E2E coverage matrix, the theme and performance
+audits, the bug-remediation report, and the screenshots taken from the running
+console.
+
 For the product overview and supported clients, see
 [`README.md`](../README.md).
 
