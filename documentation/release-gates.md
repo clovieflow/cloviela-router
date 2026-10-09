@@ -19,7 +19,7 @@ not executed; not claimed.
 | R-11 Provider CRUD and model discovery | PASS | create/delete provider + account + `GET /v1/models` (14 entries) through real HTTP |
 | R-12 Routing / health / quota / failover | PASS | backend suite 2032 pass covers routing/health/quota/failover; route simulator verified live over HTTP (read-only, cursor-stable, 404/422/401) |
 | R-13 API key issue / revoke / scope / rate limit | PASS | key issued via API, invalid key → 401 with **zero** upstream dispatches; suite covers revoke/scope/limits |
-| R-14 Backup and restore with real persistence | PASS (suite) | portability suite passes on real PostgreSQL 18.4; live post-restore request not driven |
+| R-14 Backup and restore with real persistence | PASS | portability suite passes on real PostgreSQL 18.4, and the live E2E backup family drives export → delete-all → import → post-restore dispatch with a wrong-password refusal, on both stores (DB-00265…DB-00282 green after the envelope rename fix) |
 | R-15 Authorization and log-redaction tests | PASS | credential redaction reproduced then verified; sandbox guard 6/6 |
 | R-16 No critical/high unresolved security bugs | PASS | all found P0s fixed and re-verified; see final report |
 | R-17 OMP GPT-Image-2 generated real files | PASS | 5 sources + 38 assets in `assets/manifest.json`; the README masthead is recorded as operator-supplied, not generated |
@@ -32,7 +32,7 @@ not executed; not claimed.
 | R-24 Performance measured and reported honestly | PASS | cold start 5.2 s, steady RSS 56 MB, sub-ms probes; hardware profile stated |
 | R-25 Docker persistent-data smoke if supported | **UNVERIFIED** | Docker unavailable in this environment |
 | R-26 Full PostgreSQL mode does not regress | PASS | 1993 pass / 0 fail against real PostgreSQL 18.4 |
-| R-27 Typechecks, unit, integration and E2E gates | PASS | all gates exit 0; full backend suite green five consecutive runs after the DDL-deadlock fix |
+| R-27 Typechecks, unit, integration and E2E gates | PASS | all gates exit 0; backend suite 2048 pass / 0 fail against real PostgreSQL 18.4. E2E executed on both stores: 3552 rows over 3522 identifiers, 0 failed, PASS 317 rows / 287 identifiers each. The two stores verify disjoint sets (197 identifiers exclusive to each, 90 shared), which the earlier single-store run could not establish |
 | R-28 All failing mandatory tests repaired and rerun | PASS | baseline 8 fail → 0 fail; 33-test regression fixed and rerun |
 | R-29 README, architecture, setup, client, security, release docs | PASS | all present in `documentation/` |
 | R-30 Final report with exact passes/fails/skips/blocked | PASS | `final-report.md` |
@@ -42,6 +42,6 @@ not executed; not claimed.
 ## Summary
 
 - **PASS: 29**
-- **PASS (partial, scope stated): 4** — R-10, R-12, R-14, R-23
+- **PASS (partial, scope stated): 3** — R-10, R-12, R-23
 - **BLOCKED: 1** — R-04 (operator's original Codex `config.toml` body)
 - **UNVERIFIED: 1** — R-25 (Docker unavailable in this environment)
