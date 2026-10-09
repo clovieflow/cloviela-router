@@ -710,6 +710,14 @@ export function DashboardShell({
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setPaletteOpen((v) => !v);
+        return;
+      }
+      // Escape closes the navigation drawer. The scrim handles a tap, but a
+      // keyboard or a hardware Escape key had no way out: the drawer stayed
+      // open and `body` stayed scroll-locked, which left the page unusable
+      // until a link was followed.
+      if (event.key === "Escape") {
+        setDrawerOpen(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -828,8 +836,7 @@ export function DashboardShell({
                 disabled={loggingOut}
                 aria-label={t("nav.signOut")}
                 title={t("nav.signOut")}
-                className="topbar-icon-button"
-                style={{ width: "30px", height: "30px", borderRadius: "8px" }}
+                className="topbar-icon-button user-logout-button"
               >
                 <LogOut size={14} />
               </button>

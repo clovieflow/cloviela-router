@@ -1575,8 +1575,8 @@ export default function ModelLab(): ReactNode {
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: "32px",
-                      height: "32px",
+                      width: "var(--composer-btn-size, 32px)",
+                      height: "var(--composer-btn-size, 32px)",
                       borderRadius: "9999px",
                       border: "1px solid transparent",
                       background: "transparent",
@@ -1644,7 +1644,7 @@ export default function ModelLab(): ReactNode {
                         background: "var(--surface-muted)",
                         color: "var(--text-secondary)",
                         padding: "0 12px",
-                        height: "28px",
+                        height: "var(--composer-pill-height, 28px)",
                         fontSize: "11px",
                         fontWeight: 600,
                         cursor: "pointer",
@@ -1806,8 +1806,8 @@ export default function ModelLab(): ReactNode {
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          width: "32px",
-                          height: "32px",
+                          width: "var(--composer-btn-size, 32px)",
+                          height: "var(--composer-btn-size, 32px)",
                           borderRadius: "9999px",
                           border: "1px solid transparent",
                           background: tuneOpen || tuneCustomized ? "var(--accent-soft)" : "var(--surface-muted)",
@@ -2001,8 +2001,8 @@ export default function ModelLab(): ReactNode {
                         title="Stop"
                         className="mlab-send-btn"
                         style={{
-                          width: "32px",
-                          height: "32px",
+                          width: "var(--composer-btn-size, 32px)",
+                          height: "var(--composer-btn-size, 32px)",
                           borderRadius: "9999px",
                           border: "none",
                           background: "var(--status-danger)",
@@ -2024,8 +2024,8 @@ export default function ModelLab(): ReactNode {
                         title="Send"
                         className="mlab-send-btn"
                         style={{
-                          width: "32px",
-                          height: "32px",
+                          width: "var(--composer-btn-size, 32px)",
+                          height: "var(--composer-btn-size, 32px)",
                           borderRadius: "9999px",
                           border: "none",
                           background: !canSend ? "var(--surface-muted)" : "var(--accent)",

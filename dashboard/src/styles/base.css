@@ -1644,3 +1644,113 @@ input[type="checkbox"] {
   background: transparent;
   box-shadow: none;
 }
+
+/* ── Touch sizing for the shared button primitives ──────────────────────────
+ * `.btn-sm` is 30px and `.btn-icon` is 34px. Those are deliberate on a desktop
+ * — an operator scanning a 45-row provider grid wants density — but on a phone
+ * they are below the size a fingertip reliably hits, and they appear on every
+ * page: filter chips, row actions, dialog footers.
+ *
+ * Raising them at the primitive fixes all of those at once. `min-height`
+ * rather than `height` so a button whose label wraps can still grow, and the
+ * padding is left alone so a wide label is unaffected.
+ */
+@media (max-width: 1024px), (pointer: coarse) {
+  .btn-sm {
+    height: auto;
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* A button that only carries an icon inside a table row keeps its compact
+     look but gains the vertical target, so rows do not double in height. */
+  .data-table .btn-sm {
+    min-height: 44px;
+  }
+}
+
+/* A switch is 42x24 — a size that reads correctly as an iOS-style control but
+   is under half the recommended touch height. Growing the track itself would
+   make every settings row look inflated, so the *hit area* grows instead: a
+   transparent pseudo-element extends the button's clickable box to 44px
+   without moving anything on screen. */
+@media (max-width: 1024px), (pointer: coarse) {
+  .switch-track {
+    position: relative;
+  }
+
+  .switch-track::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 44px;
+    transform: translateY(-50%);
+    /* Wider than the track so a thumb landing slightly off still registers. */
+    left: -6px;
+    right: -6px;
+  }
+
+  /* The row keeps its own layout; only the interactive box grew. */
+  .switch-container {
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .radix-select-trigger {
+    min-height: 44px;
+  }
+}
+
+/* ── Form controls on touch ─────────────────────────────────────────────────
+ * The settings page alone had fifteen undersized controls: text inputs at
+ * 38px, the password reveal button at 20px, and bare checkboxes at 16px. None
+ * of them are decorative — they are how an operator enters credentials.
+ *
+ * Inputs grow to 44px, which also lifts the label spacing around them. The
+ * reveal button keeps its icon size and gains an invisible 44px hit box, so
+ * the field does not visibly change. Checkboxes grow outright: 16px is not a
+ * target, it is a speck.
+ */
+@media (max-width: 1024px), (pointer: coarse) {
+  .form-input,
+  .input,
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="url"],
+  input[type="number"],
+  input[type="search"],
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  .input-reveal-button {
+    /* The icon stays where it was; only the tappable box grows. */
+    min-width: 44px;
+    min-height: 44px;
+    right: 0 !important;
+    justify-content: center;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* A checkbox is 24px of visible control; the label beside it is part of the
+     target, so the row gets the full height. */
+  .checkbox-row,
+  .form-check {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}

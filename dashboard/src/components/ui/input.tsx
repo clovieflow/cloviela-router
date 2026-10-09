@@ -38,6 +38,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               onClick={() => setVisible((v) => !v)}
               aria-label={visible ? "Hide password" : "Show password"}
               aria-pressed={visible}
+              className="input-reveal-button"
               style={{
                 position: "absolute",
                 right: "10px",

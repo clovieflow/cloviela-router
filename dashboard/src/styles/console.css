@@ -4245,3 +4245,154 @@
     transition: none;
   }
 }
+
+/* ── Mobile navigation ergonomics ───────────────────────────────────────────
+ * Two problems on a phone, measured at 390x844.
+ *
+ * 1. Every navigation row was 36px tall (8px padding around a 13.5px label).
+ *    That is below the ~44px a fingertip reliably hits, and it was true of all
+ *    35 interactive elements on the page — not only the nav.
+ *
+ * 2. The rail scrolls (733px of content in a 641px box) but drew no
+ *    scrollbar and no fade, so "Bantuan", "Pengaturan" and "Tentang" were
+ *    simply absent from the screen. A list that continues off the edge has to
+ *    say so.
+ */
+@media (max-width: 1024px) {
+  .nav-link-item {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  /* The rail is a scroll container here, so its bar is visible rather than
+     hidden: it is the only cue that more navigation exists below. */
+  .app-sidebar nav {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+    /* A soft fade at the bottom edge, under the last visible row. */
+    mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+  }
+
+  .app-sidebar nav::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .app-sidebar nav::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+  }
+}
+
+/* ── Touch targets ──────────────────────────────────────────────────────────
+ * The audit measured every interactive element on all 16 console routes at
+ * 390px. Before this rule, 471 of them were under 44px — including all 16
+ * navigation rows at 36px, the three topbar controls at 38px, and the
+ * sign-out button at 30px.
+ *
+ * 44px is the floor, not a target: a control already larger is untouched, and
+ * `min-height` is used rather than a fixed height so a control that needs two
+ * lines can still grow. Applied below the sidebar breakpoint and on any
+ * coarse pointer, so a tablet with a stylus and a phone both get it while a
+ * desktop mouse keeps the denser layout.
+ */
+@media (max-width: 1024px), (pointer: coarse) {
+  .topbar-button,
+  .topbar-icon-button,
+  .topbar-menu-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* The label-bearing button keeps its text and gains height only. */
+  .topbar-button {
+    height: auto;
+    min-height: 44px;
+  }
+
+  .topbar-icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* The sign-out control kept its 30px box in an inline style, which no
+   stylesheet can override. It is a class now so the touch rules above can
+   reach it: on a phone it is the last thing between the operator and a
+   mis-tap, and 30px is well under the 44px floor. */
+.user-logout-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+@media (max-width: 1024px), (pointer: coarse) {
+  .user-logout-button {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+}
+
+/* ── Filter chips and composer controls ─────────────────────────────────────
+ * Three groups survived the first two passes because each is a bespoke class
+ * rather than a shared primitive: the model capability chips (29px), the log
+ * severity filters (25px), and the Studio composer's send and attach buttons
+ * (32px and 17px).
+ *
+ * The chips grow vertically only — their width is already comfortable and
+ * widening them would push the filter row onto three lines. The composer
+ * buttons grow in both axes; they sit alone at the edge of a text field with
+ * room to spare.
+ */
+@media (max-width: 1024px), (pointer: coarse) {
+  .model-filter-chip,
+  .console-log-filter {
+    min-height: 44px;
+    padding-block: 0;
+  }
+
+  .mlab-send-btn,
+  .console-log-clear-icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* The prompt-suggestion buttons wrap their text; height follows content. */
+  .mlab-suggestion,
+  [class*="suggestion"] {
+    min-height: 44px;
+  }
+
+  /* Attach / sessions controls in the Studio composer. */
+  .mlab-attach-btn,
+  .mlab-sessions-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* The Studio composer's send, attach and sessions buttons hard-coded 32px in
+   inline styles, which no stylesheet can override. They read the size from a
+   custom property now, so the touch rules can raise it without duplicating
+   the rest of each button's inline styling. */
+@media (max-width: 1024px), (pointer: coarse) {
+  :root {
+    --composer-btn-size: 44px;
+  }
+}
+
+/* The remaining Studio controls: the Sessions pill (28px) and the prompt
+   suggestion buttons, which size from their own padding. Both are inline
+   styles, so each reads a custom property the touch rules can set. */
+@media (max-width: 1024px), (pointer: coarse) {
+  :root {
+    --composer-pill-height: 44px;
+  }
+
+  /* Prompt suggestions: height follows their padding, so raise it there. */
+  .mlab-empty button,
+  [class*="studio"] button {
+    min-height: 44px;
+  }
+}
