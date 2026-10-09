@@ -363,11 +363,16 @@ export function createConsoleAuthRoutes(
         return { status: "failed", message: "Not authenticated" } satisfies ChangePasswordResponse;
       }
       const { currentPassword, newPassword } = body;
-      if (newPassword.length < 8) {
+      // Six, matching the setup form. Setup accepts the shipped default of
+      // `123456`, so a change-password rule of eight would have made that
+      // default unsettable — the operator could start with it but never
+      // return to it, and the two screens would disagree about what a valid
+      // password is.
+      if (newPassword.length < 6) {
         set.status = 400;
         return {
           status: "failed",
-          message: "New password must be at least 8 characters",
+          message: "New password must be at least 6 characters",
         } satisfies ChangePasswordResponse;
       }
       const valid = await credentialService.verifyPassword(currentPassword, user.passwordHash);

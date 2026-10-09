@@ -3754,11 +3754,38 @@
  * three, then two, then one as space runs out — without ever letting a card
  * shrink below the width its value needs to stay readable.
  */
+/*
+ * Six across when they fit, then a clean half, third or full — never a row of
+ * five with one card orphaned underneath.
+ *
+ * `auto-fit` with a 176px floor produced exactly that orphan at 1280px: the
+ * 960px content column fits five 182px cards, so the sixth wrapped alone and
+ * the row read as 5 + 1. The breakpoints below pick column counts that divide
+ * six evenly, so the grid is either full, three-and-three, or two-and-two-and-two.
+ */
 .cl-metric-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--space-4);
 }
+
+/* Below the width where six cards stay readable, halve it. */
+@media (max-width: 1400px) {
+  .cl-metric-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .cl-metric-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Two columns hold down to 320px: a metric card needs about 150px for its
+   label and value, and six stacked cards would push the operational grid a
+   full screen down the page. The mobile audit measured this and it reads
+   well — the value stays legible and the row still scans as a set. */
 
 .cl-metric {
   display: flex;

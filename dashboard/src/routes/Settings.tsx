@@ -172,8 +172,8 @@ function PasswordChangeForm(): ReactNode {
 
   const submit = () => {
     setSuccess(false);
-    if (newPassword.length < 8) {
-      setFormError("New password must be at least 8 characters.");
+    if (newPassword.length < 6) {
+      setFormError("New password must be at least 6 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -234,7 +234,7 @@ function PasswordChangeForm(): ReactNode {
       />
       <Input
         id="new-password"
-        label="New password (min 8 characters)"
+        label="New password (min 6 characters)"
         type="password"
         value={newPassword}
         onChange={(e) => setNewPassword(e.target.value)}
