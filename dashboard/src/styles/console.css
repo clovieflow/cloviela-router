@@ -4011,8 +4011,17 @@
 @media (max-width: 720px) {
   .cl-hero {
     display: block;
-    height: auto;
     padding: 0;
+    /* `aspect-ratio` has to go, not just the height.
+       The desktop rule locks the strip to 4:1, and `height: auto` does not
+       release that — a box with a ratio and an auto height takes its height
+       FROM the ratio. At a 374px column that is 94px, while the band plus the
+       copy need 228px, so everything below the image was clipped away and the
+       hero rendered as a picture with no words. `auto` here means the height
+       follows the content, which is what this layout wants. */
+    aspect-ratio: auto;
+    max-height: none;
+    height: auto;
   }
 
   .cl-hero__media {
@@ -4421,5 +4430,43 @@
   .mlab-empty button,
   [class*="studio"] button {
     min-height: 44px;
+  }
+}
+
+/* ── Studio composer toolbar on a narrow screen ─────────────────────────────
+ * The row held attach, model, thinking, sessions, settings and send side by
+ * side with no wrap. On a phone that squeezed the model button — which has a
+ * `maxWidth` but no floor — down to the width of its own ellipsis, rendering
+ * "Pick model" as "k mo" behind a stray scrollbar.
+ *
+ * It wraps now. The send button is pushed to the end of the row it lands on,
+ * so the primary action stays at the trailing edge where a thumb expects it
+ * rather than floating mid-row when the wrap happens.
+ */
+@media (max-width: 720px) {
+  .mlab-toolbar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  /* The model name is the one control that carries information, so it gets
+     the first row to itself and enough width to show a real model id. */
+  .mlab-model-button {
+    order: -1;
+    flex: 1 1 100%;
+    max-width: none !important;
+    justify-content: flex-start;
+    padding-inline: 14px !important;
+    font-size: 12px !important;
+  }
+
+  /* Send stays last, pushed to the trailing edge of whatever row it is on. */
+  .mlab-toolbar > *:last-child {
+    margin-left: auto;
+  }
+
+  /* Secondary controls keep their size but stop fighting for space. */
+  .mlab-toolbar > * {
+    flex-shrink: 0;
   }
 }

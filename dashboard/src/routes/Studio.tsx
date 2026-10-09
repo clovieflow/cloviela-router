@@ -1546,6 +1546,7 @@ export default function ModelLab(): ReactNode {
                   </div>
                 ) : null}
                 <div
+                  className="mlab-toolbar"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -1591,6 +1592,7 @@ export default function ModelLab(): ReactNode {
                     size="sm"
                     onClick={openPicker}
                     title={model || "Pick model"}
+                    className="mlab-model-button"
                     style={{
                       maxWidth: "220px",
                       overflow: "hidden",
