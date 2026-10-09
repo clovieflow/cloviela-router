@@ -119,7 +119,12 @@ export function createApiKeyAuthenticationMiddleware(deps: {
  * store whose outage could masquerade as an auth failure.
  */
 export function createConsoleCsrfMiddleware(): Elysia {
-  const excluded = ["/auth/login", "/auth/setup", "/auth/session"];
+  // The participant portal's sign-in is excluded for the same reason the
+  // operator's login is: the request carries its own credential in the body
+  // and no ambient authority to forge. Without this, an operator who is
+  // signed into the console cannot test the portal in that browser — the CSRF
+  // guard sees their session cookie and refuses the portal's POST.
+  const excluded = ["/auth/login", "/auth/setup", "/auth/session", "/bansos/portal/session"];
   return new Elysia()
     .beforeHandle(async ({ request }) => {
       const path = fastPathname(request.url);
@@ -175,7 +180,12 @@ function pruneConsoleMutationHits(now: number): void {
 }
 
 export function createConsoleMutationLimiterMiddleware(): Elysia {
-  const excluded = ["/auth/login", "/auth/setup", "/auth/session"];
+  // The participant portal's sign-in is excluded for the same reason the
+  // operator's login is: the request carries its own credential in the body
+  // and no ambient authority to forge. Without this, an operator who is
+  // signed into the console cannot test the portal in that browser — the CSRF
+  // guard sees their session cookie and refuses the portal's POST.
+  const excluded = ["/auth/login", "/auth/setup", "/auth/session", "/bansos/portal/session"];
   return new Elysia()
     .beforeHandle(async ({ request, set }) => {
       const path = fastPathname(request.url);

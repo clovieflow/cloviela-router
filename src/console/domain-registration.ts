@@ -4,6 +4,7 @@ import { createCliToolsRoutes } from "./cli-tools/routes";
 import { createAccountQuotaRoutes } from "./quota/account-quota";
 import { createApiKeyRoutes } from "./domains/api-keys/routes";
 import { createBansosRoutes } from "./bansos/routes";
+import { createBansosPortalRoutes } from "./bansos/portal-routes";
 import { familyBucketSpend } from "./domains/api-keys/bucket-spend";
 import { createProviderCatalogRoutes } from "./providers/catalog/routes";
 import {
@@ -328,6 +329,10 @@ export function registerConsoleDomains(
         }),
   }));
   console.use(createBansosRoutes(ctx));
+  // Mounted beside the administrator routes but authorized by its own session
+  // token, never the console cookie: a participant is not an operator and the
+  // two audiences must not share an authentication path.
+  console.use(createBansosPortalRoutes({ db: ctx.db }));
   console.use(createApiKeyRoutes({ store: apiKeyStore, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, shareStore, shareActivity, admissionService: ctx.admissionService, bucketSpend: (keyId, now) => familyBucketSpend(ctx.db, keyId, now) }));
   console.use(createCliToolsRoutes({ service: ctx.cliToolService, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, snapshotInvalidator: ctx.routeSnapshotService }));
   console.use(createAccountQuotaRoutes({
