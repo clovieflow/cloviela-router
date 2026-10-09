@@ -267,6 +267,7 @@ export function createProxyRoutePreparationMiddleware(deps: {
           ...(state.clientUserAgent === undefined
             ? {}
             : { clientUserAgent: state.clientUserAgent }),
+          ...(state.bansos === undefined ? {} : { bansos: state.bansos }),
         });
       } catch (error) {
         // Only a *model* rejection is a strike: an invalid model the key may not

@@ -11,6 +11,7 @@ import {
 } from "../translation/capabilities";
 import type { RequiredCapability } from "../translation/capabilities";
 import { isModelAllowed, type ResolvedApiKey } from "../../security/api-key-auth";
+import type { BansosContext } from "../../console/bansos/enforcement";
 import { allowsCliToolMappings } from "../../security/cli-client-fingerprint";
 import { dropIncompleteToolRounds, repairRequestToolCalls } from "../translation/tool-repair";
 import { sanitizeRequestToolIds } from "../translation/tool-id";
@@ -442,8 +443,14 @@ export class ProxyRequestPreparer {
     readonly signal?: AbortSignal;
     /** Inbound `User-Agent`; gates remote CLI remaps so short slots stay tool-local. */
     readonly clientUserAgent?: string;
+    /**
+     * Present only for a subsidized key. Passed explicitly rather than read
+     * from the request state so this function stays a pure transformation of
+     * its inputs — the same property that makes it testable without a server.
+     */
+    readonly bansos?: BansosContext | undefined;
   }): Promise<PreparedProxyRequest> {
-    const { canonicalRequest: initialRequest, authorization, signal } = input;
+    const { canonicalRequest: initialRequest, authorization, signal, bansos } = input;
     if (signal?.aborted)
       throw new GatewayError("transport_closed", 499, "request was cancelled");
     if (!initialRequest.model || initialRequest.model.trim().length === 0) {
@@ -507,6 +514,26 @@ export class ProxyRequestPreparer {
       throw new GatewayError("model_not_found", 404, "model is not allowed for this API key", {
         model: request.model,
       });
+    }
+    // ── Bansos ────────────────────────────────────────────────────────────
+    // A subsidized key resolves against the program's own allowlist, which the
+    // key's `modelList` cannot express: that list names what the *key* may use
+    // on this gateway, while the program decides which upstream models the
+    // administrator is willing to pay for. Checked against `resolvedTarget`,
+    // after aliases have resolved, so a client cannot reach an unsubsidized
+    // upstream by naming an alias that points at it.
+    if (bansos !== undefined) {
+      const permitted =
+        bansos.allowedUpstreamModels.includes(resolvedTarget) ||
+        bansos.allowedUpstreamModels.includes(request.model);
+      if (!permitted) {
+        throw new GatewayError(
+          "model_not_found",
+          404,
+          "model is not available on this program",
+          { model: request.model },
+        );
+      }
     }
     // An inline image that cannot survive the upstream is dropped here rather
     // than dispatched: a provider rejects the whole request for one corrupt

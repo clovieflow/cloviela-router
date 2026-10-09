@@ -535,7 +535,7 @@ export const poolRoutingSettings = pgTable("pool_routing_settings", {
 export type PoolRoutingSettings = typeof poolRoutingSettings.$inferSelect;
 
 
-export const API_KEY_MODES = ["personal", "share"] as const;
+export const API_KEY_MODES = ["personal", "share", "bansos"] as const;
 export type ApiKeyMode = (typeof API_KEY_MODES)[number];
 
 /**
@@ -615,6 +615,12 @@ export const apiKeys = pgTable(
      */
     clientRouterDenylist: jsonb("client_router_denylist").$type<readonly string[]>(),
     modelPrefix: text("model_prefix"),
+    /**
+     * Set only on `key_mode = 'bansos'` rows: the participant that owns this
+     * credential. Cascades, so deleting a participant revokes its keys rather
+     * than leaving them authenticating against nothing.
+     */
+    bansosParticipantId: uuid("bansos_participant_id"),
     createdAt: createdAtColumn(),
     enabled: boolean("enabled").notNull().default(true),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
@@ -1052,3 +1058,158 @@ export const studioSessions = pgTable(
   },
   (table) => [index("studio_sessions_tenant_updated_idx").on(table.tenantId, table.updatedAt)],
 );
+
+/* ── Bansos AI API ────────────────────────────────────────────────────────────
+ * Administrator-managed subsidized access. These tables are the *policy* layer:
+ * quota, rate limits, concurrency and model allowlists are enforced by the
+ * existing `api_keys` columns and `ApiKeyAdmissionService`, and a Bansos key is
+ * an `api_keys` row with `key_mode = 'bansos'`. Nothing here re-implements
+ * accounting, caching or routing.
+ */
+
+export const BANSOS_ENROLLMENT_MODES = ["closed", "invite", "request", "open"] as const;
+export type BansosEnrollmentMode = (typeof BANSOS_ENROLLMENT_MODES)[number];
+
+export const BANSOS_PARTICIPANT_STATUSES = ["pending", "active", "suspended", "revoked"] as const;
+export type BansosParticipantStatus = (typeof BANSOS_PARTICIPANT_STATUSES)[number];
+
+export const bansosPrograms = pgTable(
+  "bansos_programs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: tenantRefRequired(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    /** Administrator-only; never returned by a participant-facing endpoint. */
+    adminNotes: text("admin_notes"),
+    enabled: boolean("enabled").notNull().default(true),
+
+    enrollmentMode: text("enrollment_mode")
+      .$type<BansosEnrollmentMode>()
+      .notNull()
+      .default("closed"),
+    /** An open program still requires approval unless this is set. */
+    autoApprove: boolean("auto_approve").notNull().default(false),
+    maxParticipants: integer("max_participants"),
+    termsRequired: boolean("terms_required").notNull().default(false),
+    termsText: text("terms_text"),
+
+    /** NULL means "not configured" and resolves to unlimited. A 0 is rejected. */
+    globalRpm: integer("global_rpm"),
+    globalConcurrency: integer("global_concurrency"),
+    globalTokenBudget: bigint("global_token_budget", { mode: "number" }),
+    dailyTokenBudget: bigint("daily_token_budget", { mode: "number" }),
+    monthlyTokenBudget: bigint("monthly_token_budget", { mode: "number" }),
+
+    maxInputTokens: integer("max_input_tokens"),
+    maxOutputTokens: integer("max_output_tokens"),
+    maxRequestBytes: bigint("max_request_bytes", { mode: "number" }),
+    maxRequestDurationMs: integer("max_request_duration_ms"),
+    maxStreamDurationMs: integer("max_stream_duration_ms"),
+    maxKeysPerParticipant: integer("max_keys_per_participant").notNull().default(3),
+
+    defaultTokenAllowance: bigint("default_token_allowance", { mode: "number" }),
+    defaultRpm: integer("default_rpm"),
+    defaultConcurrency: integer("default_concurrency"),
+
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+
+    /** The only upstream this program may spend. */
+    providerId: text("provider_id"),
+    providerAccountIds: jsonb("provider_account_ids")
+      .$type<readonly string[]>()
+      .notNull()
+      .default([]),
+
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("bansos_programs_slug_unique").on(table.tenantId, table.slug),
+    index("bansos_programs_tenant_idx").on(table.tenantId),
+  ],
+);
+export type BansosProgram = typeof bansosPrograms.$inferSelect;
+
+export const bansosParticipants = pgTable(
+  "bansos_participants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    programId: uuid("program_id")
+      .notNull()
+      .references(() => bansosPrograms.id, { onDelete: "cascade" }),
+    tenantId: tenantRefRequired(),
+    displayName: text("display_name").notNull(),
+    email: text("email"),
+    externalRef: text("external_ref"),
+    status: text("status")
+      .$type<BansosParticipantStatus>()
+      .notNull()
+      .default("pending"),
+    adminNotes: text("admin_notes"),
+
+    /** NULL falls back to the program default; an override only ever tightens. */
+    tokenAllowance: bigint("token_allowance", { mode: "number" }),
+    rpm: integer("rpm"),
+    concurrency: integer("concurrency"),
+    modelAllowlist: jsonb("model_allowlist").$type<readonly string[] | null>(),
+
+    tokensConsumed: bigint("tokens_consumed", { mode: "number" }).notNull().default(0),
+    periodStartedAt: timestamp("period_started_at", { withTimezone: true }).notNull().defaultNow(),
+
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("bansos_participants_email_unique").on(table.programId, table.email),
+    index("bansos_participants_program_idx").on(table.programId),
+    index("bansos_participants_status_idx").on(table.programId, table.status),
+  ],
+);
+export type BansosParticipant = typeof bansosParticipants.$inferSelect;
+
+export const bansosModels = pgTable(
+  "bansos_models",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    programId: uuid("program_id")
+      .notNull()
+      .references(() => bansosPrograms.id, { onDelete: "cascade" }),
+    /** Must already exist in the provider's catalog; never invented here. */
+    upstreamModelId: text("upstream_model_id").notNull(),
+    /** What the participant sees and sends. */
+    publicModelId: text("public_model_id").notNull(),
+    displayName: text("display_name"),
+    enabled: boolean("enabled").notNull().default(true),
+    maxInputTokens: integer("max_input_tokens"),
+    maxOutputTokens: integer("max_output_tokens"),
+    dailyTokenBudget: bigint("daily_token_budget", { mode: "number" }),
+    createdAt: createdAtColumn(),
+  },
+  (table) => [
+    uniqueIndex("bansos_models_public_unique").on(table.programId, table.publicModelId),
+    index("bansos_models_program_idx").on(table.programId, table.enabled),
+  ],
+);
+export type BansosModel = typeof bansosModels.$inferSelect;
+
+export const bansosAuditEvents = pgTable(
+  "bansos_audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    programId: uuid("program_id").references(() => bansosPrograms.id, { onDelete: "cascade" }),
+    tenantId: tenantRefRequired(),
+    actorKind: text("actor_kind").$type<"admin" | "participant" | "system">().notNull(),
+    actorId: text("actor_id"),
+    action: text("action").notNull(),
+    targetKind: text("target_kind"),
+    targetId: text("target_id"),
+    /** Metadata only — the API layer strips anything credential-shaped. */
+    detail: jsonb("detail"),
+    createdAt: createdAtColumn(),
+  },
+  (table) => [index("bansos_audit_program_idx").on(table.programId, table.createdAt)],
+);
+export type BansosAuditEvent = typeof bansosAuditEvents.$inferSelect;

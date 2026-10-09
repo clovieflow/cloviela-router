@@ -2,6 +2,7 @@ import { GatewayError } from "../gateway-error";
 import type { CanonicalRequest, UsageRecord } from "../canonical-model";
 import type { ClientIdentity } from "../../security/abuse";
 import type { ResolvedApiKey } from "../../security/api-key-auth";
+import type { BansosContext } from "../../console/bansos/enforcement";
 import type { PreparedProxyRequest } from "./preparer";
 import { createInFlightRegistry, type InFlightSnapshot } from "./inflight";
 import { log } from "../../observability/logger";
@@ -54,6 +55,13 @@ export interface ProxyRequestState {
   clientUserAgent?: string;
   clientIdentity?: ClientIdentity;
   authorization?: ResolvedApiKey;
+  /**
+   * Set only when the resolved key belongs to a Bansos program. Routing reads
+   * it to pin the dispatch to the program's provider and to reject a model the
+   * program does not subsidize — the key's own `modelList` cannot express
+   * "these upstream models, on this provider".
+   */
+  bansos?: BansosContext;
   canonicalRequest?: CanonicalRequest;
   preparedRequest?: PreparedProxyRequest;
   outcome?: ProxyRequestOutcome;
