@@ -28,6 +28,42 @@ export interface RikkaArtAsset {
 }
 
 export const RIKKA_ART = {
+  "story-first-signal": {
+    path: "/rikka/story/01-first-signal.webp",
+    width: 1600,
+    height: 900,
+    placement: "Landing chapter 01 — The First Signal",
+  },
+  "story-welcome": {
+    path: "/rikka/story/02-welcome.webp",
+    width: 1600,
+    height: 900,
+    placement: "Landing chapter 02 — The Many Voices",
+  },
+  "story-quiet-control": {
+    path: "/rikka/story/06-quiet-control.webp",
+    width: 1600,
+    height: 900,
+    placement: "Landing chapter 03 — The Quiet Control",
+  },
+  "story-many-voices": {
+    path: "/rikka/story/03-many-voices.webp",
+    width: 1600,
+    height: 900,
+    placement: "Landing chapter 04 — The Forked Path",
+  },
+  "story-boundary": {
+    path: "/rikka/story/05-boundary.webp",
+    width: 1600,
+    height: 900,
+    placement: "Landing chapter 05 — The Boundary",
+  },
+  "story-open-shore": {
+    path: "/rikka/story/07-open-shore.webp",
+    width: 1600,
+    height: 900,
+    placement: "Landing chapter 06 — The Open Shore",
+  },
   "canonical-portrait": {
     path: "/rikka/canonical-portrait.webp",
     width: 768,
@@ -42,14 +78,14 @@ export const RIKKA_ART = {
   },
   "app-icon": {
     path: "/rikka/app-icon.webp",
-    width: 192,
-    height: 192,
-    placement: "Sidebar/app icon",
+    width: 512,
+    height: 512,
+    placement: "Sidebar, share header and About manifest mark",
   },
   favicon: {
     path: "/rikka/favicon.webp",
-    width: 48,
-    height: 48,
+    width: 128,
+    height: 128,
     placement: "Browser favicon",
   },
   night: {

@@ -86,7 +86,9 @@ export function GithubBadge({ className = "" }: { className?: string }): ReactEl
       />
       <img
         className="github-badge-metric"
-        src={badgeUrl("forks", "1f6feb")}
+        // Champagne gold rather than GitHub blue: the blue was the last
+        // saturated cool hue on an otherwise warm page.
+        src={badgeUrl("forks", "d1ad79")}
         alt="GitHub forks"
         height={20}
         loading="lazy"
