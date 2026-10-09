@@ -10,7 +10,7 @@
  */
 import { type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Gift } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Gift } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardBody, CardHeader } from "../ui/card";
@@ -31,6 +31,7 @@ export function BansosProgramDetail({ programId }: { programId: string }): React
   const program = useBansosProgram(programId);
   const [tab, setTab] = useState<Tab>("participants");
   const [editing, setEditing] = useState(false);
+  const [publicCopied, setPublicCopied] = useState(false);
 
   if (program.isPending) return <LoadingState label={t("bansos.title")} compact />;
   if (program.isError) {
@@ -63,6 +64,35 @@ export function BansosProgramDetail({ programId }: { programId: string }): React
         <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
           {t("bansos.edit")}
         </Button>
+        {/* The page the operator sends to recipients. The link is built here
+            rather than typed by hand, because a wrong slug is a 404 the
+            recipient sees and the operator does not. */}
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={publicCopied ? <Check size={15} /> : <ExternalLink size={15} />}
+          onClick={() => {
+            const url = `${window.location.origin}/console/akses/${encodeURIComponent(data.slug)}`;
+            void navigator.clipboard.writeText(url).then(
+              () => {
+                setPublicCopied(true);
+                window.setTimeout(() => setPublicCopied(false), 2000);
+              },
+              () => undefined,
+            );
+          }}
+        >
+          {publicCopied ? t("bansos.copied") : t("bansos.copyPublicLink")}
+        </Button>
+        <a
+          href={`/console/akses/${encodeURIComponent(data.slug)}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Button variant="ghost" size="sm">
+            {t("bansos.openPublicPage")}
+          </Button>
+        </a>
       </div>
 
       <Card glass>

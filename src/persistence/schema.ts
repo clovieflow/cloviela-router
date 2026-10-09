@@ -1214,34 +1214,3 @@ export const bansosAuditEvents = pgTable(
 );
 export type BansosAuditEvent = typeof bansosAuditEvents.$inferSelect;
 
-/**
- * A participant's portal session.
- *
- * The key is exchanged once for a session token; only the token's hash is
- * stored, so a database dump yields no usable session. The session is bound to
- * the key that opened it, so revoking that key ends its sessions and no
- * others — which is what an operator revoking one credential expects.
- */
-export const bansosPortalSessions = pgTable(
-  "bansos_portal_sessions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    participantId: uuid("participant_id")
-      .notNull()
-      .references(() => bansosParticipants.id, { onDelete: "cascade" }),
-    keyId: uuid("key_id")
-      .notNull()
-      .references(() => apiKeys.id, { onDelete: "cascade" }),
-    tenantId: tenantRefRequired(),
-    sessionTokenHash: text("session_token_hash").notNull().unique(),
-    ipAddress: text("ip_address"),
-    userAgent: text("user_agent"),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: createdAtColumn(),
-  },
-  (table) => [
-    index("bansos_portal_sessions_participant_idx").on(table.participantId),
-    index("bansos_portal_sessions_key_idx").on(table.keyId),
-  ],
-);
-export type BansosPortalSession = typeof bansosPortalSessions.$inferSelect;

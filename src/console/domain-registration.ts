@@ -4,7 +4,8 @@ import { createCliToolsRoutes } from "./cli-tools/routes";
 import { createAccountQuotaRoutes } from "./quota/account-quota";
 import { createApiKeyRoutes } from "./domains/api-keys/routes";
 import { createBansosRoutes } from "./bansos/routes";
-import { createBansosPortalRoutes } from "./bansos/portal-routes";
+import { createBansosPublicRoutes } from "./bansos/public-routes";
+import { envValue } from "../env-compat";
 import { familyBucketSpend } from "./domains/api-keys/bucket-spend";
 import { createProviderCatalogRoutes } from "./providers/catalog/routes";
 import {
@@ -329,10 +330,12 @@ export function registerConsoleDomains(
         }),
   }));
   console.use(createBansosRoutes(ctx));
-  // Mounted beside the administrator routes but authorized by its own session
-  // token, never the console cookie: a participant is not an operator and the
-  // two audiences must not share an authentication path.
-  console.use(createBansosPortalRoutes({ db: ctx.db }));
+  // The page an operator hands to the people they subsidize. Unauthenticated
+  // by design: recipients have no session, and the operator decides who
+  // receives the link.
+  console.use(
+    createBansosPublicRoutes({ db: ctx.db, publicOrigin: envValue("CLOVIELA_PUBLIC_ORIGIN") }),
+  );
   console.use(createApiKeyRoutes({ store: apiKeyStore, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, shareStore, shareActivity, admissionService: ctx.admissionService, bucketSpend: (keyId, now) => familyBucketSpend(ctx.db, keyId, now) }));
   console.use(createCliToolsRoutes({ service: ctx.cliToolService, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, snapshotInvalidator: ctx.routeSnapshotService }));
   console.use(createAccountQuotaRoutes({

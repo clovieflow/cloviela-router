@@ -68,7 +68,7 @@ const CliToolDetail = lazyWithRetry(() => import("./routes/CliToolDetail"), "cli
 const ConsoleLogPage = lazyWithRetry(() => import("./features/logs/ConsoleLogPage"), "console-log");
 const Studio = lazyWithRetry(() => import("./routes/Studio"), "studio");
 const Bansos = lazyWithRetry(() => import("./routes/Bansos"), "bansos");
-const BansosPortal = lazyWithRetry(() => import("./routes/BansosPortal"), "bansos-portal");
+const BansosPublic = lazyWithRetry(() => import("./routes/BansosPublic"), "bansos-public");
 const NotFound = lazyWithRetry(() => import("./routes/NotFound"), "not-found");
 
 /**
@@ -106,10 +106,12 @@ function RouteErrorBoundary(): ReactNode {
           <Route path="/login" element={<Login />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/banned" element={<Banned />} />
-          {/* Participant portal. Public by design: a participant has no
-              console session, and the guard would send them to the operator
-              login. It authenticates itself against /bansos/portal. */}
-          <Route path="/portal" element={<BansosPortal />} />
+          {/* The page handed to subsidized users. Public by design: they have
+              no session, and the operator chooses who gets the link.
+              `/akses` rather than `/bansos/<slug>` because `/bansos/:programId`
+              is already the administrator's detail route — one path cannot mean
+              "this program's admin view" and "this program's public page". */}
+          <Route path="/akses/:slug" element={<BansosPublic />} />
           {/* Public 404: this document is served for `/console/*` deep links,
               so an unknown path must render the public variant rather than
               bouncing an anonymous reader through the auth guard. */}

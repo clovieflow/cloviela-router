@@ -23,6 +23,7 @@ import type { ConsoleDomainContext } from "../domain-registration";
 import { BansosStore } from "../bansos/store";
 import { resolveBansosLimits } from "../bansos/policy";
 import { generateBansosKey, redactSecrets } from "../bansos/keys";
+import { encryptCredential } from "../../security/crypto";
 import { apiKeys } from "../../persistence/schema";
 
 /** A limit field: absent means "leave alone", null means "clear it". */
@@ -560,6 +561,13 @@ export function createBansosRoutes(ctx: ConsoleDomainContext): Elysia<any, any, 
             keyHash: generated.hash,
             keyMode: "bansos" as const,
             keyPrefix: generated.display,
+            // An encrypted copy, so the operator who created this key can read
+            // it back on the Bansos page. Authentication still uses the hash —
+            // this is display only, and no participant-facing endpoint returns
+            // it. Without it, a key the operator loses is a key they must
+            // revoke and reissue, which is the workflow this feature exists to
+            // avoid.
+            keyEncrypted: encryptCredential(generated.secret),
             scopes: ["routing:invoke"] as const,
             bansosParticipantId: participant.id,
             // Participant's grant becomes the key's lifetime budget: the key is
