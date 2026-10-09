@@ -92,7 +92,7 @@ function SystemOverviewPanel({
   const cpuPercent = health ? Math.min(100, Math.max(0, health.cpu_percent)) : 0;
 
   return (
-    <Card>
+    <Card glass>
       <CardHeader
         title="System Overview"
         subtitle="Real-time proxy engine, memory allocation, and upstream health"
@@ -518,7 +518,7 @@ function ApiEndpointCard() {
   };
 
   return (
-    <Card>
+    <Card glass>
       <CardHeader
         title="Gateway Endpoint"
         subtitle="Universal OpenAI & Anthropic Wire API Endpoint"
@@ -631,7 +631,7 @@ export default function Overview(): ReactNode {
           provider, routing and endpoint panels on the right. */}
       <div className="cl-op-grid">
         <div className="cl-op-col">
-          <Card>
+          <Card glass>
             <CardHeader
               title={t("overview.activity.title" as never)}
               subtitle={t("overview.activity.subtitle" as never)}

@@ -207,7 +207,13 @@
   --kbd-bg: #2a2320;
   /* The sidebar sits deeper than the page so the main column reads as the
      raised surface, matching the layered sumi stack in the art direction. */
-  --sidebar-bg: rgba(24, 21, 19, 0.82);
+  /* 0.62 rather than the previous 0.82: the sidebar is meant to read as a
+     translucent panel floating over the atmosphere, and at 0.82 the background
+     photograph was effectively invisible behind it. Measured against the
+     reference, whose sidebar samples at luminance ~73 with the environment
+     clearly visible through it. The blur and the inset highlight carry the
+     legibility that the extra opacity was doing before. */
+  --sidebar-bg: rgba(24, 21, 19, 0.62);
 
   /* ── Liquid glass ────────────────────────────────────────────────────────
    * Three ingredients make a surface read as glass rather than as a
@@ -342,6 +348,26 @@ body {
     );
   background-attachment: fixed;
   overflow: hidden;
+}
+
+/**
+ * The document itself must be transparent for the atmosphere to show.
+ *
+ * `html` and `body` both carried an opaque `--page-bg`. A fixed layer at
+ * `z-index: -2` paints behind its own stacking context but *above* the
+ * document background, so the photograph was rendered and then covered by
+ * these two fills — the element was visible in the inspector and invisible on
+ * screen.
+ *
+ * Dark theme only: Rikka Day keeps its paper field, and the light theme is
+ * explicitly not given a night photograph.
+ */
+/* `:root` IS the html element, so the html selector must be `:root` itself —
+   `:root[data-theme="dark"] html` describes an html inside an html and matches
+   nothing, which is why the first attempt left the document opaque. */
+:root[data-theme="dark"],
+:root[data-theme="dark"] body {
+  background: transparent;
 }
 
 html[data-ambient-glow="off"] body {
