@@ -215,43 +215,90 @@ export function RecentRequestsPanel({
           />
         ) : null}
         {!pending && !error && items.length > 0 ? (
-          <div className="cl-req-table__scroll">
-            <table className="cl-req-table">
-              <thead>
-                <tr>
-                  <th scope="col">{t("overview.column.time" as never)}</th>
-                  <th scope="col">{t("overview.column.provider" as never)}</th>
-                  <th scope="col">{t("overview.column.model" as never)}</th>
-                  <th scope="col">{t("overview.column.tokens" as never)}</th>
-                  <th scope="col">{t("overview.column.latency" as never)}</th>
-                  <th scope="col">{t("overview.column.status" as never)}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => {
-                  const tokens =
-                    item.totalTokens ?? (item.inputTokens ?? 0) + (item.outputTokens ?? 0);
-                  const tone = statusTone(item.httpStatus, item.status);
-                  return (
-                    <tr key={item.requestId}>
-                      <td>{timeOfDay(item.startedAt)}</td>
-                      <td>{item.providerId ?? "—"}</td>
-                      {/* Full value in `title`: the cell truncates visually but
-                          the identifier stays recoverable. */}
-                      <td title={item.model ?? undefined}>{item.model ?? "—"}</td>
-                      <td>{tokens > 0 ? formatTokens(tokens) : "—"}</td>
-                      <td>{item.durationMs === undefined ? "—" : formatDuration(item.durationMs)}</td>
-                      <td>
-                        <span className="cl-pill" data-tone={tone}>
-                          {item.httpStatus ?? item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Desktop: the full table. Six columns of `nowrap` cells cannot fit
+                a phone, and shrinking them would truncate the model id — the one
+                value an operator is usually here to read. */}
+            <div className="cl-req-table__scroll">
+              <table className="cl-req-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{t("overview.column.time" as never)}</th>
+                    <th scope="col">{t("overview.column.provider" as never)}</th>
+                    <th scope="col">{t("overview.column.model" as never)}</th>
+                    <th scope="col">{t("overview.column.tokens" as never)}</th>
+                    <th scope="col">{t("overview.column.latency" as never)}</th>
+                    <th scope="col">{t("overview.column.status" as never)}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    const tokens =
+                      item.totalTokens ?? (item.inputTokens ?? 0) + (item.outputTokens ?? 0);
+                    const tone = statusTone(item.httpStatus, item.status);
+                    return (
+                      <tr key={item.requestId}>
+                        <td>{timeOfDay(item.startedAt)}</td>
+                        <td>{item.providerId ?? "—"}</td>
+                        {/* Full value in `title`: the cell truncates visually but
+                            the identifier stays recoverable. */}
+                        <td title={item.model ?? undefined}>{item.model ?? "—"}</td>
+                        <td>{tokens > 0 ? formatTokens(tokens) : "—"}</td>
+                        <td>{item.durationMs === undefined ? "—" : formatDuration(item.durationMs)}</td>
+                        <td>
+                          <span className="cl-pill" data-tone={tone}>
+                            {item.httpStatus ?? item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {/* Phone: one card per request. Same rows, same values, laid out
+                instead of clipped — a horizontally scrolled table reads as a
+                table that lost its right-hand columns. */}
+            <ul className="cl-req-cards">
+              {items.map((item) => {
+                const tokens =
+                  item.totalTokens ?? (item.inputTokens ?? 0) + (item.outputTokens ?? 0);
+                const tone = statusTone(item.httpStatus, item.status);
+                return (
+                  <li key={item.requestId} className="cl-req-card">
+                    <div className="cl-req-card__head">
+                      <span className="cl-req-card__model" title={item.model ?? undefined}>
+                        {item.model ?? "—"}
+                      </span>
+                      <span className="cl-pill" data-tone={tone}>
+                        {item.httpStatus ?? item.status}
+                      </span>
+                    </div>
+                    <dl className="cl-req-card__meta">
+                      <div>
+                        <dt>{t("overview.column.time" as never)}</dt>
+                        <dd>{timeOfDay(item.startedAt)}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("overview.column.provider" as never)}</dt>
+                        <dd>{item.providerId ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("overview.column.tokens" as never)}</dt>
+                        <dd>{tokens > 0 ? formatTokens(tokens) : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("overview.column.latency" as never)}</dt>
+                        <dd>
+                          {item.durationMs === undefined ? "—" : formatDuration(item.durationMs)}
+                        </dd>
+                      </div>
+                    </dl>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         ) : null}
       </CardBody>
     </Card>

@@ -630,6 +630,116 @@
   min-width: 0;
 }
 
+/* ===== API credential rows =====
+   One credential per row: identity on the left, its controls on the right. The
+   list is a container so the controls can collapse and drop to their own line
+   based on the width the row actually has — the sidebar and page padding are
+   not part of that, which a viewport breakpoint would get wrong. */
+.api-key-credentials {
+  container-type: inline-size;
+  container-name: api-key-credentials;
+}
+
+.api-key-credential {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--inner-border);
+  background: var(--surface-2);
+}
+
+/* A 260px basis is enough for a name, its badges and the key prefix. Anything
+   narrower and the controls wrap to the next line instead of squeezing this
+   block to nothing. */
+.api-key-credential-identity {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.api-key-credential-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.api-key-credential-title strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.api-key-credential-prefix {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-key-credential-created {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.api-key-credential-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+.api-key-credential-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Below ~560px of row width the controls cannot share a line with the identity
+   block without squeezing it to nothing — which is how the name and the enable
+   toggle ended up drawn on top of each other on a phone, with the trailing
+   control cut off past the card edge. Stack them instead, and collapse the
+   labeled buttons to square icons so all of them fit. */
+@container api-key-credentials (max-width: 560px) {
+  .api-key-credential {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .api-key-credential-actions {
+    justify-content: flex-start;
+  }
+
+  /* Eight limits stacked one per line made the card several screens tall; two
+     columns keep the same information at half the height. */
+  .api-key-credential-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 12px;
+  }
+
+  .btn-labeled {
+    width: 30px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+
+  .btn-labeled .btn-label {
+    display: none;
+  }
+}
+
 .api-key-form-columns {
   columns: 2;
   column-gap: 12px;
@@ -3354,6 +3464,17 @@
   word-break: normal;
 }
 
+/* On a phone a `pre` that scrolls sideways looks like a command that was cut
+   off, because the scrollbar is an overlay the browser hides until you touch
+   it. Wrapping shows the whole line, and a copy button sits directly above it,
+   so wrapping never costs the ability to copy the exact text. */
+@media (max-width: 720px) {
+  .code-sample pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* ── Health screen ──────────────────────────────────────────────────────────
    Grouped status cards. Each group states a fact and, when the fact is bad,
    what to do about it — a red dot with no remediation is a dead end. */
@@ -4071,6 +4192,16 @@
   min-width: 0;
 }
 
+/* A grid item defaults to `min-width: auto`, so a card refuses to shrink below
+   the widest thing inside it. The requests table sets `white-space: nowrap` on
+   every cell, which makes its min-content width several times a phone's — the
+   card kept that width, and the page scrolled sideways with the card's right
+   edge off-screen. `min-width: 0` lets the card shrink and hands the overflow
+   to `.cl-req-table__scroll`, which already knows how to scroll it. */
+.cl-op-col > * {
+  min-width: 0;
+}
+
 @media (max-width: 1100px) {
   .cl-op-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -4160,6 +4291,85 @@
 
 .cl-req-table__scroll {
   overflow-x: auto;
+}
+
+/* ── Requests as cards, on a phone ─────────────────────────────────────────
+   The table above is the desktop surface. Below 720px it is replaced by these
+   cards: six `nowrap` columns cannot fit a phone, and the horizontal scroll
+   that would follow reads as a table missing its right-hand side. Both read the
+   same rows, so they cannot disagree. */
+.cl-req-cards {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 720px) {
+  .cl-req-table__scroll {
+    display: none;
+  }
+
+  .cl-req-cards {
+    display: grid;
+    gap: 10px;
+  }
+}
+
+.cl-req-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--inner-border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.cl-req-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* The model id is what an operator came to read, so it truncates rather than
+   wrapping — but the full value stays in the `title` and in the desktop table. */
+.cl-req-card__model {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-req-card__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.cl-req-card__meta > div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cl-req-card__meta dt {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+.cl-req-card__meta dd {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Status pill, sized so a two-word state does not change the row height. */

@@ -134,7 +134,10 @@ export function ApiKeysPanel(): ReactNode {
         ) : (
           // The key list is the tallest thing on the page; bounding it keeps the
           // page chrome in place and scrolls only the rows, like the sidebar.
-          <div className="scroll-region" style={{ maxHeight: "560px", paddingRight: "2px" }}>
+          <div
+            className="scroll-region api-key-credentials"
+            style={{ maxHeight: "560px", paddingRight: "2px" }}
+          >
           <SortableList
             items={keys}
             label="API credentials"
@@ -146,25 +149,10 @@ export function ApiKeysPanel(): ReactNode {
               })
             }
             renderItem={(key) => (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  padding: "12px 14px",
-                  borderRadius: "12px",
-                  border: "1px solid var(--inner-border)",
-                  background: "var(--surface-2)",
-                }}
-              >
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}
-                  >
-                    <strong style={{ fontSize: "13px" }}>
-                      {key.label || "Unnamed credential"}
-                    </strong>
+              <div className="api-key-credential">
+                <div className="api-key-credential-identity">
+                  <div className="api-key-credential-title">
+                    <strong>{key.label || "Unnamed credential"}</strong>
                     <Badge tone={key.revokedAt ? "err" : key.enabled ? "ok" : "warn"}>
                       {key.revokedAt ? "revoked" : key.enabled ? "enabled" : "disabled"}
                     </Badge>
@@ -172,33 +160,13 @@ export function ApiKeysPanel(): ReactNode {
                       {key.keyMode === "share" ? "share template" : "personal"}
                     </Badge>
                   </div>
-                  <code
-                    style={{
-                      display: "block",
-                      marginTop: "2px",
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "11px",
-                      color: "var(--text-secondary)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <code className="api-key-credential-prefix">
                     {key.keyPrefix ? `${key.keyPrefix}…` : `${key.id.slice(0, 12)}…`}
                   </code>
-                  <p style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                  <p className="api-key-credential-created">
                     Created {new Date(key.createdAt).toLocaleDateString()}
                   </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      flexWrap: "wrap",
-                      marginTop: "6px",
-                      fontSize: "10.5px",
-                      color: "var(--text-tertiary)",
-                    }}
-                  >
+                  <div className="api-key-credential-meta">
                     <span>
                       {key.keyMode === "share" ? "Total usage " : "Usage "}
                       {compactTokens(key.tokensConsumed)}
@@ -215,7 +183,7 @@ export function ApiKeysPanel(): ReactNode {
                     </span>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: "6px", flexShrink: 0, flexWrap: "wrap" }}>
+                <div className="api-key-credential-actions">
                   {!key.revokedAt ? (
                     <Switch
                       checked={key.enabled}
@@ -240,40 +208,48 @@ export function ApiKeysPanel(): ReactNode {
                   ) : null}
                   <Button
                     variant="secondary"
-                    size="sm"
+                    size="icon"
                     icon={<Pencil size={13} />}
+                    label="Edit"
+                    aria-label={`Edit ${key.label || "API credential"}`}
+                    title="Edit"
                     onClick={() => { setRevealedSecret(null); setEditTarget(key); }}
-                  >
-                    Edit
-                  </Button>
+                  />
                   {!key.revokedAt && <Button
                     variant="secondary"
-                    size="sm"
+                    size="icon"
                     icon={<Share2 size={13} />}
+                    label={key.keyMode === "share" ? "Recipients" : "Share"}
+                    aria-label={
+                      key.keyMode === "share"
+                        ? `Recipients for ${key.label || "API credential"}`
+                        : `Share ${key.label || "API credential"}`
+                    }
+                    title={key.keyMode === "share" ? "Recipients" : "Share"}
                     onClick={() => openShare(key)}
-                  >
-                    {key.keyMode === "share" ? "Recipients" : "Share"}
-                  </Button>}
+                  />}
                   {!key.revokedAt && key.keyMode !== "share" && (
                     <Button
                       variant="secondary"
-                      size="sm"
+                      size="icon"
                       icon={<RotateCw size={13} />}
+                      label="Rotate"
+                      aria-label={`Rotate ${key.label || "API credential"}`}
+                      title="Rotate"
                       onClick={() => { setRevealedSecret(null); setRotateTarget(key); }}
                       disabled={regenerateKey.isPending}
-                    >
-                      Rotate
-                    </Button>
+                    />
                   )}
                   <Button
                     variant="danger"
-                    size="sm"
+                    size="icon"
                     icon={<Trash2 size={13} />}
+                    label="Revoke"
+                    aria-label={`Revoke ${key.label || "API credential"}`}
+                    title="Revoke"
                     onClick={() => setRevokeTarget(key)}
                     disabled={Boolean(key.revokedAt) || revokeKey.isPending}
-                  >
-                    Revoke
-                  </Button>
+                  />
                 </div>
               </div>
             )}

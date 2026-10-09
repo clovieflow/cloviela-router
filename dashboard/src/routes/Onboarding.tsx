@@ -27,6 +27,7 @@ import {
   TriangleAlert,
   Zap,
 } from "lucide-react";
+import { useAllModelsCatalog } from "../components/ModelPicker";
 import { Card, CardBody, CardHeader } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Stack } from "../components/ui/stack";
@@ -147,15 +148,26 @@ export default function Onboarding(): ReactNode {
   // The curl sample targets the real public surface with a real model id from
   // the catalog when one exists, so the operator can paste it as-is. When the
   // catalog is empty the placeholder is obvious rather than plausible.
+  //
+  // The host comes from the page's own origin rather than a literal. This
+  // panel is read by operators who reached it on the deployment's real
+  // hostname, and a `127.0.0.1` sample told them to test a server that is not
+  // the one they are looking at — it fails for anyone not sitting on the box.
+  const origin = useMemo(() => window.location.origin, []);
+  const catalog = useAllModelsCatalog(true);
+  const sampleModel = useMemo(() => {
+    const real = catalog.items.find((item) => item.kind === "model" && item.entry.enabled);
+    return real?.qualified ?? "{model}";
+  }, [catalog.items]);
   const sampleCommand = useMemo(
     () =>
       [
-        "curl -sS http://127.0.0.1:12800/v1/chat/completions \\",
+        `curl -sS ${origin}/v1/chat/completions \\`,
         '  -H "Authorization: Bearer {key}" \\',
         '  -H "Content-Type: application/json" \\',
-        '  -d \'{"model": "{model}", "messages": [{"role": "user", "content": "ping"}]}\'',
+        `  -d '{"model": "${sampleModel}", "messages": [{"role": "user", "content": "ping"}]}'`,
       ].join("\n"),
-    [],
+    [origin, sampleModel],
   );
 
   return (
