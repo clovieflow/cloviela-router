@@ -3693,3 +3693,471 @@
     display: none;
   }
 }
+
+/* ── Ringkasan metric row ───────────────────────────────────────────────────
+ * Six comparable figures in one row, matching the console's operational
+ * grammar: compact cards, one accent-coloured icon, a prominent value, and a
+ * quiet context line. The row collapses by container width rather than by
+ * viewport, so the same component works in the main column and in a narrow
+ * drawer without a second set of media queries.
+ *
+ * `auto-fit` with a 168px floor puts six across at desktop width and folds to
+ * three, then two, then one as space runs out — without ever letting a card
+ * shrink below the width its value needs to stay readable.
+ */
+.cl-metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
+  gap: var(--space-4);
+}
+
+.cl-metric {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-5) var(--space-5) var(--space-5) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+  transition:
+    border-color var(--dur-micro) var(--ease-spring),
+    background-color var(--dur-micro) var(--ease-spring);
+}
+
+.cl-metric:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.cl-metric__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+
+.cl-metric__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cl-metric__label {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-metric__value {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* An unavailable metric is deliberately not a zero: the dash is styled
+   quieter than a value so a glance never mistakes it for a measurement. */
+.cl-metric__value--empty {
+  color: var(--text-tertiary);
+}
+
+/* The context line wraps rather than truncating. A clipped sentence reads as
+   a broken label ("Kesiapan belum dipe…"), and the row's height is set by the
+   tallest card anyway, so wrapping costs nothing. */
+.cl-metric__detail {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  color: var(--text-tertiary);
+  text-wrap: balance;
+}
+
+/* Text that only assistive technology should read — used to give the
+   unavailable dash a spoken explanation without printing it twice. */
+.cl-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-metric {
+    transition: none;
+  }
+}
+
+/* ── Ringkasan hero ─────────────────────────────────────────────────────────
+ * A thin strip, not a landing-page banner: 132px on desktop, which leaves the
+ * operational content above the fold. The copy sits on a left-to-right scrim
+ * so it stays legible without dimming the illustration as a whole.
+ */
+/*
+ * Height note, measured rather than chosen. The illustration is 1280x400 and
+ * the subject's head occupies most of its height; at a 800px-wide column the
+ * browser shows only `height x 1.6` source pixels, so a 132px strip displays
+ * 211 of 400 and slices the face through the eyes. 224px displays 358px — the
+ * whole head with the shoulders starting — and that is the floor at which the
+ * subject reads as a character instead of a crop.
+ *
+ * The reference design's strip is shorter because its artwork was drawn for
+ * that ratio. This asset was not, and cropping a face to match a number is the
+ * wrong trade; the strip stays as thin as the artwork allows.
+ */
+.cl-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  min-height: 224px;
+  padding: var(--space-7);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.cl-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.cl-hero__media img,
+.cl-hero__media picture {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Biased above centre: the subject's face sits in the upper half of the
+     source, so centring the crop pushes the chin out of frame. */
+  object-position: right 32%;
+}
+
+/* Opaque behind the text, fully transparent before the illustration begins.
+   Fixed colours on purpose: this darkens a photograph, so it must not follow
+   the page theme — a light-theme scrim would erase the art instead. */
+.cl-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(12, 10, 9, 0.94) 0%,
+    rgba(12, 10, 9, 0.88) 32%,
+    rgba(12, 10, 9, 0.55) 52%,
+    rgba(12, 10, 9, 0.12) 68%,
+    rgba(12, 10, 9, 0) 82%
+  );
+}
+
+.cl-hero__copy {
+  position: relative;
+  max-width: 34rem;
+  min-width: 0;
+}
+
+.cl-hero__eyebrow {
+  margin: 0 0 4px;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.cl-hero__title {
+  margin: 0 0 4px;
+  font-family: var(--font-head);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.25;
+  color: #fdf9f4;
+  text-wrap: balance;
+}
+
+.cl-hero__lede {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: rgba(253, 249, 244, 0.78);
+}
+
+/* Below this width the copy would land on Rikka's face. The image becomes a
+   band above a normal text block instead of being cropped further. */
+@media (max-width: 720px) {
+  .cl-hero {
+    display: block;
+    padding: 0;
+  }
+
+  .cl-hero__media {
+    position: relative;
+    height: 116px;
+  }
+
+  .cl-hero__scrim {
+    background: linear-gradient(180deg, rgba(12, 10, 9, 0) 40%, rgba(12, 10, 9, 0.55) 100%);
+  }
+
+  .cl-hero__copy {
+    max-width: none;
+    padding: var(--space-5) var(--space-5) var(--space-6);
+    background: var(--surface-2);
+  }
+
+  .cl-hero__title {
+    font-size: var(--text-md);
+    color: var(--text-primary);
+  }
+
+  .cl-hero__lede {
+    color: var(--text-secondary);
+  }
+}
+
+/* ── Ringkasan operational grid ─────────────────────────────────────────────
+ * Two columns at 60/40, which is the reference's division: the activity chart
+ * and request table need room for a time axis, while the provider, routing and
+ * endpoint panels are lists that read fine in a narrower column.
+ *
+ * `minmax(0, …)` on both tracks is load-bearing. Without it a long model id in
+ * the request table sets the track's minimum to its intrinsic width and the
+ * grid overflows its container instead of letting the cell scroll.
+ */
+.cl-op-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.cl-op-col {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .cl-op-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Activity panel: a fixed plot height keeps the chart from collapsing to zero
+   inside a grid track whose height is content-driven. */
+.cl-activity__plot {
+  height: 208px;
+}
+
+.cl-activity__note {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--status-danger);
+}
+
+/* Panel heading row: title block on the left, action on the right. */
+.cl-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.cl-panel-head__text {
+  min-width: 0;
+}
+
+.cl-panel-head__title {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cl-panel-head__sub {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* Compact request table. The model column is the only one allowed to grow;
+   everything else is sized by its content so the numbers stay aligned. */
+.cl-req-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.cl-req-table th {
+  padding: 0 var(--space-3) var(--space-3);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.cl-req-table td {
+  padding: var(--space-3);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.cl-req-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.cl-req-table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+.cl-req-table td:nth-child(3) {
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.cl-req-table__scroll {
+  overflow-x: auto;
+}
+
+/* Status pill, sized so a two-word state does not change the row height. */
+.cl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.cl-pill[data-tone="positive"] {
+  color: var(--status-success);
+}
+
+.cl-pill[data-tone="danger"] {
+  color: var(--status-danger);
+}
+
+.cl-pill[data-tone="warning"] {
+  color: var(--status-warning);
+}
+
+/* Provider / routing summary rows: label, value, and a hairline between. */
+.cl-summary-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.cl-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cl-summary-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.cl-summary-row dt {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.cl-summary-row dd {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-req-table tbody tr {
+    transition: none;
+  }
+}
+
+/* Provider rows in the status panel: name on the left, state on the right. */
+.cl-provider-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-provider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.cl-provider-row__name {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inline action link inside a panel header. */
+.cl-link-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-control);
+  padding: 3px 6px;
+  transition: color var(--dur-micro) var(--ease-spring), background-color var(--dur-micro) var(--ease-spring);
+}
+
+.cl-link-action:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.cl-link-action:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-link-action {
+    transition: none;
+  }
+}

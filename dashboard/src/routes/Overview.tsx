@@ -12,18 +12,25 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "../components/ui/button";
-import { Card, CardBody, CardHeader } from "../components/ui/card";
 import { Switch } from "../components/ui/switch";
 import { Inline } from "../components/ui/inline";
 import { Stack } from "../components/ui/stack";
 import { ApiKeysPanel } from "../components/ApiKeysPanel";
 import { CompressionPanel } from "../components/CompressionPanel";
 import { ReadinessPanel } from "../components/ReadinessPanel";
-import { ArtBanner } from "../components/rikka/art-surfaces";
+import { MetricRow } from "../features/overview/MetricRow";
+import { OverviewHero } from "../features/overview/OverviewHero";
+import { ProviderStatusPanel, RecentRequestsPanel, RoutingSummary } from "../features/overview/OperationalPanels";
+import { RequestActivity } from "../features/overview/RequestActivity";
+import { Card, CardBody, CardHeader } from "../components/ui/card";
+import { useModelAliases, useModelCombos } from "../hooks/routing";
+import { useApiKeys } from "../hooks/api-keys";
+import { useUsageChart, useUsageRequests } from "../hooks/system";
 import { useT } from "../shared/locale-context";
 import { useTrackedTimeout } from "../hooks/use-timeout";
 import { useNetworkPools } from "../hooks/network";
-import { useSystemHealth } from "../hooks/system";
+import { useProviders } from "../hooks/providers";
+import { useSystemHealth, useUsageSummary } from "../hooks/system";
 import { formatBytes, formatDuration, formatUptime } from "../shared/format";
 
 // ── System Overview 4 Resource Cards ──────────────────────────────────────────
@@ -565,20 +572,111 @@ export default function Overview(): ReactNode {
   const t = useT();
   const healthQuery = useSystemHealth();
   const poolsQuery = useNetworkPools();
+  const providersQuery = useProviders();
+  const summaryQuery = useUsageSummary("24h");
+  const chartQuery = useUsageChart("24h");
+  const requestsQuery = useUsageRequests("24h", 8);
+  const aliasesQuery = useModelAliases();
+  const combosQuery = useModelCombos();
+  const keysQuery = useApiKeys();
 
   const refresh = () => {
-    void Promise.all([healthQuery.refetch(), poolsQuery.refetch()]).catch(() => undefined);
+    void Promise.all([
+      healthQuery.refetch(),
+      poolsQuery.refetch(),
+      providersQuery.refetch(),
+      summaryQuery.refetch(),
+    ]).catch(() => undefined);
   };
 
-  const isFetching = healthQuery.isFetching || poolsQuery.isFetching;
+  const isFetching =
+    healthQuery.isFetching || poolsQuery.isFetching || providersQuery.isFetching;
+
+  // "Active" means the provider can serve: enabled, and either holding
+  // credentials or needing none at all. The `requiresAccount` clause is what
+  // the readiness checklist already uses — omitting it made this card read
+  // "0 / 45" beside a panel saying "1 provider(s) connected", because the
+  // built-in local provider is usable without an account.
+  const providers = providersQuery.data;
+  const activeProviders =
+    providers === undefined
+      ? null
+      : providers.filter(
+          (provider) => provider.enabled && (provider.configured === true || !provider.requiresAccount),
+        ).length;
+  const totalProviders = providers === undefined ? null : providers.length;
+
+  // `healthy` is the only verdict that means the gateway can serve. `degraded`
+  // and `unhealthy` are both "not ready" for the operator's purposes, but they
+  // stay distinguishable in the Health page — this card answers one question.
+  const healthStatus = healthQuery.data?.status;
+  const ready =
+    healthStatus === undefined ? null : healthStatus === "healthy";
 
   return (
     <Stack gap="16px">
-      {/* The welcome banner is the one hero on this page; every other surface
-          uses its own compact vignette so no two screens repeat a layout. */}
-      <ArtBanner name="dashboard-hero" caption={t("overview.artAlt")} />
+      {/* The hero carries the product statement over the illustration. Every
+          other surface on this page is a data panel, so no two blocks repeat
+          the same treatment. */}
+      <OverviewHero />
+      <MetricRow
+        summary={summaryQuery.data}
+        summaryPending={summaryQuery.isPending}
+        activeProviders={activeProviders}
+        totalProviders={totalProviders}
+        ready={ready}
+        checking={healthQuery.isPending}
+      />
+      {/* Operational grid: activity and recent traffic on the left, the
+          provider, routing and endpoint panels on the right. */}
+      <div className="cl-op-grid">
+        <div className="cl-op-col">
+          <Card>
+            <CardHeader
+              title={t("overview.activity.title" as never)}
+              subtitle={t("overview.activity.subtitle" as never)}
+            />
+            <CardBody>
+              <RequestActivity
+                chart={chartQuery.data}
+                pending={chartQuery.isPending}
+                error={chartQuery.isError}
+                onRetry={() => void chartQuery.refetch()}
+                errorCount={summaryQuery.data?.totals.errors}
+              />
+            </CardBody>
+          </Card>
+
+          <RecentRequestsPanel
+            requests={requestsQuery.data}
+            pending={requestsQuery.isPending}
+            error={requestsQuery.isError}
+            onRetry={() => void requestsQuery.refetch()}
+          />
+        </div>
+
+        <div className="cl-op-col">
+          <ProviderStatusPanel
+            providers={providersQuery.data}
+            pending={providersQuery.isPending}
+            error={providersQuery.isError}
+          />
+
+          <RoutingSummary
+            routeCount={
+              aliasesQuery.data === undefined && combosQuery.data === undefined
+                ? undefined
+                : (aliasesQuery.data?.length ?? 0) + (combosQuery.data?.length ?? 0)
+            }
+            keyCount={keysQuery.data?.length}
+            pending={aliasesQuery.isPending || combosQuery.isPending || keysQuery.isPending}
+          />
+
+          <ApiEndpointCard />
+        </div>
+      </div>
+
       <ReadinessPanel />
-      <ApiEndpointCard />
       <SystemOverviewPanel onRefresh={refresh} refreshing={isFetching} />
       <CompressionPanel />
       <ApiKeysPanel />
