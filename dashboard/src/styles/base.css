@@ -124,9 +124,13 @@
   --input-bg: var(--surface-2);
   --border-soft: var(--border-subtle);
 
-  --glass-bg: rgba(255, 254, 251, 0.82);
-  --glass-bg-2: rgba(255, 254, 251, 0.93);
+  --glass-bg: rgba(255, 254, 251, 0.70);
+  --glass-bg-2: rgba(255, 254, 251, 0.88);
   --glass-border-2: rgba(255, 255, 255, 0.72);
+  --glass-blur: 18px;
+  --glass-saturate: 140%;
+  --glass-highlight: rgba(255, 255, 255, 0.85);
+  --glass-shade: rgba(38, 33, 66, 0.06);
   --shadow-card: 0 1px 2px rgba(38, 33, 66, 0.05), 0 10px 28px -6px rgba(38, 33, 66, 0.09);
   --shadow-popout: 0 20px 50px -12px rgba(38, 33, 66, 0.2), 0 0 0 1px var(--inner-border);
 
@@ -205,9 +209,28 @@
      raised surface, matching the layered sumi stack in the art direction. */
   --sidebar-bg: rgba(24, 21, 19, 0.82);
 
-  --glass-bg: rgba(33, 29, 27, 0.72);
-  --glass-bg-2: rgba(41, 35, 32, 0.86);
+  /* ── Liquid glass ────────────────────────────────────────────────────────
+   * Three ingredients make a surface read as glass rather than as a
+   * translucent rectangle, and all three are needed:
+   *
+   *  1. a translucent fill, so the layer behind shows through;
+   *  2. a backdrop blur with SATURATION — Apple's material does not only
+   *     soften what is behind it, it lifts its colour, which is what stops
+   *     glass over a dark background from turning into flat grey;
+   *  3. a light edge — a brighter 1px top inset and a dimmer bottom, which is
+   *     what actually reads as thickness. Without it the surface is a blur.
+   *
+   * The values are deliberately restrained: the assignment asks for controlled
+   * liquid-glass, not frosted-everything. Peak blur is 28px on the topbar and
+   * the specular highlight tops out at 7% white.
+   */
+  --glass-bg: rgba(33, 29, 27, 0.62);
+  --glass-bg-2: rgba(41, 35, 32, 0.80);
   --glass-border-2: rgba(242, 234, 224, 0.14);
+  --glass-blur: 18px;
+  --glass-saturate: 165%;
+  --glass-highlight: rgba(242, 234, 224, 0.07);
+  --glass-shade: rgba(12, 9, 8, 0.34);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.34), 0 16px 40px rgba(12, 9, 8, 0.46);
   --shadow-popout: 0 24px 60px -12px rgba(12, 9, 8, 0.66), 0 0 0 1px var(--inner-border);
 
@@ -372,6 +395,106 @@ html[data-ambient-glow="off"] body {
   animation: skeleton-shimmer 1.4s ease infinite;
 }
 
+/**
+ * ── Motion ──────────────────────────────────────────────────────────────────
+ * Four movements, all short and all on the spring easing the design system
+ * already uses. They exist to make the console feel assembled rather than
+ * painted: a surface arrives, a page settles, a list reveals in sequence, a
+ * number changes without jumping.
+ *
+ * Everything here is inside a `prefers-reduced-motion` guard at the bottom of
+ * this block, so an operator who asks for stillness gets stillness.
+ */
+@keyframes glass-arrive {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes page-settle {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes list-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The sheen that crosses a glass edge once, on arrival. It is a gradient that
+   travels rather than an opacity fade, so it reads as light moving over a
+   surface instead of the surface appearing. */
+@keyframes glass-sheen {
+  from {
+    background-position: -140% 0;
+  }
+  to {
+    background-position: 240% 0;
+  }
+}
+
+.animate-arrive {
+  animation: glass-arrive var(--dur-macro) var(--ease-spring) both;
+}
+
+.animate-settle {
+  animation: page-settle 320ms var(--ease-spring) both;
+}
+
+/* Staggered reveal for a list of surfaces. `--reveal-index` is set inline by
+   the consumer; the delay is capped so a long table never waits seconds for
+   its last row. */
+.animate-reveal {
+  animation: list-reveal 300ms var(--ease-spring) both;
+  animation-delay: min(calc(var(--reveal-index, 0) * 28ms), 240ms);
+}
+
+/* One pass of light across a freshly mounted glass surface. */
+.glass-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--glass-highlight) 90%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 220% 100%;
+  animation: glass-sheen 900ms var(--ease-spring) 120ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-arrive,
+  .animate-settle,
+  .animate-reveal,
+  .glass-sheen::after {
+    animation: none;
+  }
+  .glass-interactive:hover {
+    transform: none;
+  }
+}
+
 @keyframes skeleton-shimmer {
   0% {
     background-position: 200% 0;
@@ -489,15 +612,83 @@ html[data-glass-depth="2"] {
   background: var(--surface-2);
 }
 
+/**
+ * Liquid-glass surface.
+ *
+ * `blur() saturate()` is the pair that matters: blur alone over a dark page
+ * produces grey mud, because averaging dark pixels can only ever give a
+ * flatter dark. Raising saturation keeps the colour that survives the blur.
+ *
+ * The two inset shadows are the light edge. They are `inset` rather than a
+ * border so they follow the corner radius exactly, and they are drawn with
+ * the theme's own highlight/shade tokens so Day and Noir each get an edge
+ * that suits their surface.
+ */
 .glass,
 .card-glass,
 html[data-glass-enabled="true"] .card-solid {
   --card-glass-depth: var(--glass-depth, 1);
   background: var(--glass-bg);
-  backdrop-filter: blur(calc(10px + (var(--card-glass-depth) * 4px)));
-  -webkit-backdrop-filter: blur(calc(10px + (var(--card-glass-depth) * 4px)));
+  /**
+   * Order matters here, and the minifier is the reason.
+   *
+   * Lightning CSS treats `-webkit-backdrop-filter` as the "prefixed" form of
+   * `backdrop-filter` and collapses the pair, keeping only the LAST one it
+   * sees. With the webkit line written second, the standard property was
+   * dropped from the build entirely — and Chromium honours the standard one,
+   * so every glass surface rendered with no blur at all while the stylesheet
+   * looked correct. Declaring the prefixed form FIRST keeps the standard
+   * property in the output, which is what browsers actually use.
+   */
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + (var(--card-glass-depth) * 5px)))
+    saturate(var(--glass-saturate));
+  backdrop-filter: blur(calc(var(--glass-blur) + (var(--card-glass-depth) * 5px)))
+    saturate(var(--glass-saturate));
   border: 1px solid var(--inner-border);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--glass-shade),
+    var(--shadow-card);
+  transition:
+    background-color var(--dur-macro) var(--ease-spring),
+    border-color var(--dur-macro) var(--ease-spring),
+    box-shadow var(--dur-macro) var(--ease-spring);
+}
+
+/* A glass surface that is also interactive lifts very slightly on hover. This
+   is the "alive" cue from the Apple materials: the surface acknowledges the
+   pointer without moving enough to disturb a dense table. */
+@media (hover: hover) {
+  .glass-interactive:hover {
+    background: var(--glass-bg-2);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      inset 0 -1px 0 var(--glass-shade),
+      var(--shadow-popout);
+    transform: translateY(-1px);
+  }
+  .glass-interactive:active {
+    transform: translateY(0);
+    transition-duration: var(--dur-micro);
+  }
+}
+
+.glass-interactive {
+  transition:
+    transform var(--dur-macro) var(--ease-spring),
+    background-color var(--dur-macro) var(--ease-spring),
+    box-shadow var(--dur-macro) var(--ease-spring),
+    border-color var(--dur-macro) var(--ease-spring);
+}
+
+/* Browsers without backdrop-filter get an opaque surface instead of a
+   see-through one with unreadable text on it. */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass,
+  .card-glass,
+  html[data-glass-enabled="true"] .card-solid {
+    background: var(--surface-1);
+  }
 }
 
 .card-elevation-none {

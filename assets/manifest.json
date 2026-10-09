@@ -218,16 +218,15 @@
       "id": "dashboard-hero",
       "path": "dashboard/public/rikka/dashboard-hero.webp",
       "publicUrl": "/rikka/dashboard-hero.webp",
-      "sourceId": "night",
       "width": 1280,
       "height": 400,
       "mime": "image/webp",
-      "bytes": 51418,
-      "sha256": "b2a71f93710c49bee6907b347f82ddc7a7bf5344dd4e4e0cb6b9db5422cda614",
-      "placement": "Overview welcome banner",
-      "crop": null,
-      "acceptanceAsset": "dashboard-hero",
-      "visualQA": "PASS source inspected; browser fit pending"
+      "bytes": 87246,
+      "sha256": "f07b73779bcbae9ef1c251aaf16e17c922b37e2e84e5086ac0bf786135ec6de8",
+      "generatedAt": "2026-10-09T00:34:05.823590+00:00",
+      "prompt": "Rikka Takarada from SSSR.GRIDMAN, same face, hair and outfit reference. Standing calmly at a riverside railing in the evening, hands on the rail, looking left at the city across the water. Wide Japanese riverside at warm dusk: long low bridge, distant city skyline with lit windows, calm water with long warm reflections, stone embankment in the foreground. Very wide cinematic banner, Rikka in the right quarter waist-up, left three quarters calm river and skyline with open sky upper-left for a heading. Warm dusk only: deep sumi-ink sky, low vermilion and amber horizon glow, champagne-gold window lights, soft rim light on her hair. No cool blue cast, no purple, no neon. Premium 2D cel anime illustration, muted warm palette of charcoal, ivory, vermilion and champagne gold. No typography, watermark, oversaturation or sexualization.",
+      "reference": "canonical-portrait",
+      "placement": "Overview hero banner, centre-cropped to the 1280x400 slot"
     },
     {
       "id": "social",

@@ -239,7 +239,7 @@ export function LandingPage(): ReactElement {
             }}
           >
             <span className="story-brand-mark">
-              <img src={`${ASSET_BASE}favicon.webp`} alt="" />
+              <img src={`${ASSET_BASE}rikka/favicon.webp`} alt="" />
             </span>
             <span>
               <strong>Cloviela Router</strong>
