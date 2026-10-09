@@ -95,9 +95,8 @@ each is now proven fixed by the same boundary.
    you had a real key there, restore it from your records. (The rest of that
    file is untouched.)
 3. **Publish.** Done. `clovieflow/cloviela-router` is a standalone public
-   repository — created new rather than kept as a GitHub fork, so it carries no
-   "forked from" banner and no parent — with `cloviela/release` as the default
-   branch. The attribution GPL-3.0 requires lives in `NOTICE.md`: the licence,
+   repository, with `main` as the default branch. The attribution GPL-3.0
+   requires lives in `NOTICE.md`: the licence,
    the origin and revision of the incorporated engine, and a pointer to the
    change log. It is deliberately not a byline in the README or a card in the
    console — the licence asks for notices, not for framing.

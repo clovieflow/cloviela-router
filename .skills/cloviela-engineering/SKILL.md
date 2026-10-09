@@ -1,6 +1,6 @@
 ---
 name: cloviela-engineering
-description: "Use for any Cloviela Router (Cloviela fork) repository development, debugging, refactor, provider, routing, schema, dashboard/API contract, or removal task. Pick the reference, act, finish with evidence."
+description: "Use for any Cloviela Router repository development, debugging, refactor, provider, routing, schema, dashboard/API contract, or removal task. Pick the reference, act, finish with evidence."
 ---
 
 # Cloviela Engineering

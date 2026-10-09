@@ -173,6 +173,7 @@ const ID_MESSAGES = {
   "bansos.vision": "Gambar",
   "bansos.copyName": "Salin nama",
   "bansos.searchModel": "Cari model…",
+  "bansos.updated": "Diperbarui",
 
   "nav.commandPalette": "Palet perintah",
   "nav.searchPages": "Cari halaman…",
@@ -759,6 +760,7 @@ const EN_MESSAGES: Readonly<Record<MessageKey, string>> = {
   "bansos.vision": "Vision",
   "bansos.copyName": "Copy name",
   "bansos.searchModel": "Search models…",
+  "bansos.updated": "Updated",
 
   "nav.commandPalette": "Command palette",
   "nav.searchPages": "Search pages…",

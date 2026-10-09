@@ -38,7 +38,7 @@ function messagesSearchRequest(model: string): Record<string, unknown> {
     max_tokens: 1024,
     stream: false,
     tools: [{ type: "web_search_20250305", name: "web_search" }],
-    messages: [{ role: "user", content: "Coba cari siapa itu risuncode" }],
+    messages: [{ role: "user", content: "Coba cari siapa itu someone" }],
   };
 }
 
@@ -175,13 +175,13 @@ dbDescribe("web-search fallback dispatch", () => {
       },
       events: (request): readonly CanonicalEvent[] => [
         { type: "message_start", sequence_number: 0, model: request.model },
-        { type: "content_delta", sequence_number: 1, content: { kind: "text", text: "risuncode is a developer" } },
+        { type: "content_delta", sequence_number: 1, content: { kind: "text", text: "someone is a developer" } },
         { type: "terminal", sequence_number: 2, state: "complete", stop_reason: "stop" },
       ],
     });
     const searchAdapter = gateway.adapter("exa", {
       searchResults: [
-        { title: "risuncode", url: "https://example.com/risuncode", snippet: "Profile" },
+        { title: "someone", url: "https://example.com/someone", snippet: "Profile" },
       ],
     });
     const response = await gateway.json(
@@ -191,7 +191,7 @@ dbDescribe("web-search fallback dispatch", () => {
     );
     expect(response.status).toBe(200);
     // The search ran on the configured provider, with the caller's query.
-    expect(searchAdapter.searches).toEqual(["Coba cari siapa itu risuncode"]);
+    expect(searchAdapter.searches).toEqual(["Coba cari siapa itu someone"]);
     // The selected route still answers, now with the results in context. They
     // arrive as a completed tool-call + tool-result round: Claude Code counts
     // a search by the `web_search_tool_result` block in the response, so
@@ -208,14 +208,14 @@ dbDescribe("web-search fallback dispatch", () => {
     const toolResult = resultTurn?.content.find((part) => part.kind === "toolResult");
     expect(toolResult !== undefined).toBe(true);
     if (toolResult?.kind === "toolResult") {
-      expect(JSON.stringify(toolResult.content)).toContain("https://example.com/risuncode");
+      expect(JSON.stringify(toolResult.content)).toContain("https://example.com/someone");
     }
     // The round closes on itself: one call, one result, matching ids.
     if (call?.kind === "toolCall" && toolResult?.kind === "toolResult") {
       expect(toolResult.call_id).toBe(call.call_id);
     }
     const body = (await response.json()) as { content: { type: string; text?: string }[] };
-    expect(body.content.some((block) => block.text?.includes("risuncode is a developer"))).toBe(true);
+    expect(body.content.some((block) => block.text?.includes("someone is a developer"))).toBe(true);
   });
 
   test("a failing configured provider advances to the next configured one", async () => {
@@ -261,7 +261,7 @@ dbDescribe("web-search fallback dispatch", () => {
       { token: world.token },
     );
     expect(response.status).toBe(200);
-    expect(exa.searches).toEqual(["Coba cari siapa itu risuncode"]);
+    expect(exa.searches).toEqual(["Coba cari siapa itu someone"]);
   });
 
   test("an exhausted fallback still completes the chat turn", async () => {
@@ -332,14 +332,14 @@ dbDescribe("web-search fallback dispatch", () => {
           {
             type: "content_delta",
             sequence_number: 1,
-            content: { kind: "text", text: attempts === 1 ? "I have no browsing ability" : "risuncode is a developer" },
+            content: { kind: "text", text: attempts === 1 ? "I have no browsing ability" : "someone is a developer" },
           },
           { type: "terminal", sequence_number: 2, state: "complete", stop_reason: "stop" },
         ];
       },
     });
     const searchAdapter = gateway.adapter("exa", {
-      searchResults: [{ title: "risuncode", url: "https://github.com/risunCode", snippet: "Profile" }],
+      searchResults: [{ title: "example", url: "https://example.com/profile", snippet: "Profile" }],
     });
     const response = await gateway.json(
       "/v1/messages",
@@ -348,13 +348,13 @@ dbDescribe("web-search fallback dispatch", () => {
     );
     expect(response.status).toBe(200);
     // The fallback ran, and the route was dispatched again with the hits.
-    expect(searchAdapter.searches).toEqual(["Coba cari siapa itu risuncode"]);
+    expect(searchAdapter.searches).toEqual(["Coba cari siapa itu someone"]);
     expect(attempts).toBe(2);
     // The second dispatch carries the results; the first did not.
-    expect(JSON.stringify(seen[0]?.messages ?? [])).not.toContain("github.com/risunCode");
-    expect(JSON.stringify(seen[1]?.messages ?? [])).toContain("github.com/risunCode");
+    expect(JSON.stringify(seen[0]?.messages ?? [])).not.toContain("example.com/profile");
+    expect(JSON.stringify(seen[1]?.messages ?? [])).toContain("example.com/profile");
     const body = (await response.json()) as { content: { type: string; text?: string }[] };
-    expect(body.content.some((block) => block.text?.includes("risuncode is a developer"))).toBe(true);
+    expect(body.content.some((block) => block.text?.includes("someone is a developer"))).toBe(true);
   });
 
   test("a native route that really searched is not re-dispatched", async () => {
@@ -383,14 +383,14 @@ dbDescribe("web-search fallback dispatch", () => {
           {
             type: "content_delta",
             sequence_number: 1,
-            content: { kind: "text", text: "risuncode is at https://github.com/risunCode" },
+            content: { kind: "text", text: "someone is at https://github.com/someone" },
           },
           { type: "terminal", sequence_number: 2, state: "complete", stop_reason: "stop" },
         ];
       },
     });
     const searchAdapter = gateway.adapter("exa", {
-      searchResults: [{ title: "risuncode", url: "https://github.com/risunCode", snippet: "Profile" }],
+      searchResults: [{ title: "example", url: "https://example.com/profile", snippet: "Profile" }],
     });
     const response = await gateway.json(
       "/v1/messages",
@@ -422,7 +422,7 @@ describe("search query extraction", () => {
             {
               kind: "text",
               text:
-                "coba kau websearch siapa itu risuncode\n" +
+                "coba kau websearch siapa itu someone\n" +
                 "<system-reminder>\n" +
                 "As you answer, you must use the codegraph tool.\n" +
                 "# CLAUDE.md\n" +
@@ -434,7 +434,7 @@ describe("search query extraction", () => {
       ],
     } as unknown as CanonicalRequest;
     const invocation = extractWebSearchInvocation(request);
-    expect(invocation?.query).toBe("coba kau websearch siapa itu risuncode");
+    expect(invocation?.query).toBe("coba kau websearch siapa itu someone");
     // None of the injected prose survives into the query.
     expect(invocation?.query ?? "").not.toContain("system-reminder");
     expect(invocation?.query ?? "").not.toContain("CodeGraph");
@@ -470,13 +470,13 @@ describe("search query extraction", () => {
       messages: [
         {
           role: "user",
-          content: [{ kind: "text", text: "who is risuncode " + "noise ".repeat(400) }],
+          content: [{ kind: "text", text: "who is someone " + "noise ".repeat(400) }],
         },
       ],
     } as unknown as CanonicalRequest;
     const query = extractWebSearchInvocation(request)?.query ?? "";
     expect(query.length).toBeLessThanOrEqual(512);
-    expect(query.startsWith("who is risuncode")).toBe(true);
+    expect(query.startsWith("who is someone")).toBe(true);
   });
 
   test("passes a model-authored tool query through untouched", () => {
@@ -494,13 +494,13 @@ describe("search query extraction", () => {
               kind: "toolCall",
               call_id: "c1",
               name: "web_search",
-              arguments: { query: "risuncode github profile" },
+              arguments: { query: "someone github profile" },
             },
           ],
         },
       ],
     } as unknown as CanonicalRequest;
-    expect(extractWebSearchInvocation(request)?.query).toBe("risuncode github profile");
+    expect(extractWebSearchInvocation(request)?.query).toBe("someone github profile");
   });
 
   test("keeps a client-side WebSearch tool instead of consuming it", () => {

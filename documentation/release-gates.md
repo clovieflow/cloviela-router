@@ -37,7 +37,7 @@ not executed; not claimed.
 | R-29 README, architecture, setup, client, security, release docs | PASS | all present in `documentation/` |
 | R-30 Final report with exact passes/fails/skips/blocked | PASS | `final-report.md` |
 | R-31 Release branch commits contain reviewed real source and assets | PASS | 32 commits on `cloviela/release` (1 import + 31 of our own); no credentials staged; `.env` gitignored |
-| R-32 Public push succeeds if authorized | PASS | published as the standalone repo `clovieflow/cloviela-router` (not a GitHub fork, no parent), default branch `cloviela/release`; upstream `dev`/`SeeYouLater` untouched |
+| R-32 Public push succeeds if authorized | PASS | published as `clovieflow/cloviela-router`, default branch `main` |
 | R-33 Bansos subsidy cannot be bypassed | PASS | live: unsubsidized model 404, wrong provider 404, foreign account 404, suspended participant 403, revoked participant 403, revoked key 401, deleted key 401; see the Bansos section of `release-evidence.md` |
 | R-34 Bansos quota and rate limits are enforced | PASS | live: rpm 2 → 429 after 2 calls; concurrency 1 → 429 on 5 of 6 parallel; allowance 500 → 429 after 504 consumed |
 | R-35 Participant portal is isolated from the operator console | PASS | portal session reaches `/bansos/programs` and `/api-keys` with 401; `adminNotes` and upstream model ids absent from every portal response (grep, 0 hits); revoking a key ends its portal sessions (401) |

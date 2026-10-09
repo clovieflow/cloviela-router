@@ -135,6 +135,8 @@ export default function BansosPublic(): ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [snippet, setSnippet] = useState<"curl" | "python" | "node">("curl");
   const [modelFilter, setModelFilter] = useState("");
+  /** Set by the polling effect so a refresh never flashes the loading state. */
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -156,6 +158,53 @@ export default function BansosPublic(): ReactNode {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // ── Keep the page live ──────────────────────────────────────────────────
+  // The request log is the reason someone leaves this page open, and a page
+  // that only updates when you reload it is a page you reload to find out
+  // nothing happened. Telemetry reaches the database within ~500ms of a
+  // request finishing, so a short poll is enough to make the log feel live.
+  //
+  // Polling stops while the tab is hidden: a background tab asking every few
+  // seconds spends the recipient's battery and the operator's database for
+  // nothing. It resumes — with an immediate fetch — when the tab is visible
+  // again, so a returning reader sees current data without waiting a tick.
+  useEffect(() => {
+    const POLL_MS = 5000;
+    let timer: number | null = null;
+
+    const tick = async (): Promise<void> => {
+      if (document.visibilityState !== "visible") return;
+      await load();
+      setRefreshedAt(new Date());
+    };
+
+    const start = (): void => {
+      if (timer !== null) return;
+      timer = window.setInterval(() => void tick(), POLL_MS);
+    };
+    const stop = (): void => {
+      if (timer === null) return;
+      window.clearInterval(timer);
+      timer = null;
+    };
+
+    const onVisibility = (): void => {
+      if (document.visibilityState === "visible") {
+        void tick();
+        start();
+      } else {
+        stop();
+      }
+    };
+
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [load]);
 
   if (error !== null) {
@@ -426,9 +475,16 @@ console.log(reply.choices[0].message.content);`,
           icon={<Activity size={18} />}
           subtitle={t("bansos.publicLogHint")}
           action={
-            <Badge tone={payload.last24h.failed > 0 ? "warn" : "ok"}>
-              {payload.last24h.requests} {t("bansos.requests")}
-            </Badge>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              {refreshedAt !== null ? (
+                <span className="account-row-meta">
+                  {t("bansos.updated")} {refreshedAt.toLocaleTimeString()}
+                </span>
+              ) : null}
+              <Badge tone={payload.last24h.failed > 0 ? "warn" : "ok"}>
+                {payload.last24h.requests} {t("bansos.requests")}
+              </Badge>
+            </div>
           }
         />
         <CardBody>

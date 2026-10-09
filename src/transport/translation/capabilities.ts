@@ -140,7 +140,7 @@ const MAX_SEARCH_QUERY_CHARS = 512;
  *
  * What this fixes: sending the whole turn verbatim made the provider match
  * on the injected prose and return pages *about those files*. A request for
- * "risuncode" came back with CLAUDE.md, CodeGraph, and AGENTS.md pages.
+ * a personal profile came back with CLAUDE.md, CodeGraph, and AGENTS.md pages.
  *
  * The result is a query only — it never reaches the model, and the model
  * still receives the full, unmodified conversation.

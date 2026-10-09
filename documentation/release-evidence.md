@@ -300,4 +300,3 @@ Tests written for these invariants: `test/console/bansos-enforcement.test.ts`
   8 GB; measurements are recorded with that hardware profile, not the target).
 - `POST /console/api/routing/simulate` and `GET /console/api/system/readiness`
   while their implementing agent's work was still in flight.
-- Fork push (performed only if the authenticated account owns the target).
