@@ -66,6 +66,15 @@ export interface CreateApiKeyRequest {
   sharePopupImage?: string | null;
   sharePopupTitle?: string;
   sharePopupBody?: string;
+  /**
+   * Publish this key on the public Bansos page.
+   *
+   * Settable at creation as well as afterwards, so an operator can issue a key
+   * and publish it in one step instead of creating it and then editing it.
+   */
+  bansosEnabled?: boolean;
+  /** `null` clears an expiry; omitting it leaves the key without one. */
+  expiresAt?: string | null;
 }
 
 /** Public key representation; it never contains a secret, hash, or IP-key digest. */
@@ -97,6 +106,15 @@ export interface ApiKeyResponse {
   readonly createdAt: string;
   readonly revokedAt?: string;
   readonly tokensConsumed: number;
+  /**
+   * Published on the public Bansos page.
+   *
+   * The model allowlist, rate limits and token budget beside it are what the
+   * page shows, so this flag is the only Bansos-specific field there is.
+   */
+  readonly bansosEnabled?: boolean;
+  /** `undefined` = never expires. Enforced in the authentication lookup. */
+  readonly expiresAt?: string;
 }
 /** Creation result; plaintext is returned only when a personal key is minted. */
 export interface CreateApiKeyResponse extends ApiKeyResponse {
@@ -341,6 +359,10 @@ export function sanitizeApiKeyResponse(record: ApiKeyRecord): ApiKeyResponse {
     createdAt: record.createdAt.toISOString(),
     ...(record.revokedAt === undefined ? {} : { revokedAt: record.revokedAt.toISOString() }),
     tokensConsumed: record.tokensConsumed,
+    ...(record.bansosEnabled === undefined ? {} : { bansosEnabled: record.bansosEnabled }),
+    ...(record.expiresAt === undefined || record.expiresAt === null
+      ? {}
+      : { expiresAt: record.expiresAt.toISOString() }),
   };
 }
 

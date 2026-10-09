@@ -43,6 +43,16 @@ export interface ApiKeyRecord {
   readonly createdAt: Date;
   readonly revokedAt?: Date;
   readonly tokensConsumed: number;
+  /** Published on the public Bansos page. */
+  readonly bansosEnabled?: boolean;
+  /**
+   * Absent = never expires.
+   *
+   * The patch type allows `null` as well, because clearing an expiry is a
+   * distinct operation from leaving it alone — and the update writes `null`
+   * through, so the two must not be the same value.
+   */
+  readonly expiresAt?: Date | null;
 }
 
 /**
@@ -154,6 +164,8 @@ export class DrizzleApiKeyStore implements ApiKeyStore {
         : { clientRouterDenylist: row.clientRouterDenylist as string[] }),
       createdAt: row.createdAt,
       ...(row.revokedAt ? { revokedAt: row.revokedAt } : {}),
+      ...(row.expiresAt ? { expiresAt: row.expiresAt } : {}),
+      bansosEnabled: row.bansosEnabled,
       tokensConsumed: row.lifetimeTokensConsumed,
     };
   }
@@ -323,6 +335,11 @@ export class DrizzleApiKeyStore implements ApiKeyStore {
           ...(patch.clientRouterDenylist !== undefined
             ? { clientRouterDenylist: patch.clientRouterDenylist }
             : {}),
+          // Publishing and expiry are ordinary key columns, so they travel
+          // through the same update. Omitting them here was how a setting
+          // could be accepted by the API and never reach the database.
+          ...(patch.bansosEnabled !== undefined ? { bansosEnabled: patch.bansosEnabled } : {}),
+          ...(patch.expiresAt !== undefined ? { expiresAt: patch.expiresAt } : {}),
         })
         .where(and(eq(apiKeys.tenantId, tenantId), eq(apiKeys.id, keyId)))
         .returning();

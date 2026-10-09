@@ -267,7 +267,6 @@ export function createProxyRoutePreparationMiddleware(deps: {
           ...(state.clientUserAgent === undefined
             ? {}
             : { clientUserAgent: state.clientUserAgent }),
-          ...(state.bansos === undefined ? {} : { bansos: state.bansos }),
         });
       } catch (error) {
         // Only a *model* rejection is a strike: an invalid model the key may not
@@ -280,7 +279,7 @@ export function createProxyRoutePreparationMiddleware(deps: {
         // in their own portal, so naming a model outside it is a mistake rather
         // than probing — and banning their IP would cut off every other
         // participant behind the same address.
-        if (strikeIdentity && state.bansos === undefined && isModelRejection(error)) {
+        if (strikeIdentity && isModelRejection(error)) {
           const outcome = await strikeIdentity.strikes
             .noteInvalid({ ip: strikeIdentity.ip })
             .catch(() => null);

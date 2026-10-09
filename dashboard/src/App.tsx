@@ -108,10 +108,9 @@ function RouteErrorBoundary(): ReactNode {
           <Route path="/banned" element={<Banned />} />
           {/* The page handed to subsidized users. Public by design: they have
               no session, and the operator chooses who gets the link.
-              `/akses` rather than `/bansos/<slug>` because `/bansos/:programId`
-              is already the administrator's detail route — one path cannot mean
-              "this program's admin view" and "this program's public page". */}
-          <Route path="/akses/:slug" element={<BansosPublic />} />
+              A single path with no parameter: the page shows every key the
+              operator published, so there is nothing to address. */}
+          <Route path="/akses" element={<BansosPublic />} />
           {/* Public 404: this document is served for `/console/*` deep links,
               so an unknown path must render the public variant rather than
               bouncing an anonymous reader through the auth guard. */}

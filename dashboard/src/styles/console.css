@@ -4470,3 +4470,83 @@
     flex-shrink: 0;
   }
 }
+
+/* ===== bansos advanced sections ===== */
+/* A collapsed group of settings that most operators never touch. The summary
+   is the only thing visible, so it carries the title, an optional count of
+   configured values, and a one-line description. */
+.bansos-advanced {
+  border: 1px solid var(--inner-border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.bansos-advanced > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.bansos-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.bansos-advanced > summary::before {
+  content: "▸";
+  color: var(--text-tertiary);
+  font-size: 11px;
+  transition: transform var(--dur-micro, 120ms) ease;
+}
+
+.bansos-advanced[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.bansos-advanced > summary:hover {
+  background: var(--surface-3, rgba(255, 255, 255, 0.04));
+}
+
+.bansos-advanced > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.bansos-advanced-title {
+  color: var(--text-primary);
+}
+
+/* Says "there is something configured in here" without opening it. */
+.bansos-advanced-badge {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--surface-1, #fff);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.bansos-advanced-desc {
+  flex: 1 1 100%;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.bansos-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-top: 1px solid var(--inner-border);
+}

@@ -3,7 +3,6 @@ import { ConsoleDomainError } from "./shared/errors";
 import { createCliToolsRoutes } from "./cli-tools/routes";
 import { createAccountQuotaRoutes } from "./quota/account-quota";
 import { createApiKeyRoutes } from "./domains/api-keys/routes";
-import { createBansosRoutes } from "./bansos/routes";
 import { createBansosPublicRoutes } from "./bansos/public-routes";
 import { envValue } from "../env-compat";
 import { familyBucketSpend } from "./domains/api-keys/bucket-spend";
@@ -329,7 +328,6 @@ export function registerConsoleDomains(
           },
         }),
   }));
-  console.use(createBansosRoutes(ctx));
   // The page an operator hands to the people they subsidize. Unauthenticated
   // by design: recipients have no session, and the operator decides who
   // receives the link.

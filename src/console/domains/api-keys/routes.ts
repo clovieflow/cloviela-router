@@ -253,6 +253,12 @@ export function createApiKeyOperations(config: ApiKeyConfig) {
         ...(patchRequest.modelPrefix === undefined ? {} : { modelPrefix: patchRequest.modelPrefix }),
         ...(patchRequest.modelAccessMode === undefined ? {} : { modelAccessMode: patchRequest.modelAccessMode }),
         ...(patchRequest.modelList === undefined ? {} : { modelList: patchRequest.modelList }),
+        ...(patchRequest.bansosEnabled === undefined
+          ? {}
+          : { bansosEnabled: patchRequest.bansosEnabled }),
+        ...(patchRequest.expiresAt === undefined
+          ? {}
+          : { expiresAt: patchRequest.expiresAt === null ? null : new Date(patchRequest.expiresAt) }),
         ...(patchRequest.clientRouterDenylist === undefined
           ? {}
           : { clientRouterDenylist: patchRequest.clientRouterDenylist }),
@@ -635,6 +641,10 @@ const apiKeyBody = t.Object({
   sharePopupImage: t.Optional(t.Union([t.String({ maxLength: 2_800_000 }), t.Null()])),
   sharePopupTitle: t.Optional(t.Union([t.String({ maxLength: 120 }), t.Null()])),
   sharePopupBody: t.Optional(t.Union([t.String({ maxLength: 1200 }), t.Null()])),
+  /** Publish or unpublish this key on the public Bansos page. */
+  bansosEnabled: t.Optional(t.Boolean()),
+  /** `null` clears an expiry; `undefined` leaves it unchanged. */
+  expiresAt: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 /** Full replacement order for the tenant's top-level credential list. */

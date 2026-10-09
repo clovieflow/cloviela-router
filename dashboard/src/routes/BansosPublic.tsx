@@ -1,25 +1,18 @@
 /**
  * Public Bansos page.
  *
- * ── What this is ────────────────────────────────────────────────────────────
- * One page an operator can hand to the people they are subsidizing. It answers
- * everything a recipient needs without a support message: where to point their
- * client, which key to use, which models they may call, how much has been
- * spent, how much is left, when access ends, and the exact code to paste.
- * No login, because the operator created every key and is the one sending the
- * link — a sign-in step would add a step without adding a check.
+ * ── What it is ──────────────────────────────────────────────────────────────
+ * One page the operator sends to the people they are subsidizing. It shows the
+ * base URL, every key that was published, the models each key may call, its
+ * limits, and how much of its token budget is left — plus ready-to-paste code,
+ * because a base URL and a key are two facts while a working request is one
+ * action.
  *
- * ── Why ready-to-paste snippets ─────────────────────────────────────────────
- * A base URL and a key are two facts; a working request is one action. The
- * recipients of a subsidy program are frequently not the people who configure
- * their own tooling, and "paste this into a terminal" is a different level of
- * difficulty from "set your base_url and api_key". The snippets are generated
- * from the live values, so they cannot drift from what the page shows.
- *
- * ── What it deliberately does not show ──────────────────────────────────────
- * Nothing per-participant beyond what the operator published, no `adminNotes`,
- * no provider names, no upstream model ids, no other program or tenant. The
- * page renders what the server sends, and the server sends only public fields.
+ * ── No login ────────────────────────────────────────────────────────────────
+ * The operator creates every key and is the one sending the link. Requiring a
+ * sign-in would mean inventing a second credential per recipient — more to
+ * distribute, more to leak — without adding a check on who may read a page
+ * whose URL the operator already chose to share.
  */
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Check, Copy, KeyRound, Sparkles, Terminal } from "lucide-react";
@@ -32,51 +25,32 @@ import { useT } from "../shared/locale-context";
 import { formatNumber } from "../shared/format";
 
 interface PublicKey {
+  readonly id: string;
   readonly label: string;
+  readonly prefix: string | null;
   readonly secret: string | null;
-  readonly keyPrefix: string | null;
-  readonly live: boolean;
-  readonly tokensConsumed: number;
-  readonly tokenBudget: number | null;
-  readonly expiresAt: string | null;
+  readonly models: readonly string[];
+  readonly modelRestricted: boolean;
   readonly requestsPerMinute: number | null;
   readonly maxConcurrentRequests: number | null;
-}
-
-interface PublicModel {
-  readonly publicModelId: string;
-  readonly displayName: string | null;
-  readonly maxInputTokens: number | null;
-  readonly maxOutputTokens: number | null;
+  readonly dailyTokenLimit: number | null;
+  readonly monthlyTokenLimit: number | null;
+  readonly tokenBudget: number | null;
+  readonly tokensConsumed: number;
+  readonly remaining: number | null;
+  readonly expiresAt: string | null;
 }
 
 interface PublicPayload {
-  readonly program: {
-    readonly name: string;
-    readonly description: string | null;
-    readonly baseUrl: string;
-    readonly globalRpm: number | null;
-    readonly globalConcurrency: number | null;
-    readonly startsAt: string | null;
-    readonly endsAt: string | null;
-    readonly maxInputTokens: number | null;
-    readonly maxOutputTokens: number | null;
-    readonly maxRequestBytes: number | null;
-    readonly maxRequestDurationMs: number | null;
-    readonly maxStreamDurationMs: number | null;
-    readonly termsRequired: boolean;
-    readonly termsText: string | null;
-  };
+  readonly baseUrl: string;
   readonly keys: readonly PublicKey[];
-  readonly models: readonly PublicModel[];
   readonly totals: {
+    readonly keys: number;
     readonly tokensConsumed: number;
     readonly tokenBudget: number | null;
-    readonly liveKeys: number;
   };
 }
 
-/** Copies text and reports success; the clipboard API needs a secure context. */
 function CopyButton({ value, label }: { value: string; label: string }): ReactNode {
   const t = useT();
   const [copied, setCopied] = useState(false);
@@ -101,10 +75,10 @@ function CopyButton({ value, label }: { value: string; label: string }): ReactNo
 }
 
 /**
- * A quota bar.
+ * A quota bar, or nothing.
  *
- * Renders nothing when no ceiling was configured, because a bar at 0% for an
- * unlimited key reads as "you have used nothing of your nothing".
+ * Renders nothing when no ceiling was configured: a bar at 0% for an unlimited
+ * key reads as "you have used nothing of your nothing".
  */
 function QuotaBar({ used, budget }: { used: number; budget: number | null }): ReactNode {
   if (budget === null || budget <= 0) return null;
@@ -127,20 +101,12 @@ export default function BansosPublic(): ReactNode {
   const t = useT();
   const [payload, setPayload] = useState<PublicPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [slug, setSlug] = useState<string | null>(null);
   const [snippet, setSnippet] = useState<"curl" | "python" | "node">("curl");
 
-  // The program comes from the URL: `/console/akses/<slug>`. Read from the path
-  // rather than a router param so the page works opened as a bare link.
-  useEffect(() => {
-    const match = /\/akses\/([^/?#]+)/.exec(window.location.pathname);
-    setSlug(match?.[1] ?? null);
-  }, []);
-
-  const load = useCallback(async (target: string) => {
+  const load = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(`/console/api/bansos/public/${encodeURIComponent(target)}`);
+      const response = await fetch("/console/api/bansos/public");
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) {
         throw new Error(
@@ -156,16 +122,9 @@ export default function BansosPublic(): ReactNode {
   }, []);
 
   useEffect(() => {
-    if (slug !== null) void load(slug);
-  }, [slug, load]);
+    void load();
+  }, [load]);
 
-  if (slug === null) {
-    return (
-      <main className="auth-viewport">
-        <ErrorState title={t("bansos.publicTitle")} message={t("bansos.publicNoSlug")} compact />
-      </main>
-    );
-  }
   if (error !== null) {
     return (
       <main className="auth-viewport">
@@ -180,12 +139,20 @@ export default function BansosPublic(): ReactNode {
       </main>
     );
   }
+  if (payload.keys.length === 0) {
+    return (
+      <main className="auth-viewport">
+        <ErrorState title={t("bansos.publicTitle")} message={t("bansos.publicNoKey")} compact />
+      </main>
+    );
+  }
 
-  const liveKeys = payload.keys.filter((key) => key.live);
-  const primaryKey = liveKeys[0];
-  const endpoint = `${payload.program.baseUrl}/v1`;
-  const model = payload.models[0]?.publicModelId ?? "model-name";
-  const key = primaryKey?.secret ?? "YOUR_KEY";
+  const endpoint = `${payload.baseUrl}/v1`;
+  // The first key drives the snippet; a recipient with several picks one from
+  // the table below and the code still matches what the page shows.
+  const primary = payload.keys[0];
+  const key = primary?.secret ?? "YOUR_KEY";
+  const model = primary?.models[0] ?? "model-name";
 
   // Generated from the live values, so a snippet can never show a URL or key
   // the page does not also show.
@@ -227,24 +194,11 @@ console.log(reply.choices[0].message.content);`,
     <main className="app-main-column" style={{ padding: "24px" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 240px", minWidth: 0 }}>
-          <h1>{payload.program.name}</h1>
-          <p className="account-row-meta">{payload.program.description ?? t("bansos.publicSubtitle")}</p>
+          <h1>{t("bansos.publicTitle")}</h1>
+          <p className="account-row-meta">{t("bansos.publicSubtitle")}</p>
         </div>
-        <Badge tone={liveKeys.length > 0 ? "ok" : "err"}>
-          {liveKeys.length > 0 ? t("bansos.publicOpen") : t("bansos.publicClosed")}
-        </Badge>
+        <Badge tone="ok">{t("bansos.publicOpen")}</Badge>
       </div>
-
-      {/* Terms come first when required: a recipient should read them before
-          copying a key, not after. */}
-      {payload.program.termsRequired && payload.program.termsText ? (
-        <Card glass>
-          <CardHeader title={t("bansos.termsText")} subtitle={t("bansos.termsTextHint")} />
-          <CardBody>
-            <p style={{ whiteSpace: "pre-wrap" }}>{payload.program.termsText}</p>
-          </CardBody>
-        </Card>
-      ) : null}
 
       <div className="metric-grid">
         <StatCard
@@ -255,19 +209,23 @@ console.log(reply.choices[0].message.content);`,
         />
         <StatCard
           label={t("bansos.publicBudget")}
-          value={payload.totals.tokenBudget === null ? t("bansos.unlimited") : formatNumber(payload.totals.tokenBudget)}
+          value={
+            payload.totals.tokenBudget === null
+              ? t("bansos.unlimited")
+              : formatNumber(payload.totals.tokenBudget)
+          }
           detail={t("portal.tokens")}
           tone="purple"
         />
         <StatCard
-          label={t("bansos.usageLiveKeys")}
-          value={String(payload.totals.liveKeys)}
+          label={t("bansos.publishedKeys")}
+          value={String(payload.totals.keys)}
           detail={t("bansos.keys")}
           tone="green"
         />
         <StatCard
-          label={t("bansos.globalRpm")}
-          value={payload.program.globalRpm === null ? t("bansos.unlimited") : String(payload.program.globalRpm)}
+          label={t("bansos.rpm")}
+          value={primary?.requestsPerMinute === null || primary === undefined ? t("bansos.unlimited") : String(primary.requestsPerMinute)}
           detail={t("portal.perMinute")}
           tone="orange"
         />
@@ -286,14 +244,10 @@ console.log(reply.choices[0].message.content);`,
             </div>
             <div>
               <div className="account-row-meta">{t("bansos.publicApiKey")}</div>
-              {primaryKey?.secret ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <code style={{ wordBreak: "break-all" }}>{primaryKey.secret}</code>
-                  <CopyButton value={primaryKey.secret} label={t("bansos.copy")} />
-                </div>
-              ) : (
-                <p className="account-row-meta">{t("bansos.publicNoKey")}</p>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <code style={{ wordBreak: "break-all" }}>{key}</code>
+                <CopyButton value={key} label={t("bansos.copy")} />
+              </div>
             </div>
           </div>
           <p className="account-row-meta" style={{ marginTop: "12px" }}>
@@ -302,9 +256,6 @@ console.log(reply.choices[0].message.content);`,
         </CardBody>
       </Card>
 
-      {/* Ready-to-paste code. The recipients are often not the people who
-          configure their own tooling, and a working request is one action
-          where a base URL plus a key is two facts. */}
       <Card glass>
         <CardHeader title={t("bansos.publicSnippet")} icon={<Terminal size={18} />} subtitle={t("bansos.publicSnippetHint")} />
         <CardBody>
@@ -338,130 +289,64 @@ console.log(reply.choices[0].message.content);`,
       </Card>
 
       <Card glass>
-        <CardHeader title={t("portal.modelsTitle")} icon={<KeyRound size={18} />} subtitle={t("portal.modelsHint")} />
-        <CardBody>
-          {payload.models.length === 0 ? (
-            <p className="account-row-meta">{t("portal.modelsEmpty")}</p>
-          ) : (
-            <DataTable headers={[t("bansos.publicModelName"), t("portal.maxInput"), t("portal.maxOutput"), ""]}>
-              {payload.models.map((entry) => (
-                <tr key={entry.publicModelId}>
-                  <td>
-                    <code>{entry.publicModelId}</code>
-                    {entry.displayName ? <span className="account-row-meta"> — {entry.displayName}</span> : null}
-                  </td>
-                  <td>
-                    {entry.maxInputTokens === null
-                      ? t("bansos.unlimited")
-                      : formatNumber(entry.maxInputTokens)}
-                  </td>
-                  <td>
-                    {entry.maxOutputTokens === null
-                      ? t("bansos.unlimited")
-                      : formatNumber(entry.maxOutputTokens)}
-                  </td>
-                  <td>
-                    <CopyButton value={entry.publicModelId} label={t("bansos.copy")} />
-                  </td>
-                </tr>
-              ))}
-            </DataTable>
-          )}
-        </CardBody>
-      </Card>
-
-      <Card glass>
-        <CardHeader title={t("bansos.publicUsage")} icon={<KeyRound size={18} />} subtitle={t("bansos.publicUsageHint")} />
+        <CardHeader title={t("bansos.pickKeys")} icon={<KeyRound size={18} />} subtitle={t("bansos.publicLimitsHint")} />
         <CardBody>
           <DataTable
             headers={[
-              t("bansos.keyLabel"),
-              t("bansos.participantStatus"),
+              t("bansos.publicApiKey"),
+              t("bansos.publicModelName"),
+              t("bansos.rpm"),
               t("bansos.keyConsumed"),
-              t("bansos.usageRemaining"),
+              t("bansos.publicBudget"),
               t("bansos.expiresAt"),
+              "",
             ]}
           >
             {payload.keys.map((entry) => (
-              <tr key={entry.keyPrefix ?? entry.label}>
+              <tr key={entry.id}>
                 <td>
                   <div className="account-row-name">{entry.label}</div>
-                  <code className="account-row-meta">{entry.keyPrefix ?? "—"}</code>
+                  <code className="account-row-meta">{entry.secret ?? entry.prefix ?? "—"}</code>
                 </td>
                 <td>
-                  <Badge tone={entry.live ? "ok" : "disabled"}>
-                    {entry.live ? t("bansos.keyLive") : t("bansos.keyRevoked")}
-                  </Badge>
+                  {entry.modelRestricted ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      {entry.models.map((name) => (
+                        <code key={name} className="account-row-meta">
+                          {name}
+                        </code>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="account-row-meta">{t("bansos.allModels")}</span>
+                  )}
                 </td>
+                <td>{entry.requestsPerMinute ?? t("bansos.unlimited")}</td>
                 <td>
                   <div>{formatNumber(entry.tokensConsumed)}</div>
                   <QuotaBar used={entry.tokensConsumed} budget={entry.tokenBudget} />
                 </td>
                 <td>
-                  {entry.tokenBudget === null
-                    ? t("bansos.unlimited")
-                    : formatNumber(Math.max(0, entry.tokenBudget - entry.tokensConsumed))}
+                  {entry.tokenBudget === null ? t("bansos.unlimited") : formatNumber(entry.tokenBudget)}
+                  {entry.remaining !== null ? (
+                    <div className="account-row-meta">
+                      {formatNumber(entry.remaining)} {t("portal.tokens")}
+                    </div>
+                  ) : null}
                 </td>
                 <td>
                   {entry.expiresAt === null
                     ? t("bansos.never")
                     : new Date(entry.expiresAt).toLocaleString()}
                 </td>
+                <td>
+                  {entry.secret !== null ? (
+                    <CopyButton value={entry.secret} label={t("bansos.copy")} />
+                  ) : null}
+                </td>
               </tr>
             ))}
           </DataTable>
-        </CardBody>
-      </Card>
-
-      {/* The program's own window and per-request ceilings: a recipient needs
-          to know when access ends and how big a request may be. */}
-      <Card glass>
-        <CardHeader title={t("bansos.publicLimits")} subtitle={t("bansos.publicLimitsHint")} />
-        <CardBody>
-          <dl className="about-facts">
-            <div className="about-fact">
-              <dt className="about-fact-label">{t("bansos.sectionWindow")}</dt>
-              <dd className="about-fact-value">
-                {payload.program.startsAt === null && payload.program.endsAt === null
-                  ? t("bansos.always")
-                  : `${payload.program.startsAt === null ? "…" : new Date(payload.program.startsAt).toLocaleString()} → ${
-                      payload.program.endsAt === null ? "…" : new Date(payload.program.endsAt).toLocaleString()
-                    }`}
-              </dd>
-            </div>
-            <div className="about-fact">
-              <dt className="about-fact-label">{t("bansos.globalConcurrency")}</dt>
-              <dd className="about-fact-value">
-                {payload.program.globalConcurrency === null
-                  ? t("bansos.unlimited")
-                  : String(payload.program.globalConcurrency)}
-              </dd>
-            </div>
-            <div className="about-fact">
-              <dt className="about-fact-label">{t("bansos.maxInputTokens")}</dt>
-              <dd className="about-fact-value">
-                {payload.program.maxInputTokens === null
-                  ? t("bansos.unlimited")
-                  : formatNumber(payload.program.maxInputTokens)}
-              </dd>
-            </div>
-            <div className="about-fact">
-              <dt className="about-fact-label">{t("bansos.maxOutputTokens")}</dt>
-              <dd className="about-fact-value">
-                {payload.program.maxOutputTokens === null
-                  ? t("bansos.unlimited")
-                  : formatNumber(payload.program.maxOutputTokens)}
-              </dd>
-            </div>
-            <div className="about-fact">
-              <dt className="about-fact-label">{t("bansos.maxRequestBytes")}</dt>
-              <dd className="about-fact-value">
-                {payload.program.maxRequestBytes === null
-                  ? t("bansos.unlimited")
-                  : formatNumber(payload.program.maxRequestBytes)}
-              </dd>
-            </div>
-          </dl>
         </CardBody>
       </Card>
     </main>

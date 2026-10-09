@@ -11,7 +11,6 @@ import {
 } from "../translation/capabilities";
 import type { RequiredCapability } from "../translation/capabilities";
 import { isModelAllowed, type ResolvedApiKey } from "../../security/api-key-auth";
-import type { BansosContext } from "../../console/bansos/enforcement";
 import { allowsCliToolMappings } from "../../security/cli-client-fingerprint";
 import { dropIncompleteToolRounds, repairRequestToolCalls } from "../translation/tool-repair";
 import { sanitizeRequestToolIds } from "../translation/tool-id";
@@ -448,9 +447,9 @@ export class ProxyRequestPreparer {
      * from the request state so this function stays a pure transformation of
      * its inputs — the same property that makes it testable without a server.
      */
-    readonly bansos?: BansosContext | undefined;
+
   }): Promise<PreparedProxyRequest> {
-    const { canonicalRequest: initialRequest, authorization, signal, bansos } = input;
+    const { canonicalRequest: initialRequest, authorization, signal } = input;
     if (signal?.aborted)
       throw new GatewayError("transport_closed", 499, "request was cancelled");
     if (!initialRequest.model || initialRequest.model.trim().length === 0) {
@@ -515,33 +514,10 @@ export class ProxyRequestPreparer {
         model: request.model,
       });
     }
-    // ── Bansos ────────────────────────────────────────────────────────────
-    // The program publishes its own model names — `bansos-sonnet` — and each
-    // maps to one upstream id the administrator agreed to pay for. The client
-    // sends the published name; the gateway sends the upstream one.
-    //
-    // Translation happens here rather than through the tenant alias table so a
-    // participant cannot reach an upstream the program did not name: the map is
-    // the program's own allowlist, and anything absent from it is refused
-    // before a route is planned.
-    let upstreamModel = resolvedTarget;
-    if (bansos !== undefined) {
-      const mapped = bansos.modelMap.get(request.model) ?? bansos.modelMap.get(resolvedTarget);
-      if (mapped === undefined) {
-        throw new GatewayError(
-          "model_not_found",
-          404,
-          "model is not available on this program",
-          { model: request.model },
-        );
-      }
-      upstreamModel = mapped;
-    }
-    // What the router plans against. For every ordinary key this is the
-    // resolved target unchanged; for a subsidized key it is the upstream the
-    // program authorized. One binding, used everywhere the plan is built, so
-    // the two cannot drift apart between the several `plan()` calls below.
-    const routingModel = bansos === undefined ? request.model : upstreamModel;
+    // What the router plans against: the resolved target. A Bansos key is an
+    // ordinary key whose model allowlist already constrains what it may reach,
+    // so there is no second name to translate.
+    const routingModel = request.model;
     // An inline image that cannot survive the upstream is dropped here rather
     // than dispatched: a provider rejects the whole request for one corrupt
     // attachment, and the buddy family reports it with no field named, so the
@@ -609,37 +585,6 @@ export class ProxyRequestPreparer {
     if (policyCandidates.length !== plan.candidates.length)
       plan = { ...plan, candidates: policyCandidates };
     // ── Bansos provider scope ─────────────────────────────────────────────
-    // A program may name the provider — and the specific accounts — it is
-    // willing to pay. Without this the program's own budget could be spent
-    // through any provider that happens to serve the same model id, which is
-    // money the administrator never offered.
-    //
-    // The same model id served by two providers is the ordinary case, not a
-    // contrived one, so this cannot be left to the model allowlist: the id is
-    // identical and only the provider distinguishes them.
-    if (bansos !== undefined && (bansos.providerId !== null || bansos.providerAccountIds.length > 0)) {
-      const scoped = plan.candidates.filter((candidate) => {
-        if (bansos.providerId !== null && candidate.provider_id !== bansos.providerId) return false;
-        // An empty account list means "any account under that provider"; a
-        // named list restricts to exactly those credentials.
-        if (bansos.providerAccountIds.length === 0) return true;
-        const account = candidate.provider_account_id;
-        return account !== undefined && bansos.providerAccountIds.includes(account);
-      });
-      if (scoped.length === 0) {
-        // Deliberately the same shape as the model refusal: which provider or
-        // account serves a model is gateway topology, and a participant has no
-        // need to learn it.
-        throw new GatewayError(
-          "model_not_found",
-          404,
-          "model is not available on this program",
-          { model: request.model },
-        );
-      }
-      if (scoped.length !== plan.candidates.length) plan = { ...plan, candidates: scoped };
-    }
-    // A canonical request is chat-shaped by definition, so only `llm` rows may
     // serve it. A non-`llm` row (System One) is dispatched by its native route
     // and its `wire_family` is an inert placeholder; without this filter the
     // chat pipeline would route to it and send a chat body to a decision

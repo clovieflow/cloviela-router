@@ -13,7 +13,6 @@ import {
   detectClientRouter,
 } from "../../security/client-router-fingerprint";
 import { createAccessDecision } from "../../security/access-control";
-import { bansosRejectionMessage, resolveBansosContext } from "../../console/bansos/enforcement";
 import { parseCookieValue, SESSION_COOKIE_NAME, isCsrfValid } from "../../security/csrf";
 import type { IpAbuseProtectionService } from "../../security/abuse";
 import { modelAbuseBannedError, type ModelStrikeService } from "../../security/model-abuse";
@@ -86,26 +85,10 @@ export function createApiKeyAuthenticationMiddleware(deps: {
           if (banned) throw modelAbuseBannedError();
         }
       }
-      // ── Bansos ────────────────────────────────────────────────────────────
-      // A subsidized key is still an ordinary key: it authenticated above and
-      // its quota, rate limit and concurrency are enforced by the existing
-      // admission path. What is Bansos-specific is checked here, before the
-      // request is parsed or a route is planned — the participant must be
-      // active, the program enabled and in-window, and the model subsidized.
-      //
-      // `not_bansos` is the common case and costs one indexed read of a column
-      // that is NULL for every other key mode.
-      const bansos = await resolveBansosContext(deps.db, authorization.id);
-      if ("rejection" in bansos) {
-        const refusal = bansosRejectionMessage(bansos.rejection);
-        if (refusal !== null) {
-          throw new GatewayError("invalid_request", refusal.status, refusal.message, {
-            reason: refusal.code,
-          });
-        }
-      } else {
-        deps.stateStore.require(request).bansos = bansos.context;
-      }
+      // A Bansos key needs nothing extra here. It authenticated above and its
+      // model allowlist, rate limit, concurrency and token budget are enforced
+      // by the admission path every other key uses — publishing it on the
+      // public page changed no column those checks read.
       deps.stateStore.require(request).authorization = authorization;
     })
     .as("plugin");
