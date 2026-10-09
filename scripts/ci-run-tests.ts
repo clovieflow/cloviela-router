@@ -73,9 +73,19 @@ mkdirSync(isolatedHome, { recursive: true });
 mkdirSync(isolatedTmp, { recursive: true });
 process.on("exit", () => rmSync(sandbox, { recursive: true, force: true }));
 
+/**
+ * `.env.test` supplies the defaults; a variable already in the environment
+ * wins.
+ *
+ * The order used to be the reverse, which silently discarded an explicitly
+ * exported `CLOVIELA_TEST_DATABASE_URL` — so pointing the suite at a different
+ * database appeared to work while every test still connected to the one named
+ * in the file. An operator overriding a variable for one run is stating the
+ * value they want; a checked-in default must not overrule them.
+ */
 const sharedEnv = {
-  ...process.env,
   ...loadEnvFile(join(PROJECT_ROOT, ".env.test")),
+  ...process.env,
   NODE_ENV: "test",
   HOME: isolatedHome,
   USERPROFILE: isolatedHome,
