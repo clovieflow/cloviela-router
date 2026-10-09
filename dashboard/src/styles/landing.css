@@ -223,7 +223,12 @@ html[data-app="landing"] #root {
 .story-page-section { min-height: 100svh; display: flex; align-items: center; padding: 7rem 0 5rem; }
 .story-page-section { position: relative; overflow: hidden; background: #0f0d0b; background-image: linear-gradient(to right, var(--story-grid) 1px, transparent 1px), linear-gradient(to bottom, var(--story-grid) 1px, transparent 1px); background-size: 44px 100%, 100% 40px; }
 .story-page-ambient { position: absolute; inset: 0; z-index: 0; opacity: .24; background-position: center; background-size: cover; filter: blur(27px) saturate(1.14); transform: scale(1.08); mix-blend-mode: screen; }
-.story-page-shell { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: center; gap: clamp(2rem, 5vw, 5rem); }
+/* Even columns. The previous 0.8/1.2 split was chosen when the plate had a
+   fixed height, so a narrower column did not shrink it. Now that the frame
+   takes its artwork's 16:9 ratio, a narrow column makes the plate small enough
+   that the subject reads as a thumbnail beside the copy — the artwork is the
+   chapter's anchor, not an illustration to the text. */
+.story-page-shell { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: clamp(2rem, 5vw, 5rem); }
 .story-page-copy { min-width: 0; padding-block: 2rem; }
 .story-page-section:nth-child(odd) .story-page-visual { grid-column: 1; grid-row: 1; }
 .story-page-section:nth-child(odd) .story-page-copy { grid-column: 2; grid-row: 1; }
@@ -231,9 +236,29 @@ html[data-app="landing"] #root {
 .story-page-section:nth-child(even) .story-page-visual { grid-column: 2; grid-row: 1; }
 .story-page-copy h1 { max-width: 12ch; margin-top: .75rem; font-family: var(--font-head); font-size: clamp(38px, 4.4vw, 68px); line-height: .98; letter-spacing: -.045em; text-wrap: balance; }
 .story-page-copy .story-description { min-height: 0; max-width: 54ch; margin-top: 1.25rem; }
-.story-page-visual { position: relative; align-self: center; width: 100%; height: min(62svh, 540px); min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--story-line); background: #090d16; box-shadow: 0 24px 80px rgba(0,0,0,.3); }
+.story-page-visual {
+  position: relative;
+  align-self: center;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--story-line);
+  background: #090d16;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+  /* The artwork is 16:9 and the frame used to be a fixed
+     `min(62svh, 540px)` tall, which at a ~560px column made it nearly square:
+     `object-fit: cover` then discarded 42% of the width and pushed the subject
+     against the frame edge, so every plate looked like a bad crop.
+     The frame now takes the artwork's own ratio, which means `cover` has
+     nothing to discard and the composition arrives as drawn. `max-height`
+     keeps a tall window from making the plate outgrow the copy beside it. */
+  aspect-ratio: 16 / 9;
+  max-height: min(62svh, 540px);
+}
 .story-page-visual::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(15,13,11,.04), transparent 50%, rgba(15,13,11,.62)); }
 .story-page-visual img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center; }
+.story-page-visual figcaption { letter-spacing: 0.14em; }
 .story-page-visual figcaption { position: absolute; inset: auto 1rem 1rem; z-index: 1; display: flex; justify-content: space-between; color: rgba(255,255,255,.68); font: 500 9px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
 .story-page-visual figcaption span { color: var(--story-accent); }
 .story-page-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.75rem; }
@@ -258,7 +283,10 @@ html[data-app="landing"] #root {
   .story-page-shell { display: flex; flex-direction: column; align-items: stretch; gap: 2.25rem; }
   .story-page-section:nth-child(n) .story-page-visual { order: -1; grid-column: auto; grid-row: auto; }
   .story-page-section:nth-child(n) .story-page-copy { grid-column: auto; grid-row: auto; }
-  .story-page-visual { order: -1; width: 100%; height: auto; aspect-ratio: 16 / 11; }
+  /* 16/9, matching the artwork, not the 16/11 this used to be. A phone is
+     where the subject is largest relative to the frame, so an 11-unit crop
+     took 12% of the width off a picture that has nothing to spare. */
+  .story-page-visual { order: -1; width: 100%; height: auto; max-height: none; aspect-ratio: 16 / 9; }
   .story-page-copy { padding-block: 0; }
   .story-page-copy h1 { max-width: 13ch; font-size: clamp(34px, 10.5vw, 56px); }
   .story-page-copy .story-description { font-size: 13px; line-height: 1.65; }
