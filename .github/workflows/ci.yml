@@ -64,9 +64,19 @@ jobs:
           # not fail on "database already exists".
           sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'cloviela_test'" \
             | grep -q 1 || sudo -u postgres createdb cloviela_test
-          sudo systemctl start redis-server || sudo systemctl start redis
           pg_isready -h localhost -p 5432
-          redis-cli ping
+
+          # Redis is optional in this project: a suite that needs it skips with
+          # an explicit reason when its URL is absent. The runner does not ship
+          # it, and installing a cache to make an optional dependency present
+          # would slow every run for no coverage gain — so it is started only if
+          # it happens to exist.
+          if command -v redis-server >/dev/null 2>&1; then
+            sudo systemctl start redis-server || sudo systemctl start redis || redis-server --daemonize yes
+            redis-cli ping
+          else
+            echo "Redis absent; suites that need it will skip with a reason."
+          fi
 
       - run: bun install --frozen-lockfile
       - run: bun run test:backend
