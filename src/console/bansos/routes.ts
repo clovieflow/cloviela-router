@@ -616,10 +616,10 @@ export function createBansosRoutes(ctx: ConsoleDomainContext): Elysia<any, any, 
       }
     })
 
-    // Deleting a participant destroys their keys rather than orphaning them.
-    // Revoking first would leave rows whose participant is gone, and the FK is
-    // `set null` — which would quietly promote a subsidized key into an
-    // ordinary personal one that still holds its budget.
+    // Deleting a participant destroys their keys. The FK cascades, but the
+    // store deletes them explicitly first so their auth-cache entries can be
+    // dropped — a cascaded row disappears while its cached authorization
+    // survives, and the key keeps working until the cache expires.
     .delete("/participants/:participantId", async ({ request, params, set }) => {
       try {
         const access = requireTenantScope(ctx.accessResolver(request), "dashboard:write");

@@ -168,11 +168,11 @@ export class BansosStore {
   /**
    * Removes a participant and everything that hangs off them.
    *
-   * The keys go first and are deleted rather than revoked: a participant row
-   * that no longer exists would leave `bansos_participant_id` pointing at
-   * nothing, and the FK is `set null` — which would silently turn their
-   * subsidized keys into ordinary personal keys still holding a budget. That
-   * is the one outcome worse than deleting them.
+   * The keys are deleted explicitly rather than left to the cascade, for one
+   * reason: the cascade cannot tell the auth cache that the keys are gone. The
+   * rows would vanish while their cached authorizations kept saying yes, which
+   * is exactly the bug this ordering was written to fix. Deleting first lets
+   * the key ids be read and their cache entries dropped.
    *
    * Returns the number of keys destroyed so the audit entry can say so; an
    * operator deleting a participant should be told what went with them.
