@@ -781,6 +781,21 @@
       "crop": "top 62% of the source, keeping crown, face and ribbon whole",
       "acceptanceAsset": "day-hero",
       "visualQA": "PASS — head and ribbon intact at 1440/1920/2302/2560px"
+    },
+    {
+      "id": "background",
+      "path": "dashboard/public/rikka/background.webp",
+      "publicUrl": "/rikka/background.webp",
+      "sourceId": "night",
+      "width": 1920,
+      "height": 1293,
+      "mime": "image/webp",
+      "bytes": 34676,
+      "sha256": "f9939818ca287b680ddc1b65c5cd05e7f7587977f99f0ad30730d7ef634a8e3b",
+      "placement": "Global atmospheric background behind the glass shell",
+      "crop": "character-free left region of night.webp (x 0-950), then colour-treated",
+      "acceptanceAsset": "background",
+      "visualQA": "PASS — median luminance 81/255 at source; renders near the reference's 56 through the scrim"
     }
   ],
   "generationAttempts": [
@@ -795,6 +810,19 @@
       "result": "FAILED",
       "error": "Image generation exhausted the resolved image chain: openai-codex/gpt-image-2, google-antigravity/gemini-3-pro-image",
       "consequence": "No new image file was produced. The hero uses the existing assets/sources/night.webp (dark) and day.webp (light), which already carry the requested composition: subject on the right, city panorama through the centre, quiet left third for interface text.",
+      "verifiedNoFileWritten": true
+    },
+    {
+      "requestedAt": "2026-10-09T15:30:00+07:00",
+      "purpose": "Liquid Glass pass — original atmospheric background (16:9, no characters)",
+      "tool": "OMP generate_image",
+      "resolvedChain": [
+        "openai-codex/gpt-image-2",
+        "google-antigravity/gemini-3-pro-image"
+      ],
+      "result": "FAILED",
+      "error": "Image generation exhausted the resolved image chain (two attempts)",
+      "consequence": "No new image was produced. The background is derived from the existing night.webp instead: its character-free left region, desaturated, warmed, darkened and defocused. Recorded here so the brief's generation requirement is not reported as met.",
       "verifiedNoFileWritten": true
     }
   ]

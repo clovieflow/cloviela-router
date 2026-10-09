@@ -118,6 +118,12 @@ export const RIKKA_ART = {
     height: 400,
     placement: "Onboarding welcome banner",
   },
+  "background": {
+    path: "/rikka/background.webp",
+    width: 1920,
+    height: 1293,
+    placement: "Global atmospheric background behind the glass shell (dark theme)",
+  },
   "night-hero": {
     path: "/rikka/night-hero.webp",
     width: 1600,

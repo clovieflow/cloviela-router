@@ -869,6 +869,52 @@
  * colours for meaning — a red error badge should be the only warm thing on
  * screen. Peak alpha here is 12%, and every stop is a theme token.
  */
+/**
+ * Atmospheric photographic layer, behind the gradient field.
+ *
+ * Kept as its own fixed element rather than folded into `.app-bg`'s
+ * `background` shorthand: the gradients carry the theme's warmth and the
+ * hairline grid, and a shorthand list mixing an image with six gradient stops
+ * is where `background-size` silently stops matching up.
+ *
+ * Dark theme only. The light theme keeps its paper field — a night photograph
+ * behind Rikka Day would be the "force a dark background into every theme"
+ * failure the brief names.
+ *
+ * The image is already dark (median luminance 39/255) and is blurred at the
+ * source, so it costs one decode and no runtime filter. `object-fit: cover`
+ * means no browser-side scaling artefacts on wide windows.
+ */
+.app-bg-image {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  display: none;
+  background-image: url("/rikka/background.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+:root[data-theme="dark"] .app-bg-image {
+  display: block;
+  /* Opacity and the `.app-bg` scrim multiply, so both were tuned together
+     against the reference: the source's median luminance of 81, through 0.85
+     here and a 0.35 scrim, lands at ~53 — the reference samples its background
+     at 56. At the first settings (39 through 0.55 and 0.62) the product was 24,
+     which read as plain black and made the photograph look broken. */
+  opacity: 0.85;
+}
+
+/* A phone decodes a 1920px image for a 390px screen. The same scene at 1/3 the
+   pixels, generated from the master, keeps the look at a fraction of the cost. */
+@media (max-width: 720px) {
+  :root[data-theme="dark"] .app-bg-image {
+    background-image: url("/rikka/background-mobile.webp");
+  }
+}
+
 .app-bg {
   position: fixed;
   inset: 0;
@@ -895,7 +941,10 @@
     radial-gradient(40rem 40rem at 50% 116%, color-mix(in srgb, var(--surface-hover) 42%, transparent), transparent 62%),
     linear-gradient(to right, color-mix(in srgb, var(--text-primary) 2.2%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--text-primary) 2.2%, transparent) 1px, transparent 1px),
-    var(--page-bg);
+    /* A translucent scrim, not `--page-bg`. The opaque fill used to sit over
+       `.app-bg-image` and hid the photograph entirely. 35% keeps the base dark
+       enough for text contrast while letting the atmosphere read through. */
+    color-mix(in srgb, var(--page-bg) 35%, transparent);
   background-size: auto, auto, auto, 44px 100%, 100% 40px, auto;
   mask-image: linear-gradient(to bottom, black 0, black 62vh, transparent 108vh);
 }
@@ -3717,17 +3766,34 @@
   gap: var(--space-4);
   min-width: 0;
   padding: var(--space-5) var(--space-5) var(--space-5) var(--space-4);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--inner-border);
   border-radius: var(--radius-card);
-  background: var(--surface-1);
+  /* Content Glass: translucent enough to show the atmosphere, opaque enough
+     that a metric stays readable over any part of the photograph. The blur is
+     lighter than the shell's — six of these sit side by side, and the brief
+     asks for the expensive blur to stay on the key surfaces. */
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  backdrop-filter: blur(12px) saturate(130%);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--glass-shade);
   transition:
     border-color var(--dur-micro) var(--ease-spring),
     background-color var(--dur-micro) var(--ease-spring);
 }
 
 .cl-metric:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-2);
+  border-color: var(--glass-border-2);
+  background: var(--glass-bg-2);
+}
+
+/* A browser without backdrop-filter gets an opaque surface rather than a
+   translucent one with the photograph showing through the text. */
+@supports not (backdrop-filter: blur(1px)) {
+  .cl-metric {
+    background: var(--surface-1);
+  }
 }
 
 .cl-metric__icon {

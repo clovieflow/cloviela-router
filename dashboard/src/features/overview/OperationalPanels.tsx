@@ -60,7 +60,7 @@ export function ProviderStatusPanel({
   );
 
   return (
-    <Card>
+    <Card glass>
       <CardHeader
         title={t("overview.providers.title" as never)}
         action={
@@ -129,7 +129,7 @@ export function RoutingSummary({
     pending || n === undefined ? "—" : formatNumber(n);
 
   return (
-    <Card>
+    <Card glass>
       <CardHeader
         title={t("overview.routing.title" as never)}
         action={
@@ -187,7 +187,7 @@ export function RecentRequestsPanel({
   const items = requests?.items ?? [];
 
   return (
-    <Card>
+    <Card glass>
       <CardHeader
         title={t("overview.requests.title" as never)}
         action={
