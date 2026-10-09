@@ -1174,6 +1174,9 @@
   padding: 8px 14px;
   border-radius: 14px;
   border: 1px solid var(--inner-border);
+  /* The topbar is the one surface content scrolls under, so it takes the
+     deepest blur in the console — it has to stay legible over a dense table. */
+  --glass-depth: 2;
   box-shadow: var(--shadow-card);
 }
 @media (max-width: 1024px) {

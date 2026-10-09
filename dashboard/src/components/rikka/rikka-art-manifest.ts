@@ -122,7 +122,7 @@ export const RIKKA_ART = {
     path: "/rikka/dashboard-hero.webp",
     width: 1280,
     height: 400,
-    placement: "Overview welcome banner",
+    placement: "Overview welcome banner (warm dusk, matches the Noir palette)",
   },
   social: {
     path: "/rikka/social.webp",
