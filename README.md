@@ -215,7 +215,6 @@ bun run typecheck  # both typechecks
 - [`documentation/architecture.md`](documentation/architecture.md) — the request lifecycle and where each behavior is owned.
 - [`documentation/security.md`](documentation/security.md) — trust boundaries, credential handling, and what is redacted where.
 - [`documentation/release.md`](documentation/release.md) — release gates, evidence, and known limitations.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution rules.
 
 ## Verification
 

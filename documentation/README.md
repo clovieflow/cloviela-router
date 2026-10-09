@@ -23,5 +23,3 @@ console.
 
 For the product overview and supported clients, see
 [`README.md`](../README.md).
-
-For contribution rules and pull requests, see [`CONTRIBUTING.md`](../CONTRIBUTING.md).

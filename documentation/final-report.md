@@ -79,7 +79,7 @@ each is now proven fixed by the same boundary.
 - **Backend hardening:** credential redaction, private-first binding, the
   Lite deadlock fix, provider validation, and the build fixes above.
 - **Docs:** README, getting-started (updated), architecture, clients, security,
-  release, CHANGELOG, CONTRIBUTING/AGENTS/SKILL naming.
+  release, CHANGELOG, AGENTS/SKILL naming.
 - **E2E harness** (`scripts/ci-cloviela-e2e.ts`) with a shipped 3522-case index,
   a real mock upstream for all three wire families, a safety guard that refuses
   unsafe targets, and per-ID evidence output. Written and self-checked; the
