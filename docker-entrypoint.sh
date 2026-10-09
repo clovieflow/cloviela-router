@@ -11,13 +11,31 @@ APP_GID=10001
 # Gateway-owned state (lite database, install id) plus telemetry payload
 # captures. Both default under /app/data; a relative payload dir is resolved
 # against /app so it stays inside the volume.
-STATE_DIR="${CARTETHYIA_DATA_DIR:-/app/data}"
+# Read the same names, in the same order, as the application: the current
+# spelling wins, and the pre-rename one is honoured when it is what the
+# operator set. Reading only the legacy name meant a deployment that exported
+# CLOVIELA_DATA_DIR had its real mount left owned by root, so the process
+# dropped to 10001 and then failed to write the database it had just been
+# pointed at.
+#
+# The variable is assigned by name rather than passed by value: a relative
+# path has to be resolved against the working directory *after* the lookup,
+# and expanding it as an argument would read the wrong scope.
+pick() {
+  # $1 = variable to set, $2 = current name, $3 = legacy name, $4 = default
+  eval "chosen=\${$2:-}"
+  if [ -z "$chosen" ]; then eval "chosen=\${$3:-}"; fi
+  if [ -z "$chosen" ]; then chosen="$4"; fi
+  eval "$1=\$chosen"
+}
+
+pick STATE_DIR CLOVIELA_DATA_DIR CARTETHYIA_DATA_DIR /app/data
+pick PAYLOAD_DIR CLOVIELA_TELEMETRY_PAYLOAD_DIR CARTETHYIA_TELEMETRY_PAYLOAD_DIR /app/data
+
+# A relative payload directory is resolved against /app so it stays inside the
+# volume; the state directory is the database location and must be absolute.
 case "$STATE_DIR" in /*) ;; *) STATE_DIR="/app/data" ;; esac
-PAYLOAD_DIR="${CARTETHYIA_TELEMETRY_PAYLOAD_DIR:-/app/data}"
-case "$PAYLOAD_DIR" in
-  /*) ;;
-  *) PAYLOAD_DIR="/app/$PAYLOAD_DIR" ;;
-esac
+case "$PAYLOAD_DIR" in /*) ;; *) PAYLOAD_DIR="/app/$PAYLOAD_DIR" ;; esac
 
 # A mounted volume arrives owned by root, while the application runs as 10001.
 # The image deliberately does not set USER, so the entrypoint starts as root,
