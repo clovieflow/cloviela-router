@@ -12,8 +12,14 @@
  * one-time issue response, and it is the only place a credential is readable.
  */
 
-/** The participant lifecycle the gateway enforces. */
-export type BansosParticipantStatus = "active" | "suspended" | "expired" | "pending";
+/**
+ * The participant lifecycle the gateway enforces.
+ *
+ * `expired` is deliberately absent: expiry is an `expiresAt` timestamp, not a
+ * status, and a participant whose date has passed still reads `active` while
+ * being refused — reporting it as a status would imply someone set it.
+ */
+export type BansosParticipantStatus = "pending" | "active" | "suspended" | "revoked";
 
 /** How a participant may join a program. */
 export type BansosEnrollmentMode = "closed" | "invite" | "request" | "open";

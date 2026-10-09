@@ -32,7 +32,7 @@ const STATUS_TONE: Readonly<Record<BansosParticipantStatus, "ok" | "warn" | "err
   active: "ok",
   pending: "warn",
   suspended: "err",
-  expired: "disabled",
+  revoked: "disabled",
 };
 
 /**
@@ -44,7 +44,7 @@ const STATUS_TONE: Readonly<Record<BansosParticipantStatus, "ok" | "warn" | "err
 const STATUS_KEY = {
   active: "bansos.status.active",
   suspended: "bansos.status.suspended",
-  expired: "bansos.status.expired",
+  revoked: "bansos.status.revoked",
   pending: "bansos.status.pending",
 } as const satisfies Readonly<Record<BansosParticipantStatus, string>>;
 
