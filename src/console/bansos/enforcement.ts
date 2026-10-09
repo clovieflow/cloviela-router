@@ -29,8 +29,22 @@ export interface BansosContext {
   readonly programId: string;
   readonly participantId: string;
   readonly programSlug: string;
-  /** The upstream provider this program may spend. */
+  /**
+   * The upstream provider this program may spend. `null` = any provider whose
+   * models the program names. Set, it is a hard restriction: a subsidized
+   * request may not reach another provider even if that provider serves the
+   * same model id, because the administrator agreed to fund one account, not
+   * "whoever serves this name cheapest".
+   */
   readonly providerId: string | null;
+  /**
+   * Provider accounts this program may spend, when the administrator named
+   * them. Empty = any account under `providerId`. Non-empty is a hard
+   * allowlist: the program's budget is attached to specific credentials, and
+   * a request that would draw on another account is spending money the
+   * administrator did not offer.
+   */
+  readonly providerAccountIds: readonly string[];
   /** Upstream model ids the program subsidizes. */
   readonly allowedUpstreamModels: readonly string[];
   /** Public id → upstream id, for translating what a client asked for. */
@@ -129,6 +143,7 @@ export async function resolveBansosContext(
       participantId: participant.id,
       programSlug: program.slug,
       providerId: program.providerId,
+      providerAccountIds: program.providerAccountIds ?? [],
       allowedUpstreamModels: permitted.map((row) => row.upstreamModelId),
       modelMap,
     },

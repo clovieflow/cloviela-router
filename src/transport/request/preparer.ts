@@ -608,6 +608,37 @@ export class ProxyRequestPreparer {
       });
     if (policyCandidates.length !== plan.candidates.length)
       plan = { ...plan, candidates: policyCandidates };
+    // ── Bansos provider scope ─────────────────────────────────────────────
+    // A program may name the provider — and the specific accounts — it is
+    // willing to pay. Without this the program's own budget could be spent
+    // through any provider that happens to serve the same model id, which is
+    // money the administrator never offered.
+    //
+    // The same model id served by two providers is the ordinary case, not a
+    // contrived one, so this cannot be left to the model allowlist: the id is
+    // identical and only the provider distinguishes them.
+    if (bansos !== undefined && (bansos.providerId !== null || bansos.providerAccountIds.length > 0)) {
+      const scoped = plan.candidates.filter((candidate) => {
+        if (bansos.providerId !== null && candidate.provider_id !== bansos.providerId) return false;
+        // An empty account list means "any account under that provider"; a
+        // named list restricts to exactly those credentials.
+        if (bansos.providerAccountIds.length === 0) return true;
+        const account = candidate.provider_account_id;
+        return account !== undefined && bansos.providerAccountIds.includes(account);
+      });
+      if (scoped.length === 0) {
+        // Deliberately the same shape as the model refusal: which provider or
+        // account serves a model is gateway topology, and a participant has no
+        // need to learn it.
+        throw new GatewayError(
+          "model_not_found",
+          404,
+          "model is not available on this program",
+          { model: request.model },
+        );
+      }
+      if (scoped.length !== plan.candidates.length) plan = { ...plan, candidates: scoped };
+    }
     // A canonical request is chat-shaped by definition, so only `llm` rows may
     // serve it. A non-`llm` row (System One) is dispatched by its native route
     // and its `wire_family` is an inert placeholder; without this filter the
