@@ -8,18 +8,6 @@ import type { ReactElement } from "react";
 export const GITHUB_REPO_URL = "https://github.com/clovieflow/cloviela-router";
 
 /**
- * The open-source gateway core this project is built on.
- *
- * Kept as a separate constant because it serves a different purpose: it is the
- * attribution required by GPL-3.0, shown in About -> Credits. Pointing the star
- * badge at it would send this product's visitors to someone else's project.
- */
-// The upstream project keeps its own name: it is a different project by a
-// different author, and this is the attribution the GPL requires. Renaming it
-// here would credit the wrong people and point at a URL that does not exist.
-export const UPSTREAM_PROJECT_URL = "https://github.com/risunCode/Cartethyia";
-
-/**
  * The badge host, declared here rather than imported from the backend CSP
  * module: that module reads `node:crypto` and browser code must not pull in a
  * Node-only runtime dependency. The two must be kept in agreement by hand —

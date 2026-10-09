@@ -414,9 +414,6 @@ const ID_MESSAGES = {
   "about.license": "Lisensi",
   "about.licenseBody":
     "Kode sumber proyek ini dilisensikan di bawah GNU General Public License v3.0 (GPL-3.0-only). Anda berhak memakai, mempelajari, mengubah, dan menyebarkan ulang kode ini dengan syarat yang sama.",
-  "about.upstream": "Kredit",
-  "about.upstreamBody":
-    "Inti gateway ini dibangun di atas proyek open-source {repo} oleh risunCode, dilisensikan GPL-3.0-only. Cloviela Router mengembangkannya dengan identitas, tema, dan fitur operasionalnya sendiri.",
   "about.derivative": "Perubahan pada kode asli",
   "about.derivativeBody":
     "Sejak 2026: tema Cloviela, alur panduan awal, simulator rute, dan halaman operasional tambahan. Kontrak protokol, autentikasi, dan penyimpanan tidak diubah.",
@@ -811,9 +808,6 @@ const EN_MESSAGES: Readonly<Record<MessageKey, string>> = {
   "about.license": "License",
   "about.licenseBody":
     "This project's source code is licensed under the GNU General Public License v3.0 (GPL-3.0-only). You may use, study, modify, and redistribute it under the same terms.",
-  "about.upstream": "Credits",
-  "about.upstreamBody":
-    "This gateway core is built on the open-source project {repo} by risunCode, licensed GPL-3.0-only. Cloviela Router develops it further with its own identity, theme, and operational features.",
   "about.derivative": "Changes to the original code",
   "about.derivativeBody":
     "Since 2026: the Cloviela theme, a getting-started flow, a route simulator, and additional operational pages. Protocol, authentication, and storage contracts are unchanged.",

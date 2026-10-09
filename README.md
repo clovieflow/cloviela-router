@@ -116,16 +116,6 @@ it under the same terms. If you distribute it or a modified version, keep the
 license notices, provide the corresponding source, and license covered work
 under GPLv3.
 
-### Built on
-
-The gateway core is **Cartethyia** by risunCode
-(<https://github.com/risunCode/Cartethyia>), imported at branch `dev`, commit
-`382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`, also GPL-3.0-only. It is the
-first commit in this repository and names its origin in the commit message.
-Its copyright and license are retained as the GPL requires, and every change
-made here is recorded in [`CHANGELOG.md`](CHANGELOG.md) and summarised in the
-console under **Tentang → Kredit**.
-
 ### Artwork
 
 The character illustrations in `assets/` and `dashboard/public/rikka/` were
