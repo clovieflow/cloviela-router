@@ -1,7 +1,7 @@
 # Contributing to Cloviela Router
 
 Cloviela Router is GPLv3 software. Its gateway core derives from
-[Cloviela](https://github.com/risunCode/Cloviela), so a bug in shared
+[Cartethyia](https://github.com/risunCode/Cartethyia), so a bug in shared
 routing, protocol, or persistence behavior usually belongs upstream where every
 downstream project benefits. Keep presentation changes (theme, artwork,
 localization) separate from those core changes so either can move on its own.
