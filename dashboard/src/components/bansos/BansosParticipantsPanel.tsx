@@ -53,7 +53,7 @@ export function BansosParticipantsPanel({ programId }: { programId: string }): R
   const participants = useBansosParticipants(programId);
   const update = useUpdateBansosParticipant();
   const remove = useDeleteBansosParticipant();
-  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<BansosParticipant | "new" | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [keysFor, setKeysFor] = useState<BansosParticipant | null>(null);
 
@@ -62,7 +62,7 @@ export function BansosParticipantsPanel({ programId }: { programId: string }): R
   return (
     <>
       <div className="page-toolbar-sticky">
-        <Button variant="primary" size="sm" icon={<UserPlus size={16} />} onClick={() => setCreating(true)}>
+        <Button variant="primary" size="sm" icon={<UserPlus size={16} />} onClick={() => setEditing("new")}>
           {t("bansos.newParticipant")}
         </Button>
       </div>
@@ -111,6 +111,9 @@ export function BansosParticipantsPanel({ programId }: { programId: string }): R
                   >
                     {t("bansos.keys")}
                   </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setEditing(participant)}>
+                    {t("bansos.edit")}
+                  </Button>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -144,8 +147,12 @@ export function BansosParticipantsPanel({ programId }: { programId: string }): R
         </DataTable>
       )}
 
-      {creating ? (
-        <BansosParticipantDialog programId={programId} onClose={() => setCreating(false)} />
+      {editing !== null ? (
+        <BansosParticipantDialog
+          programId={programId}
+          {...(editing === "new" ? {} : { participant: editing })}
+          onClose={() => setEditing(null)}
+        />
       ) : null}
 
       {keysFor !== null ? (

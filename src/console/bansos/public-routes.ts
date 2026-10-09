@@ -97,6 +97,9 @@ export function createBansosPublicRoutes(deps: {
             revokedAt: apiKeys.revokedAt,
             lifetimeTokenBudget: apiKeys.lifetimeTokenBudget,
             lifetimeTokensConsumed: apiKeys.lifetimeTokensConsumed,
+            expiresAt: apiKeys.expiresAt,
+            requestsPerMinute: apiKeys.requestsPerMinute,
+            maxConcurrentRequests: apiKeys.maxConcurrentRequests,
           })
           .from(apiKeys)
           .innerJoin(
@@ -132,6 +135,11 @@ export function createBansosPublicRoutes(deps: {
             live,
             tokensConsumed: key.lifetimeTokensConsumed ?? 0,
             tokenBudget: key.lifetimeTokenBudget,
+            // A recipient watching their own quota needs the same numbers the
+            // gateway enforces, including when the key stops working.
+            expiresAt: key.expiresAt?.toISOString() ?? null,
+            requestsPerMinute: key.requestsPerMinute,
+            maxConcurrentRequests: key.maxConcurrentRequests,
           };
         });
 
@@ -142,6 +150,21 @@ export function createBansosPublicRoutes(deps: {
             baseUrl: baseUrl(request, deps.publicOrigin),
             globalRpm: program.globalRpm,
             globalConcurrency: program.globalConcurrency,
+            // The window is published because a recipient needs to know when
+            // their access ends; it is not operator-only information.
+            startsAt: program.startsAt?.toISOString() ?? null,
+            endsAt: program.endsAt?.toISOString() ?? null,
+            // Per-request ceilings, so a recipient can size their requests
+            // instead of discovering the limit by hitting it.
+            maxInputTokens: program.maxInputTokens,
+            maxOutputTokens: program.maxOutputTokens,
+            maxRequestBytes: program.maxRequestBytes,
+            maxRequestDurationMs: program.maxRequestDurationMs,
+            maxStreamDurationMs: program.maxStreamDurationMs,
+            // Terms are shown when the operator requires them. `termsText` is
+            // published deliberately: it is written to be read by recipients.
+            termsRequired: program.termsRequired,
+            termsText: program.termsRequired ? program.termsText : null,
           },
           keys,
           models,

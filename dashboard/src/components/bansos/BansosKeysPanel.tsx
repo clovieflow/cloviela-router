@@ -29,6 +29,14 @@ import { useT } from "../../shared/locale-context";
 import { formatNumber } from "../../shared/format";
 import type { BansosIssuedKey } from "../../data/bansos-contracts";
 
+/** Blank = inherit; anything else must be a positive whole number. */
+function optionalNumber(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : null;
+}
+
 export function BansosKeysPanel({
   participantId,
   programId,
@@ -43,6 +51,14 @@ export function BansosKeysPanel({
   const clipboard = useClipboard();
   const [issuing, setIssuing] = useState(false);
   const [label, setLabel] = useState("");
+  // Every limit the API accepts. Blank leaves the column unset, which the
+  // resolver reads as "inherit from program/participant" — not as zero.
+  const [lifetimeBudget, setLifetimeBudget] = useState("");
+  const [rpm, setRpm] = useState("");
+  const [dailyLimit, setDailyLimit] = useState("");
+  const [monthlyLimit, setMonthlyLimit] = useState("");
+  const [concurrency, setConcurrency] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
   const [issued, setIssued] = useState<BansosIssuedKey | null>(null);
   const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
 
@@ -126,6 +142,33 @@ export function BansosKeysPanel({
               <span>{t("bansos.keyLabel")}</span>
               <Input value={label} onChange={(event) => setLabel(event.target.value)} autoFocus />
             </label>
+            <div className="two-column-grid">
+              <label>
+                <span>{t("bansos.tokenAllowance")}</span>
+                <Input inputMode="numeric" value={lifetimeBudget} onChange={(e) => setLifetimeBudget(e.target.value)} placeholder={t("bansos.unlimited")} />
+              </label>
+              <label>
+                <span>{t("bansos.rpm")}</span>
+                <Input inputMode="numeric" value={rpm} onChange={(e) => setRpm(e.target.value)} placeholder={t("bansos.unlimited")} />
+              </label>
+              <label>
+                <span>{t("bansos.dailyTokenBudget")}</span>
+                <Input inputMode="numeric" value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} placeholder={t("bansos.unlimited")} />
+              </label>
+              <label>
+                <span>{t("bansos.monthlyTokenBudget")}</span>
+                <Input inputMode="numeric" value={monthlyLimit} onChange={(e) => setMonthlyLimit(e.target.value)} placeholder={t("bansos.unlimited")} />
+              </label>
+              <label>
+                <span>{t("bansos.concurrency")}</span>
+                <Input inputMode="numeric" value={concurrency} onChange={(e) => setConcurrency(e.target.value)} placeholder={t("bansos.unlimited")} />
+              </label>
+              <label>
+                <span>{t("bansos.expiresAt")}</span>
+                <Input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+              </label>
+            </div>
+            <p className="account-row-meta">{t("bansos.keyLimitsHint")}</p>
             {issue.isError ? <p role="alert">{issue.error.message}</p> : null}
             <div className="modal-form-actions">
               <Button variant="secondary" onClick={() => setIssuing(false)}>
@@ -139,12 +182,26 @@ export function BansosKeysPanel({
                     {
                       participantId,
                       programId,
-                      input: label.trim().length > 0 ? { label: label.trim() } : {},
+                      input: {
+                        ...(label.trim().length > 0 ? { label: label.trim() } : {}),
+                        ...(optionalNumber(lifetimeBudget) === null ? {} : { lifetimeTokenBudget: optionalNumber(lifetimeBudget) }),
+                        ...(optionalNumber(rpm) === null ? {} : { rpm: optionalNumber(rpm) }),
+                        ...(optionalNumber(dailyLimit) === null ? {} : { dailyTokenLimit: optionalNumber(dailyLimit) }),
+                        ...(optionalNumber(monthlyLimit) === null ? {} : { monthlyTokenLimit: optionalNumber(monthlyLimit) }),
+                        ...(optionalNumber(concurrency) === null ? {} : { maxConcurrentRequests: optionalNumber(concurrency) }),
+                        ...(expiresAt.trim().length === 0 ? {} : { expiresAt: new Date(expiresAt).toISOString() }),
+                      },
                     },
                     {
                       onSuccess: (created) => {
                         setIssuing(false);
                         setLabel("");
+                        setLifetimeBudget("");
+                        setRpm("");
+                        setDailyLimit("");
+                        setMonthlyLimit("");
+                        setConcurrency("");
+                        setExpiresAt("");
                         setIssued(created);
                       },
                     },

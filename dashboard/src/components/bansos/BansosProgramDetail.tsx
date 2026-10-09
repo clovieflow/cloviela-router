@@ -26,6 +26,17 @@ import { formatNumber } from "../../shared/format";
 
 type Tab = "participants" | "models" | "usage";
 
+/**
+ * Renders a stored ceiling.
+ *
+ * `null` is not "unset and therefore broken" — it is the documented state the
+ * resolver reads as unlimited, so it is shown as a word. A dash would read as
+ * missing data and send an operator looking for a bug that is not there.
+ */
+function show(value: number | null, unlimited: string): string {
+  return value === null ? unlimited : formatNumber(value);
+}
+
 export function BansosProgramDetail({ programId }: { programId: string }): ReactNode {
   const t = useT();
   const program = useBansosProgram(programId);
@@ -140,16 +151,87 @@ export function BansosProgramDetail({ programId }: { programId: string }): React
               tone="orange"
             />
           </div>
+          {/*
+            Every configured value, not only the four in the metric row. An
+            operator who set a daily budget three weeks ago needs to see it
+            without opening the edit dialog, and a limit that is enforced but
+            invisible is one they will report as a bug.
+          */}
           <dl className="about-facts">
             <div className="about-fact">
               <dt className="about-fact-label">{t("bansos.enrollmentMode")}</dt>
               <dd className="about-fact-value">{t(ENROLLMENT_KEY[data.enrollmentMode])}</dd>
             </div>
             <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.autoApprove")}</dt>
+              <dd className="about-fact-value">{data.autoApprove ? t("bansos.yes") : t("bansos.no")}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.maxParticipants")}</dt>
+              <dd className="about-fact-value">{show(data.maxParticipants, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.globalTokenBudget")}</dt>
+              <dd className="about-fact-value">{show(data.globalTokenBudget, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.dailyTokenBudget")}</dt>
+              <dd className="about-fact-value">{show(data.dailyTokenBudget, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.monthlyTokenBudget")}</dt>
+              <dd className="about-fact-value">{show(data.monthlyTokenBudget, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.defaultRpm")}</dt>
+              <dd className="about-fact-value">{show(data.defaultRpm, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.defaultConcurrency")}</dt>
+              <dd className="about-fact-value">{show(data.defaultConcurrency, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.maxInputTokens")}</dt>
+              <dd className="about-fact-value">{show(data.maxInputTokens, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.maxOutputTokens")}</dt>
+              <dd className="about-fact-value">{show(data.maxOutputTokens, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.maxRequestBytes")}</dt>
+              <dd className="about-fact-value">{show(data.maxRequestBytes, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.maxRequestDurationMs")}</dt>
+              <dd className="about-fact-value">{show(data.maxRequestDurationMs, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.maxStreamDurationMs")}</dt>
+              <dd className="about-fact-value">{show(data.maxStreamDurationMs, t("bansos.unlimited"))}</dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.sectionWindow")}</dt>
+              <dd className="about-fact-value">
+                {data.startsAt === null && data.endsAt === null
+                  ? t("bansos.always")
+                  : `${data.startsAt === null ? "…" : new Date(data.startsAt).toLocaleString()} → ${
+                      data.endsAt === null ? "…" : new Date(data.endsAt).toLocaleString()
+                    }`}
+              </dd>
+            </div>
+            <div className="about-fact">
               <dt className="about-fact-label">{t("bansos.providerScope")}</dt>
               <dd className="about-fact-value">
                 {data.providerId === null ? t("bansos.providerAny") : data.providerId}
+                {data.providerAccountIds.length > 0
+                  ? ` (${data.providerAccountIds.length} ${t("bansos.accounts")})`
+                  : ""}
               </dd>
+            </div>
+            <div className="about-fact">
+              <dt className="about-fact-label">{t("bansos.termsRequired")}</dt>
+              <dd className="about-fact-value">{data.termsRequired ? t("bansos.yes") : t("bansos.no")}</dd>
             </div>
           </dl>
         </CardBody>

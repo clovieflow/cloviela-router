@@ -471,6 +471,7 @@ export function createBansosRoutes(ctx: ConsoleDomainContext): Elysia<any, any, 
             lifetimeTokenBudget: apiKeys.lifetimeTokenBudget,
             lifetimeTokensConsumed: apiKeys.lifetimeTokensConsumed,
             maxConcurrentRequests: apiKeys.maxConcurrentRequests,
+            expiresAt: apiKeys.expiresAt,
           })
           .from(apiKeys)
           .where(eq(apiKeys.bansosParticipantId, participant.id));
@@ -577,6 +578,11 @@ export function createBansosRoutes(ctx: ConsoleDomainContext): Elysia<any, any, 
             dailyTokenLimit: body.dailyTokenLimit ?? program.dailyTokenBudget,
             monthlyTokenLimit: body.monthlyTokenLimit ?? program.monthlyTokenBudget,
             maxConcurrentRequests: body.maxConcurrentRequests ?? limits.concurrency,
+            // Written, not merely accepted. The column did not exist before, so
+            // this value was silently dropped and the key never expired.
+            ...(body.expiresAt === undefined || body.expiresAt === null
+              ? {}
+              : { expiresAt: new Date(body.expiresAt) }),
             modelAccessMode: "whitelist" as const,
             modelList: allowedNames,
             enabled: true,

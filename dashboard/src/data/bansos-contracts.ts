@@ -78,14 +78,18 @@ export interface BansosParticipant {
 export interface BansosModel {
   readonly id: string;
   readonly programId: string;
+  /** What the gateway actually calls. Fixed after creation. */
   readonly upstreamModelId: string;
+  /** What participants send. */
   readonly publicModelId: string;
+  /** Optional friendly name shown alongside the public id. */
+  readonly displayName: string | null;
   readonly enabled: boolean;
   readonly maxInputTokens: number | null;
   readonly maxOutputTokens: number | null;
-  readonly notes: string | null;
+  /** Daily token ceiling specific to this model. */
+  readonly dailyTokenBudget: number | null;
   readonly createdAt: string;
-  readonly updatedAt: string;
 }
 
 /**
@@ -106,6 +110,8 @@ export interface BansosKey {
   readonly lifetimeTokenBudget: number | null;
   readonly lifetimeTokensConsumed: number | null;
   readonly maxConcurrentRequests: number | null;
+  /** `null` = never expires. Enforced in the authentication lookup. */
+  readonly expiresAt: string | null;
 }
 
 /** One-time response from issuing a key. The secret is never sent again. */
@@ -198,10 +204,11 @@ export interface BansosParticipantInput {
 export interface BansosModelInput {
   upstreamModelId: string;
   publicModelId: string;
+  displayName?: string | null;
   enabled?: boolean;
   maxInputTokens?: number | null;
   maxOutputTokens?: number | null;
-  notes?: string | null;
+  dailyTokenBudget?: number | null;
 }
 
 export interface BansosKeyInput {

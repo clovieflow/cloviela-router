@@ -1,6 +1,6 @@
 // Persisted API-key store: the console API-key domain and gateway authentication both consume this boundary.
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
 import type { ClovielaDatabase } from "./postgres";
 import { apiKeys, shareLinks, type ApiKeyMode, type ApiKeyModelAccessMode } from "./schema";
 import type { AccessScope } from "../security/access-control";
@@ -358,12 +358,20 @@ export class DrizzleApiKeyStore implements ApiKeyStore {
     });
   }
   async findActiveByHash(hash: string): Promise<typeof apiKeys.$inferSelect | undefined> {
-    // Filter revoked in the DB, not in JS: the hot auth path must not fetch
-    // revoked rows it immediately discards.
+    // Filter revoked and expired in the DB, not in JS: the hot auth path must
+    // not fetch rows it immediately discards, and an expiry checked only in
+    // application code would be missed by whichever caller forgot.
     const rows = await this.db
       .select()
       .from(apiKeys)
-      .where(and(eq(apiKeys.keyHash, hash), eq(apiKeys.enabled, true), isNull(apiKeys.revokedAt)))
+      .where(
+        and(
+          eq(apiKeys.keyHash, hash),
+          eq(apiKeys.enabled, true),
+          isNull(apiKeys.revokedAt),
+          or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, new Date())),
+        ),
+      )
       .limit(1);
     return rows[0];
   }

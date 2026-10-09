@@ -624,6 +624,13 @@ export const apiKeys = pgTable(
     createdAt: createdAtColumn(),
     enabled: boolean("enabled").notNull().default(true),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /**
+     * When this key stops working. `NULL` means never.
+     *
+     * Enforced in the authentication lookup rather than by a scheduled sweep,
+     * so an expired key fails the same query that refuses a revoked one.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("api_keys_key_hash_idx").on(table.keyHash),

@@ -12,12 +12,20 @@
  * — that is the enforcement. The panel states it before the operator tries,
  * because the underlying cause is a property of the key's allowlist that is
  * invisible from the key screen.
+ *
+ * ── Why each row is editable ────────────────────────────────────────────────
+ * A model carries its own token ceilings and a daily budget, and those were
+ * reachable only through the API. An operator who wants one expensive model
+ * capped lower than the rest needs a field, not a curl command.
  */
 import { type ReactNode, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
+import { Dialog } from "../ui/dialog";
+import { Stack } from "../ui/stack";
+import { SectionHeading } from "../ui/layout";
 import { EmptyState } from "../ui/state";
 import { DataTable } from "../ui/layout";
 import {
@@ -27,63 +35,176 @@ import {
   useUpdateBansosModel,
 } from "../../hooks/bansos";
 import { useT } from "../../shared/locale-context";
+import { formatNumber } from "../../shared/format";
+import type { BansosModel, BansosModelInput } from "../../data/bansos-contracts";
+
+function optionalNumber(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : null;
+}
+
+function asText(value: number | null | undefined): string {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }): ReactNode {
+  return (
+    <label style={{ display: "block" }}>
+      <span style={{ display: "block", fontSize: "12px", fontWeight: 600 }}>{label}</span>
+      {children}
+      {hint ? (
+        <span className="account-row-meta" style={{ display: "block", fontSize: "11px" }}>
+          {hint}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+/** Create or edit one subsidized model. */
+function BansosModelDialog({
+  programId,
+  model,
+  onClose,
+}: {
+  programId: string;
+  model?: BansosModel;
+  onClose: () => void;
+}): ReactNode {
+  const t = useT();
+  const add = useAddBansosModel();
+  const update = useUpdateBansosModel();
+  const editing = model !== undefined;
+
+  const [upstream, setUpstream] = useState(model?.upstreamModelId ?? "");
+  const [publicId, setPublicId] = useState(model?.publicModelId ?? "");
+  const [displayName, setDisplayName] = useState(model?.displayName ?? "");
+  const [maxInput, setMaxInput] = useState(asText(model?.maxInputTokens));
+  const [maxOutput, setMaxOutput] = useState(asText(model?.maxOutputTokens));
+  const [dailyBudget, setDailyBudget] = useState(asText(model?.dailyTokenBudget));
+
+  const pending = add.isPending || update.isPending;
+  // The upstream id identifies what is being paid for; changing it on an
+  // existing row would silently redirect a published name at a different
+  // model, so it is fixed after creation and a new row is the way to change it.
+  const canSubmit =
+    publicId.trim().length > 0 && (editing || upstream.trim().length > 0) && !pending;
+  const error = add.error ?? update.error;
+
+  function submit(): void {
+    const input: BansosModelInput = {
+      upstreamModelId: upstream.trim(),
+      publicModelId: publicId.trim(),
+      displayName: displayName.trim().length > 0 ? displayName.trim() : null,
+      maxInputTokens: optionalNumber(maxInput),
+      maxOutputTokens: optionalNumber(maxOutput),
+      dailyTokenBudget: optionalNumber(dailyBudget),
+    };
+    if (editing) {
+      update.mutate(
+        {
+          programId,
+          modelId: model.id,
+          input: {
+            publicModelId: input.publicModelId,
+            displayName: input.displayName,
+            maxInputTokens: input.maxInputTokens,
+            maxOutputTokens: input.maxOutputTokens,
+            dailyTokenBudget: input.dailyTokenBudget,
+          },
+        },
+        { onSuccess: onClose },
+      );
+      return;
+    }
+    add.mutate({ programId, input }, { onSuccess: onClose });
+  }
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={editing ? t("bansos.editModel") : t("bansos.addModel")}
+      width={620}
+    >
+      <Stack gap="lg">
+        <SectionHeading level={3} title={t("bansos.sectionIdentity")} />
+        <div className="two-column-grid">
+          <Field
+            label={t("bansos.upstreamModel")}
+            hint={editing ? t("bansos.upstreamLocked") : t("bansos.upstreamHint")}
+          >
+            <Input
+              value={upstream}
+              onChange={(e) => setUpstream(e.target.value)}
+              readOnly={editing}
+              placeholder="opencodeft/big-pickle"
+              required
+            />
+          </Field>
+          <Field label={t("bansos.publicModel")} hint={t("bansos.publicModelHint")}>
+            <Input value={publicId} onChange={(e) => setPublicId(e.target.value)} placeholder="bansos-model" required />
+          </Field>
+        </div>
+        <Field label={t("bansos.displayName")} hint={t("bansos.displayNameHint")}>
+          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+        </Field>
+
+        <SectionHeading
+          level={3}
+          title={t("bansos.sectionModelLimits")}
+          description={t("bansos.blankUnlimited")}
+        />
+        <div className="two-column-grid">
+          <Field label={t("bansos.maxInputTokens")}>
+            <Input inputMode="numeric" value={maxInput} onChange={(e) => setMaxInput(e.target.value)} />
+          </Field>
+          <Field label={t("bansos.maxOutputTokens")}>
+            <Input inputMode="numeric" value={maxOutput} onChange={(e) => setMaxOutput(e.target.value)} />
+          </Field>
+        </div>
+        <Field label={t("bansos.dailyTokenBudget")} hint={t("bansos.modelDailyHint")}>
+          <Input inputMode="numeric" value={dailyBudget} onChange={(e) => setDailyBudget(e.target.value)} />
+        </Field>
+
+        {error ? <p role="alert">{error.message}</p> : null}
+
+        <div className="modal-form-actions">
+          <Button variant="secondary" onClick={onClose}>
+            {t("bansos.cancel")}
+          </Button>
+          <Button variant="primary" disabled={!canSubmit} loading={pending} onClick={submit}>
+            {editing ? t("bansos.save") : t("bansos.create")}
+          </Button>
+        </div>
+      </Stack>
+    </Dialog>
+  );
+}
 
 export function BansosModelsPanel({ programId }: { programId: string }): ReactNode {
   const t = useT();
   const models = useBansosModels(programId);
-  const add = useAddBansosModel();
   const update = useUpdateBansosModel();
   const remove = useRemoveBansosModel();
-  const [upstream, setUpstream] = useState("");
-  const [publicId, setPublicId] = useState("");
+  const [editing, setEditing] = useState<BansosModel | "new" | null>(null);
 
   const rows = models.data ?? [];
-  const canAdd = upstream.trim().length > 0 && publicId.trim().length > 0 && !add.isPending;
 
   return (
     <>
       <div className="page-toolbar-sticky">
-        <Input
-          value={upstream}
-          onChange={(event) => setUpstream(event.target.value)}
-          placeholder={t("bansos.upstreamModel")}
-          aria-label={t("bansos.upstreamModel")}
-        />
-        <Input
-          value={publicId}
-          onChange={(event) => setPublicId(event.target.value)}
-          placeholder={t("bansos.publicModel")}
-          aria-label={t("bansos.publicModel")}
-        />
         <Button
           variant="primary"
           size="sm"
           icon={<Plus size={16} />}
-          disabled={!canAdd}
-          loading={add.isPending}
-          onClick={() =>
-            add.mutate(
-              {
-                programId,
-                input: {
-                  upstreamModelId: upstream.trim(),
-                  publicModelId: publicId.trim(),
-                },
-              },
-              {
-                onSuccess: () => {
-                  setUpstream("");
-                  setPublicId("");
-                },
-              },
-            )
-          }
+          onClick={() => setEditing("new")}
         >
           {t("bansos.addModel")}
         </Button>
       </div>
-
-      {add.isError ? <p role="alert">{add.error.message}</p> : null}
 
       {rows.length === 0 ? (
         <EmptyState
@@ -94,17 +215,28 @@ export function BansosModelsPanel({ programId }: { programId: string }): ReactNo
         />
       ) : (
         <DataTable
-          headers={[t("bansos.publicModel"), t("bansos.upstreamModel"), t("bansos.programEnabled"), ""]}
+          headers={[
+            t("bansos.publicModel"),
+            t("bansos.upstreamModel"),
+            t("bansos.maxInputTokens"),
+            t("bansos.maxOutputTokens"),
+            t("bansos.programEnabled"),
+            "",
+          ]}
         >
           {rows.map((model) => (
             <tr key={model.id}>
               <td>
                 <div className="account-row-name">{model.publicModelId}</div>
-                <div className="account-row-meta">{t("bansos.publicModelHint")}</div>
+                <div className="account-row-meta">
+                  {model.displayName ?? t("bansos.publicModelHint")}
+                </div>
               </td>
               <td>
                 <code>{model.upstreamModelId}</code>
               </td>
+              <td>{model.maxInputTokens === null ? "—" : formatNumber(model.maxInputTokens)}</td>
+              <td>{model.maxOutputTokens === null ? "—" : formatNumber(model.maxOutputTokens)}</td>
               <td>
                 <Badge tone={model.enabled ? "ok" : "disabled"}>
                   {model.enabled ? t("bansos.keyLive") : t("bansos.keyRevoked")}
@@ -112,6 +244,14 @@ export function BansosModelsPanel({ programId }: { programId: string }): ReactNo
               </td>
               <td>
                 <div className="account-row-actions">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={<Pencil size={14} />}
+                    onClick={() => setEditing(model)}
+                  >
+                    {t("bansos.edit")}
+                  </Button>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -140,6 +280,14 @@ export function BansosModelsPanel({ programId }: { programId: string }): ReactNo
           ))}
         </DataTable>
       )}
+
+      {editing !== null ? (
+        <BansosModelDialog
+          programId={programId}
+          {...(editing === "new" ? {} : { model: editing })}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
     </>
   );
 }
