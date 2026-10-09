@@ -528,7 +528,7 @@ async function main(): Promise<number> {
   for (const dimension of cli.dimensions) {
     for (const entry of loadDimension(index, dimension)) {
       if (cli.only !== undefined && !cli.only.has(entry.id)) continue;
-      planned.push(planCase(dimension, entry, { clients, hasFullStore: cli.databaseUrl !== undefined, hasRedis: cli.redisUrl !== undefined }));
+      planned.push(planCase(dimension, entry, { clients, hasFullStore: cli.databaseUrl !== undefined, hasRedis: cli.redisUrl !== undefined, bootedStore: cli.store }));
     }
   }
   const plan = summarizePlan(planned);
@@ -645,8 +645,13 @@ async function main(): Promise<number> {
 
   const failed = results.filter((entry) => entry.status === "FAIL");
   const passed = results.filter((entry) => entry.status === "PASS");
+  // One clause can back several scenario rows, so the row count is not the
+  // number of identifiers verified. Both are printed: the rows show how much
+  // was executed, the distinct count shows how much of the plan that covers.
+  const distinctPassed = new Set(passed.map((entry) => entry.id)).size;
   process.stdout.write(
-    `\nexecuted ${results.length}: PASS ${passed.length}, FAIL ${failed.length}, ` +
+    `\nexecuted ${results.length} rows over ${new Set(results.map((e) => e.id)).size} identifiers: ` +
+      `PASS ${passed.length} rows (${distinctPassed} identifiers), FAIL ${failed.length}, ` +
       `BLOCKED ${results.filter((e) => e.status === "BLOCKED").length}, ` +
       `NA ${results.filter((e) => e.status === "NA").length}, ` +
       `UNVERIFIED ${results.filter((e) => e.status === "UNVERIFIED").length}\n`,

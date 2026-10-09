@@ -202,6 +202,13 @@ export function planCase(
     readonly clients: ReadonlySet<string>;
     readonly hasFullStore: boolean;
     readonly hasRedis: boolean;
+    /**
+     * The backend this run booted. A case that names the other one cannot be
+     * executed here: the assertion would be evaluated against a store it was
+     * not written for, and reporting that as PASS claims coverage the run does
+     * not have.
+     */
+    readonly bootedStore: "lite" | "full";
   },
 ): PlannedCase {
   const base: PlannedCase = {
@@ -219,11 +226,30 @@ export function planCase(
 
 function planGatewayCase(
   base: PlannedCase,
-  available: { readonly hasFullStore: boolean; readonly hasRedis: boolean },
+  available: {
+    readonly hasFullStore: boolean;
+    readonly hasRedis: boolean;
+    readonly bootedStore: "lite" | "full";
+  },
 ): PlannedCase {
   const { protocol, fault, strategy, persistence } = base.axes;
   if (protocol === undefined || fault === undefined || strategy === undefined || persistence === undefined) {
     return base;
+  }
+  // This run booted one backend. A clause naming the other one is not a
+  // failure and not a pass: there is no host to evaluate it on.
+  if (persistence !== available.bootedStore) {
+    return {
+      ...base,
+      disposition: {
+        status: "NA",
+        reason:
+          `the clause names persistence=${persistence}, but this run booted the ${available.bootedStore} store; ` +
+          `run with --store ${persistence} to execute it`,
+        owner: "scripts/ci-cloviela-e2e.ts (--store selects the backend the host boots)",
+        combination: `persistence=${persistence}`,
+      },
+    };
   }
   if (persistence === "full" && !available.hasFullStore) {
     return {
@@ -291,9 +317,25 @@ function planGatewayCase(
   return base;
 }
 
-function planSecurityCase(base: PlannedCase, available: { readonly hasFullStore: boolean }): PlannedCase {
+function planSecurityCase(
+  base: PlannedCase,
+  available: { readonly hasFullStore: boolean; readonly bootedStore: "lite" | "full" },
+): PlannedCase {
   const { "trust-boundary": boundary, attack, storage } = base.axes;
   if (boundary === undefined || attack === undefined || storage === undefined) return base;
+  if (storage !== available.bootedStore) {
+    return {
+      ...base,
+      disposition: {
+        status: "NA",
+        reason:
+          `the clause names storage=${storage}, but this run booted the ${available.bootedStore} store; ` +
+          `run with --store ${storage} to execute it`,
+        owner: "scripts/ci-cloviela-e2e.ts (--store selects the backend the host boots)",
+        combination: `storage=${storage}`,
+      },
+    };
+  }
   if (storage === "full" && !available.hasFullStore) {
     return {
       ...base,
@@ -320,9 +362,25 @@ function planSecurityCase(base: PlannedCase, available: { readonly hasFullStore:
   return base;
 }
 
-function planDatabaseCase(base: PlannedCase, available: { readonly hasFullStore: boolean }): PlannedCase {
+function planDatabaseCase(
+  base: PlannedCase,
+  available: { readonly hasFullStore: boolean; readonly bootedStore: "lite" | "full" },
+): PlannedCase {
   const { entity, lifecycle, store } = base.axes;
   if (entity === undefined || lifecycle === undefined || store === undefined) return base;
+  if (store !== available.bootedStore) {
+    return {
+      ...base,
+      disposition: {
+        status: "NA",
+        reason:
+          `the clause names store=${store}, but this run booted the ${available.bootedStore} store; ` +
+          `run with --store ${store} to execute it`,
+        owner: "scripts/ci-cloviela-e2e.ts (--store selects the backend the host boots)",
+        combination: `store=${store}`,
+      },
+    };
+  }
   if (store === "full" && !available.hasFullStore) {
     return {
       ...base,
