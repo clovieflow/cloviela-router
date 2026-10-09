@@ -616,6 +616,101 @@ export function createBansosRoutes(ctx: ConsoleDomainContext): Elysia<any, any, 
       }
     })
 
+    // Deleting a participant destroys their keys rather than orphaning them.
+    // Revoking first would leave rows whose participant is gone, and the FK is
+    // `set null` — which would quietly promote a subsidized key into an
+    // ordinary personal one that still holds its budget.
+    .delete("/participants/:participantId", async ({ request, params, set }) => {
+      try {
+        const access = requireTenantScope(ctx.accessResolver(request), "dashboard:write");
+        // Read the program id *before* the row is gone: the audit entry has to
+        // name which program lost a participant, and after the delete there is
+        // nothing left to read it from.
+        const participant = await store.findParticipant(access.tenantId, params.participantId);
+        if (participant === undefined) throw new ConsoleDomainError("not_found", 404, "Participant not found");
+        const result = await store.deleteParticipant(access.tenantId, params.participantId);
+        if (!result.deleted) throw new ConsoleDomainError("not_found", 404, "Participant not found");
+        await store.recordAudit({
+          tenantId: access.tenantId,
+          programId: participant.programId,
+          actorKind: "admin",
+          actorId: access.id,
+          action: "participant.delete",
+          targetKind: "participant",
+          targetId: params.participantId,
+          detail: { keysDestroyed: result.keys },
+        });
+        return { success: true, keysDestroyed: result.keys };
+      } catch (error) {
+        return errorResponse(error, set, "Could not delete the participant");
+      }
+    })
+
+    /* ── Usage ───────────────────────────────────────────────────────────── */
+
+    // Per-participant consumption, aggregated from the keys they hold.
+    //
+    // The numbers are read from `api_keys` rather than summed from a request
+    // log: `lifetime_tokens_consumed` is the same counter the quota check
+    // reads, so a report that disagreed with enforcement would be worse than
+    // no report. `requests` is not tracked per key, so it is not claimed here
+    // rather than being estimated.
+    .get("/programs/:programId/usage", async ({ request, params, set }) => {
+      try {
+        const access = requireTenantScope(ctx.accessResolver(request), "dashboard:read");
+        const program = await store.findProgram(access.tenantId, params.programId);
+        if (program === undefined) throw new ConsoleDomainError("not_found", 404, "Program not found");
+        const participants = await store.listParticipants(access.tenantId, program.id);
+        const rows = await ctx.db
+          .select({
+            participantId: apiKeys.bansosParticipantId,
+            keyId: apiKeys.id,
+            enabled: apiKeys.enabled,
+            revokedAt: apiKeys.revokedAt,
+            budget: apiKeys.lifetimeTokenBudget,
+            consumed: apiKeys.lifetimeTokensConsumed,
+          })
+          .from(apiKeys)
+          .where(eq(apiKeys.tenantId, access.tenantId));
+
+        const byParticipant = new Map<string, { budget: number; consumed: number; liveKeys: number; revokedKeys: number }>();
+        for (const row of rows) {
+          if (row.participantId === null) continue;
+          const entry = byParticipant.get(row.participantId) ?? { budget: 0, consumed: 0, liveKeys: 0, revokedKeys: 0 };
+          // Budgets are per key and each key is separately capped, so the
+          // participant's ceiling is their sum — not the largest one.
+          entry.budget += row.budget ?? 0;
+          entry.consumed += row.consumed ?? 0;
+          if (row.revokedAt === null && row.enabled) entry.liveKeys += 1;
+          else entry.revokedKeys += 1;
+          byParticipant.set(row.participantId, entry);
+        }
+
+        const usage = participants.map((participant) => {
+          const entry = byParticipant.get(participant.id) ?? { budget: 0, consumed: 0, liveKeys: 0, revokedKeys: 0 };
+          return {
+            participantId: participant.id,
+            displayName: participant.displayName,
+            status: participant.status,
+            tokenBudget: entry.budget,
+            tokensConsumed: entry.consumed,
+            // `null` when no ceiling was ever configured, so the UI can say
+            // "unlimited" instead of rendering 100% used.
+            remaining: entry.budget === 0 ? null : Math.max(0, entry.budget - entry.consumed),
+            liveKeys: entry.liveKeys,
+            revokedKeys: entry.revokedKeys,
+          };
+        });
+        const totals = usage.reduce(
+          (acc, u) => ({ budget: acc.budget + u.tokenBudget, consumed: acc.consumed + u.tokensConsumed }),
+          { budget: 0, consumed: 0 },
+        );
+        return { programId: program.id, usage, totals };
+      } catch (error) {
+        return errorResponse(error, set, "Could not read program usage");
+      }
+    })
+
     /* ── Audit ───────────────────────────────────────────────────────────── */
 
     .get("/programs/:programId/audit", async ({ request, params, set }) => {

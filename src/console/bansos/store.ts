@@ -8,7 +8,9 @@
  */
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { ClovielaDatabase } from "../../persistence/postgres";
+import { invalidateApiKeyCache } from "../../security/api-key-auth";
 import {
+  apiKeys,
   bansosAuditEvents,
   bansosModels,
   bansosParticipants,
@@ -161,6 +163,38 @@ export class BansosStore {
       )
       .returning();
     return rows[0];
+  }
+
+  /**
+   * Removes a participant and everything that hangs off them.
+   *
+   * The keys go first and are deleted rather than revoked: a participant row
+   * that no longer exists would leave `bansos_participant_id` pointing at
+   * nothing, and the FK is `set null` — which would silently turn their
+   * subsidized keys into ordinary personal keys still holding a budget. That
+   * is the one outcome worse than deleting them.
+   *
+   * Returns the number of keys destroyed so the audit entry can say so; an
+   * operator deleting a participant should be told what went with them.
+   */
+  async deleteParticipant(tenantId: string, participantId: string): Promise<{ deleted: boolean; keys: number }> {
+    const participant = await this.findParticipant(tenantId, participantId);
+    if (participant === undefined) return { deleted: false, keys: 0 };
+    // Read the key ids before deleting them so their auth entries can be
+    // dropped. A deleted key would otherwise keep authenticating for as long
+    // as the cache holds it — the row is gone, so the lookup that would have
+    // refused it never runs.
+    const doomed = await this.db
+      .select({ id: apiKeys.id })
+      .from(apiKeys)
+      .where(eq(apiKeys.bansosParticipantId, participantId));
+    const removed = await this.db
+      .delete(apiKeys)
+      .where(eq(apiKeys.bansosParticipantId, participantId))
+      .returning({ id: apiKeys.id });
+    await this.db.delete(bansosParticipants).where(eq(bansosParticipants.id, participantId));
+    for (const row of doomed) invalidateApiKeyCache(row.id);
+    return { deleted: true, keys: removed.length };
   }
 
   async countParticipants(programId: string): Promise<number> {
