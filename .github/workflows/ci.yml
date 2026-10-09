@@ -24,9 +24,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Only the database URL is exported here. `CLOVIELA_TEST_REDIS_URL` is set by
+# the step below *after* Redis is confirmed running: a suite that reads the
+# variable concludes Redis is available, so exporting it unconditionally made
+# the admission tests fail to connect instead of skipping with a reason.
 env:
   CLOVIELA_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/cloviela_test
-  CLOVIELA_TEST_REDIS_URL: redis://localhost:6379/15
 
 jobs:
   typecheck:
@@ -72,14 +75,20 @@ jobs:
             | grep -q 1 || sudo -u postgres createdb cloviela_test
           pg_isready -h localhost -p 5432
 
-          # Redis is optional in this project: a suite that needs it skips with
-          # an explicit reason when its URL is absent. The runner does not ship
-          # it, and installing a cache to make an optional dependency present
-          # would slow every run for no coverage gain — so it is started only if
-          # it happens to exist.
+          # Redis is installed rather than assumed. The runner ships the client
+          # but not always the server, and the admission suites need a real one
+          # to exercise their atomicity guarantees — skipping them would leave
+          # the concurrency limits untested on every push.
+          if ! command -v redis-server >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq redis-server
+          fi
+
           if command -v redis-server >/dev/null 2>&1; then
             sudo systemctl start redis-server || sudo systemctl start redis || redis-server --daemonize yes
             redis-cli ping
+            # Exported only now, so the suites that need Redis run and the ones
+            # that do not are unaffected.
+            echo "CLOVIELA_TEST_REDIS_URL=redis://localhost:6379/15" >> "$GITHUB_ENV"
           else
             echo "Redis absent; suites that need it will skip with a reason."
           fi
