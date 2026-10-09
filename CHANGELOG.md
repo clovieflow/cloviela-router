@@ -1,3 +1,27 @@
+## 2.1.0-rikka.2
+
+- **Liquid Glass across the console.** The sidebar, topbar, every card and the
+  metric row are translucent panels over an atmospheric background. The
+  default card material is glass in the dark theme, so a new card is correct
+  by construction rather than by remembering to opt in. Light theme keeps its
+  opaque paper surfaces, and a browser without `backdrop-filter` falls back to
+  them.
+- **The product rename is complete.** Backups write `app: "cloviela"` and
+  still accept the pre-rename value; the container account, its environment
+  variables and the lockfile workspace all carry the current name. Readiness
+  reads the same migration ledger the runner writes, so an installation whose
+  history predates the rename no longer reports itself un-migrated.
+- **Artwork fits its frames.** The story plates, the console hero and the
+  onboarding strip all took their sizes from rules that cropped the subject.
+  Each frame now follows its artwork's ratio: measured at 390, 768, 1440,
+  1920 and 2302px, nothing is cropped in either axis.
+- **`bun setup` creates `.env.test`.** The documentation had said so for
+  three releases while the template named a variable no suite reads.
+
+## 2.0.0-rikka.1
+
+- Initial tagged release.
+
 ## Cloviela Router
 
 - **Readiness read a different ledger than the runner wrote.** The migration
