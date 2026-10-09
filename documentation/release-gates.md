@@ -6,7 +6,7 @@ not executed; not claimed.
 
 | Gate | Status | Evidence |
 |---|---|---|
-| R-01 Source commit and upstream SHA | PASS | core derived from upstream `dev` `382cf23…`; release branch `cloviela/release`; `git ls-remote` output |
+| R-01 Source commit and upstream SHA | PASS | core imported from upstream `dev` `382cf23…` as one commit stating its origin; branch `cloviela/release`; full upstream history kept at tag `upstream-base` |
 | R-02 GPL license and derivative notices preserved | PASS | `LICENSE` unchanged (GPL-3.0); README → License and credits; About → Kredit with the upstream link; CHANGELOG change notice |
 | R-03 Baseline and final code inventory | PASS | `baseline-inventory.json`; 141,815 production lines / 680 files measured |
 | R-04 No unintended data loss or credential exposure | **BLOCKED** | Test suite damaged real client configs; 15 test-created files quarantined, Hermes restored from matching backup; original Codex `config.toml` needs operator backup |
@@ -36,7 +36,7 @@ not executed; not claimed.
 | R-28 All failing mandatory tests repaired and rerun | PASS | baseline 8 fail → 0 fail; 33-test regression fixed and rerun |
 | R-29 README, architecture, setup, client, security, release docs | PASS | all present in `documentation/` |
 | R-30 Final report with exact passes/fails/skips/blocked | PASS | `final-report.md` |
-| R-31 Release branch commits contain reviewed real source and assets | PASS | five commits on `cloviela/release`; no credentials staged; `.env` gitignored |
+| R-31 Release branch commits contain reviewed real source and assets | PASS | 22 commits on `cloviela/release` (1 import + 21 of our own); no credentials staged; `.env` gitignored |
 | R-32 Public push succeeds if authorized | PASS | published as the standalone repo `clovieflow/cloviela-router` (not a GitHub fork, no parent), default branch `cloviela/release`; upstream `dev`/`SeeYouLater` untouched |
 
 ## Summary
