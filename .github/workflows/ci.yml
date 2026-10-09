@@ -37,7 +37,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          # Read from `.bun-version`, which is the file a contributor's
+          # version manager already honours. "latest" tested a different Bun
+          # than the Dockerfile builds with and the README asks for.
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run dashboard:typecheck
@@ -50,7 +53,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          # Read from `.bun-version`, which is the file a contributor's
+          # version manager already honours. "latest" tested a different Bun
+          # than the Dockerfile builds with and the README asks for.
+          bun-version-file: .bun-version
 
       # Started from the runner's own packages rather than as a service
       # container: a service container needs a Docker Hub pull, and the
@@ -89,7 +95,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          # Read from `.bun-version`, which is the file a contributor's
+          # version manager already honours. "latest" tested a different Bun
+          # than the Dockerfile builds with and the README asks for.
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run dashboard:test
       - run: bun run dashboard:build
@@ -102,7 +111,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          # Read from `.bun-version`, which is the file a contributor's
+          # version manager already honours. "latest" tested a different Bun
+          # than the Dockerfile builds with and the README asks for.
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       # The whole point of the build job is that a release artefact can be
       # produced from a clean checkout — not only from the author's machine.

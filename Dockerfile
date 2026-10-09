@@ -5,7 +5,7 @@
 # `oven/bun:debian` and runtime with `debian:bookworm-slim`, then
 # replace apk/user commands with apt equivalents. Verify native modules and tools.
 
-FROM oven/bun:1.4.0-alpine AS builder
+FROM oven/bun:1.4.2-alpine AS builder
 
 WORKDIR /build
 
