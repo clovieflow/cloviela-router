@@ -124,8 +124,17 @@ export async function readMigrationLedgerStatus(
   folder: string = resolveMigrationsFolder(),
 ): Promise<MigrationLedgerStatus> {
   const expected = migrationFiles(folder).map((file) => migrationIdFor(file));
+  // Read whichever ledger actually holds this database's history, using the
+  // same resolution the runner uses. Reading the new table directly reports
+  // every migration as pending on an installation whose history is in the
+  // legacy one — a gateway that boots and serves fine would be described as
+  // un-migrated, and readiness would refuse it.
+  const ledger = await resolveLedgerTable(async (statement) => {
+    const rows = await db.execute<Record<string, unknown>>(sql.raw(statement));
+    return { rows: rows.rows as readonly Record<string, unknown>[] };
+  });
   const result = await db.execute<{ migration_id: string }>(
-    sql.raw(`SELECT migration_id FROM ${MIGRATION_LEDGER_TABLE}`),
+    sql.raw(`SELECT migration_id FROM ${ledger}`),
   );
   const applied = new Set(result.rows.map((row) => row.migration_id));
   const pending = expected.filter((migrationId) => !applied.has(migrationId));
