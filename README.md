@@ -122,6 +122,59 @@ On a server with no browser, use `cloviela up --no-open`.
 Your database, keys and configuration all live in the data directory. Backing
 up that one folder backs up the installation.
 
+## Let other people use it
+
+By default the gateway listens on `127.0.0.1`, which means **only this
+computer** can reach it. That is deliberate: an AI gateway holds provider
+credentials and spends real money, and a fresh install should not be reachable
+from the network by accident.
+
+To let other people — or your own phone — use it, pick one of these.
+
+### Same network (LAN)
+
+For a phone, a laptop, or anyone on your Wi-Fi:
+
+```dotenv
+# .env
+CLOVIELA_BIND_HOST=0.0.0.0
+```
+
+Then `cloviela restart`. Others reach it at `http://<your-ip>:12800`, where
+`<your-ip>` is what `ipconfig getifaddr en0` (macOS) or `hostname -I` (Linux)
+prints.
+
+> Only do this on a network you trust. Anyone who can reach the port can reach
+> the console login, and a Bansos key is a bearer credential.
+
+### Over the internet
+
+The safe way is a tunnel, which gives you HTTPS without opening a port:
+
+```bash
+# Cloudflare Tunnel — free, no account needed for a quick tunnel
+cloudflared tunnel --url http://localhost:12800
+```
+
+It prints a public `https://…trycloudflare.com` address. Put that address in
+`.env` so the Bansos page tells recipients the right URL:
+
+```dotenv
+CLOVIELA_PUBLIC_ORIGIN=https://your-tunnel-address
+```
+
+Then `cloviela restart`, and share `/console/akses` from that address.
+
+`ngrok http 12800` works the same way if you prefer it.
+
+### A server
+
+Copy the repository to the machine, run `cloviela up`, and put a reverse proxy
+in front of it for TLS. Set `CLOVIELA_BIND_HOST=127.0.0.1` again and let the
+proxy be the only thing exposed — see
+[`documentation/getting-started.md`](documentation/getting-started.md) for the
+Docker route, which is the intended deployment.
+
 ## Configure
 
 Everything is environment-driven; every knob is documented in

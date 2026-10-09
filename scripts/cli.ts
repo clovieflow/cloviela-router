@@ -20,22 +20,30 @@
  * - **No root, no daemon manager.** It is a personal gateway; a pid file is
  *   enough, and it works the same on macOS, Linux and Windows.
  */
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile, appendFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { compiledBinaryPath } from "./build/binary";
 import { resolveDataDir } from "../src/persistence/db-mode";
 
-const ROOT = resolve(import.meta.dir, "..");
+const ROOT = realpathSync(resolve(import.meta.dir, ".."));
 const BINARY = compiledBinaryPath(join(ROOT, "dist", "cloviela-router"));
 const VERSION = await readVersion();
 
 /** Where the running instance records itself, inside the app's own data dir. */
-function pidFile(): string {
-  return join(resolveDataDir(), "cloviela.pid");
+/**
+ * Where a running instance records itself, inside the app's own data dir.
+ *
+ * Keyed by port, because two installations can run side by side — one on 12800
+ * and a second on 12900 — and a single shared file made each of them read the
+ * other's record. `status` then reported the wrong instance and `up` refused to
+ * start against a port it was not even using.
+ */
+function pidFile(port: number = resolvePort()): string {
+  return join(resolveDataDir(), `cloviela-${port}.pid`);
 }
-function logFile(): string {
-  return join(resolveDataDir(), "cloviela.log");
+function logFile(port: number = resolvePort()): string {
+  return join(resolveDataDir(), `cloviela-${port}.log`);
 }
 
 interface InstanceRecord {
@@ -43,6 +51,16 @@ interface InstanceRecord {
   readonly port: number;
   readonly startedAt: string;
   readonly version: string;
+  /**
+   * The installation directory this instance was started from.
+   *
+   * Without it, `cloviela up` run from a second checkout finds the first
+   * checkout's pid file, sees a live process on the port, and reports "already
+   * running" — so a fresh install appears to succeed while nothing of it is
+   * actually running. Optional because records written by an older version do
+   * not have it; those are treated as belonging to this installation.
+   */
+  readonly root?: string;
 }
 
 async function readVersion(): Promise<string> {
@@ -64,16 +82,20 @@ function resolvePort(): number {
   return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : 12_800;
 }
 
-async function readRecord(): Promise<InstanceRecord | undefined> {
+async function readRecord(port: number = resolvePort()): Promise<InstanceRecord | undefined> {
   try {
-    const raw = await readFile(pidFile(), "utf8");
+    const raw = await readFile(pidFile(port), "utf8");
     const parsed = JSON.parse(raw) as Partial<InstanceRecord>;
     if (typeof parsed.pid !== "number" || !Number.isInteger(parsed.pid)) return undefined;
     return {
       pid: parsed.pid,
-      port: typeof parsed.port === "number" ? parsed.port : resolvePort(),
+      port: typeof parsed.port === "number" ? parsed.port : port,
       startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : "unknown",
       version: typeof parsed.version === "string" ? parsed.version : "unknown",
+      // Read back as well as written. Omitting it here made every record look
+      // like it came from an unknown installation, which is the one field the
+      // ownership check depends on.
+      ...(typeof parsed.root === "string" ? { root: parsed.root } : {}),
     };
   } catch {
     // Missing or unreadable: treated as "not running" rather than an error,
@@ -84,11 +106,11 @@ async function readRecord(): Promise<InstanceRecord | undefined> {
 
 async function writeRecord(record: InstanceRecord): Promise<void> {
   await mkdir(resolveDataDir(), { recursive: true });
-  await writeFile(pidFile(), JSON.stringify(record, null, 2), "utf8");
+  await writeFile(pidFile(record.port), JSON.stringify(record, null, 2), "utf8");
 }
 
-async function clearRecord(): Promise<void> {
-  await rm(pidFile(), { force: true });
+async function clearRecord(port: number = resolvePort()): Promise<void> {
+  await rm(pidFile(port), { force: true });
 }
 
 /** Whether a process with this pid exists and is still ours. */
@@ -224,14 +246,14 @@ async function ensureBuilt(): Promise<boolean> {
  * with an explicit reader. Errors are swallowed: the reader ends when the
  * process exits, and a closed stream is not a failure worth reporting.
  */
-async function pumpToLog(stream: ReadableStream<Uint8Array>): Promise<void> {
+async function pumpToLog(stream: ReadableStream<Uint8Array>, port: number): Promise<void> {
   const decoder = new TextDecoder();
   const reader = stream.getReader();
   try {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) return;
-      if (value !== undefined) await appendFile(logFile(), decoder.decode(value, { stream: true }));
+      if (value !== undefined) await appendFile(logFile(port), decoder.decode(value, { stream: true }));
     }
   } catch {
     // Process ended or the pipe closed.
@@ -261,14 +283,33 @@ async function commandUp(args: readonly string[]): Promise<number> {
   // Already running: report it and open the console rather than starting a
   // second copy, which would fail on the port with a message about sockets
   // instead of a message about the thing the user actually wanted.
-  const record = await readRecord();
-  if (record !== undefined && isAlive(record.pid) && (await isServing(record.port))) {
+  const record = await readRecord(port);
+  // An older record has no `root`, so its owner is unknown. Treating that as
+  // "mine" is what let a fresh checkout report "already running" while nothing
+  // of it was running — so unknown is treated as someone else's, and the port
+  // is what decides.
+  const sameInstall = record?.root === ROOT;
+  if (record !== undefined && sameInstall && isAlive(record.pid) && (await isServing(record.port))) {
     ok(`Already running on ${consoleUrl(record.port)} ${dim(`(pid ${record.pid}, since ${record.startedAt})`)}`);
     if (wantsBrowser) await openBrowser(consoleUrl(record.port));
     return 0;
   }
+  // A different installation owns the port. Starting here would fail on the
+  // bind with a message about sockets rather than about the actual situation.
+  if (!sameInstall && (await isServing(port))) {
+    fail(`Port ${port} is already serving another installation:`);
+    fail(
+      `  ${record?.root ?? "(started before this version recorded its path)"}` +
+        (record === undefined ? "" : ` ${dim(`(pid ${record.pid})`)}`),
+    );
+    fail("");
+    fail("Two installations cannot share a port. Either stop that one from its");
+    fail("own directory, or start this one on a different port:");
+    fail(`  PORT=${port + 1} cloviela up`);
+    return 1;
+  }
   // A stale pid file is cleaned up here rather than left to confuse `status`.
-  if (record !== undefined && !isAlive(record.pid)) await clearRecord();
+  if (record !== undefined && !isAlive(record.pid)) await clearRecord(port);
 
   if (!(await ensureDependencies())) return 1;
   if (!(await ensureConfigured())) return 1;
@@ -288,15 +329,21 @@ async function commandUp(args: readonly string[]): Promise<number> {
 
   // Detach: the CLI exits and the gateway keeps running. Its output is piped
   // to the log file by these readers, which end when the process does.
-  void pumpToLog(child.stdout as ReadableStream<Uint8Array>);
-  void pumpToLog(child.stderr as ReadableStream<Uint8Array>);
+  void pumpToLog(child.stdout as ReadableStream<Uint8Array>, port);
+  void pumpToLog(child.stderr as ReadableStream<Uint8Array>, port);
 
-  await writeRecord({ pid: child.pid, port, startedAt: new Date().toISOString(), version: VERSION });
+  await writeRecord({
+    pid: child.pid,
+    port,
+    startedAt: new Date().toISOString(),
+    version: VERSION,
+    root: ROOT,
+  });
   child.unref();
 
   if (!(await waitForReady(port))) {
     fail(`The gateway did not answer on port ${port} within 60s.`);
-    fail(`Check the log: ${logFile()}`);
+    fail(`Check the log: ${logFile(port)}`);
     fail(`Last lines:\n${await tailLog(12)}`);
     return 1;
   }
@@ -311,10 +358,19 @@ async function commandUp(args: readonly string[]): Promise<number> {
 }
 
 async function commandDown(): Promise<number> {
-  const record = await readRecord();
-  const port = record?.port ?? resolvePort();
+  const requested = resolvePort();
+  const record = await readRecord(requested);
+  const port = record?.port ?? requested;
+  // Refuse to stop an installation that is not this one: an operator running
+  // `down` in a second checkout would otherwise kill the first.
+  if (record !== undefined && record.root !== undefined && record.root !== ROOT && isAlive(record.pid)) {
+    fail(`The instance on port ${record.port} was started from a different directory:`);
+    fail(`  ${record.root}`);
+    fail("Run `cloviela down` there instead.");
+    return 1;
+  }
   if (record === undefined || !isAlive(record.pid)) {
-    await clearRecord();
+    await clearRecord(requested);
     // The pid file can be gone while something still holds the port — a
     // manually started instance, or a binary from another checkout.
     if (await isServing(port)) {
@@ -346,7 +402,7 @@ async function commandDown(): Promise<number> {
       // Gone.
     }
   }
-  await clearRecord();
+  await clearRecord(port);
   ok("Stopped.");
   return 0;
 }
@@ -361,9 +417,20 @@ async function tailLog(lines: number): Promise<string> {
 }
 
 async function commandStatus(): Promise<number> {
-  const record = await readRecord();
-  const port = record?.port ?? resolvePort();
+  const requested = resolvePort();
+  const record = await readRecord(requested);
+  const port = record?.port ?? requested;
   const serving = await isServing(port);
+  const sameInstall = record?.root === ROOT;
+
+  if (record !== undefined && !sameInstall && serving) {
+    process.stdout.write(
+      `${yellow("●")} A different installation is serving ${consoleUrl(port)}\n`,
+    );
+    process.stdout.write(`  ${dim("from")} ${record.root ?? "(unknown)"} ${dim(`(pid ${record.pid})`)}\n`);
+    process.stdout.write(`  ${dim("This directory is not the one running.")}\n`);
+    return 0;
+  }
 
   if (record === undefined) {
     if (serving) {
@@ -387,7 +454,7 @@ async function commandStatus(): Promise<number> {
     process.stdout.write(`  ${dim("Recent log:")}\n${await tailLog(8)}\n`);
     return 1;
   }
-  await clearRecord();
+  await clearRecord(requested);
   process.stdout.write(`${dim("○")} Not running ${dim("(cleaned up a stale record)")}\n`);
   return 1;
 }
@@ -398,7 +465,8 @@ async function commandLogs(args: readonly string[]): Promise<number> {
   const count = countFlag === -1 ? 40 : Number(args[countFlag + 1] ?? 40);
   const lines = Number.isFinite(count) && count > 0 ? Math.trunc(count) : 40;
 
-  if (!existsSync(logFile())) {
+  const logPort = resolvePort();
+  if (!existsSync(logFile(logPort))) {
     process.stdout.write(`${dim("No log yet. Start the gateway with")} cloviela up.\n`);
     return 0;
   }
@@ -410,7 +478,7 @@ async function commandLogs(args: readonly string[]): Promise<number> {
   // the behaviour is identical on macOS, Linux and Windows.
   let shown = 0;
   for (;;) {
-    const text = await readFile(logFile(), "utf8");
+    const text = await readFile(logFile(logPort), "utf8");
     const all = text.split(/\r?\n/).filter(Boolean);
     for (const line of all.slice(shown)) process.stdout.write(`${line}\n`);
     shown = all.length;
