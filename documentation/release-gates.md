@@ -7,7 +7,7 @@ not executed; not claimed.
 | Gate | Status | Evidence |
 |---|---|---|
 | R-01 Source commit and upstream SHA | PASS | core imported from upstream `dev` `382cf23…` as one commit stating its origin; branch `cloviela/release`; full upstream history kept at tag `upstream-base` |
-| R-02 GPL license and derivative notices preserved | PASS | `LICENSE` unchanged (GPL-3.0); README → License and credits; About → Kredit with the upstream link; CHANGELOG change notice |
+| R-02 GPL license and derivative notices preserved | PASS | `LICENSE` unchanged (GPL-3.0); `NOTICE.md` records the incorporated engine, its revision and the modification pointer; `CHANGELOG.md` is the dated change notice |
 | R-03 Baseline and final code inventory | PASS | `baseline-inventory.json`; 141,815 production lines / 680 files measured |
 | R-04 No unintended data loss or credential exposure | **BLOCKED** | Test suite damaged real client configs; 15 test-created files quarantined, Hermes restored from matching backup. The live `~/.codex/config.toml` is itself fixture residue (`# my codex config` / `other_agent_setting = "keep-me"`, both from `test/console/cli-tool-lifecycle.test.ts`), so the operator's original body was not recovered. The copy at `~/.codex/config.toml.backup-2026-10-09` preserves that residue; it is post-incident preservation, not recovery |
 | R-05 Bun setup and doctor in clean Lite fixture | PASS | `bun setup --non-interactive`; `bun doctor` → "All systems operational" |

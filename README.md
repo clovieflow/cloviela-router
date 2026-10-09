@@ -241,6 +241,10 @@ it under the same terms. If you distribute it or a modified version, keep the
 license notices, provide the corresponding source, and license covered work
 under GPLv3.
 
+[`NOTICE.md`](NOTICE.md) carries the notices the licence requires: the licence
+itself, the origin and revision of the incorporated gateway engine, and a
+pointer to [`CHANGELOG.md`](CHANGELOG.md) as the dated record of changes.
+
 ### Artwork
 
 The character illustrations in `assets/` and `dashboard/public/rikka/` were
