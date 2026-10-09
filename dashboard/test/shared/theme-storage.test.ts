@@ -269,9 +269,9 @@ describe("studio session storage", () => {
   test("the keys are the documented ones", () => {
     // A rename would silently orphan every operator's stored session, because the
     // read would simply find nothing.
-    expect(ACTIVE_KEY).toBe("cartethyia:studio:active-session");
-    expect(STUDIO_KEY_STORAGE).toBe("cartethyia:studio:key");
-    expect(STUDIO_PREFIX_STORAGE).toBe("cartethyia:studio:key-prefix");
+    expect(ACTIVE_KEY).toBe("cloviela:studio:active-session");
+    expect(STUDIO_KEY_STORAGE).toBe("cloviela:studio:key");
+    expect(STUDIO_PREFIX_STORAGE).toBe("cloviela:studio:key-prefix");
   });
 
   test("readStorage prefers sessionStorage", () => {

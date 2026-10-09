@@ -40,7 +40,7 @@ and every count is measured, never inferred from configuration.
 **Regression test.** `test/console/readiness-endpoint.test.ts` (10 tests). It
 builds its own PGlite database in the OS temp dir rather than calling
 `bootDatabase()`, which resolves the operator's real data directory when
-`CARTETHYIA_DATA_DIR` is unset — a plain `bun test <file>` would otherwise
+`CLOVIELA_DATA_DIR` is unset — a plain `bun test <file>` would otherwise
 write test tenants into a live gateway. That mistake was made and cleaned up
 during this session; see "Process notes".
 
@@ -179,7 +179,7 @@ Stated because they affected the repository and the operator's data.
 
 **A test suite wrote into the live data directory.** The first version of the
 readiness regression test called `bootDatabase()`, which resolves
-`~/Library/Application Support/Cartethyia` when `CARTETHYIA_DATA_DIR` is unset.
+`~/Library/Application Support/Cloviela` when `CLOVIELA_DATA_DIR` is unset.
 Running `bun test <file>` directly — outside the sandboxed runner — left 6
 provider rows in the operator's real database. They were found by a read-only
 audit query, removed by a script scoped to exactly the leaked id prefix

@@ -340,19 +340,19 @@ async function executeDimension(
       const before = mockCalls().length;
       let outcome: { exitCode: number; stdout: string; stderr: string };
       if (clientName === "omp") {
-        writeOmpProfile(fixture, "cartethyia");
+        writeOmpProfile(fixture, "cloviela");
         outcome = await runClient({
-          command: ["omp", "-p", "--no-tools", "--model", `cartethyia/${world.models.chat}`, "Reply with the single word: ok"],
+          command: ["omp", "-p", "--no-tools", "--model", `cloviela/${world.models.chat}`, "Reply with the single word: ok"],
           cwd: fixture.workDir,
           env: clientEnv(fixture, {}),
           timeoutMs: 120_000,
         });
       } else if (clientName === "opencode") {
-        writeOpencodeProfile(fixture, "cartethyia");
+        writeOpencodeProfile(fixture, "cloviela");
         outcome = await runClient({
-          command: ["opencode", "run", "--standalone", "--model", `cartethyia/${world.models.chat}`, "Reply with the single word: ok"],
+          command: ["opencode", "run", "--standalone", "--model", `cloviela/${world.models.chat}`, "Reply with the single word: ok"],
           cwd: fixture.workDir,
-          env: clientEnv(fixture, { CARTETHYIA_E2E_KEY: fixture.apiKey }),
+          env: clientEnv(fixture, { CLOVIELA_E2E_KEY: fixture.apiKey }),
           timeoutMs: 120_000,
         });
       } else {
@@ -577,7 +577,7 @@ async function main(): Promise<number> {
       extra: {
         ...(cli.databaseUrl === undefined ? {} : { DATABASE_URL: cli.databaseUrl }),
         ...(cli.redisUrl === undefined ? {} : { REDIS_URL: cli.redisUrl }),
-        CARTETHYIA_DB_MODE: cli.store,
+        CLOVIELA_DB_MODE: cli.store,
       },
     });
     host = await startHost(env, process.cwd(), 180_000);

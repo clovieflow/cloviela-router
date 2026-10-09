@@ -1,7 +1,7 @@
 // Routing snapshot: builds the RouteSnapshot from the persisted model catalog.
 
 import { asc, eq, ne } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import {
   models,
   modelAliases,
@@ -307,7 +307,7 @@ type RouteCatalogSnapshotResult = Omit<RouteSnapshot, "revision" | "created_at">
 
 /** Repository abstracting database queries for the route catalog snapshot. */
 class RouteCatalogRepository {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async loadRouteCatalogSnapshot(tenantId?: string): Promise<RouteCatalogSnapshotResult> {
     const [providerRows, modelRows, accountRows, aliasRows, comboRows, routingRows, poolRows, disabledModelRows, cliMappingRows, cliMappingSettingRows, poolSettingRows] =
@@ -704,7 +704,7 @@ class RouteCatalogRepository {
 }
 
 /** Builds a `SnapshotBuilder` reading the live catalog from `db`. */
-export function createDatabaseSnapshotBuilder(db: CartethyiaDatabase): SnapshotBuilder {
+export function createDatabaseSnapshotBuilder(db: ClovielaDatabase): SnapshotBuilder {
   const repository = new RouteCatalogRepository(db);
   return () => repository.loadRouteCatalogSnapshot(undefined);
 }

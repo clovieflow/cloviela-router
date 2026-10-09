@@ -62,7 +62,7 @@
   Reproduced before the fix (`publicErrorLeaks:true`), verified after
   (`false`, `upstreamInputUnchanged:true`).
 - **Private-first listener.** The HTTP server bound every interface implicitly.
-  `CARTETHYIA_BIND_HOST` now defaults to `127.0.0.1`; Docker sets `0.0.0.0`
+  `CLOVIELA_BIND_HOST` now defaults to `127.0.0.1`; Docker sets `0.0.0.0`
   explicitly and publishes to the host as `127.0.0.1` only.
 - **Dependency: Elysia and TypeBox pinned together.** TypeBox `1.3.24` removed
   the `Validator.buildResult` shape that Elysia `2.0.0-beta.16` reads, so a

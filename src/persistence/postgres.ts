@@ -7,7 +7,7 @@ import { GatewayError } from "../transport/gateway-error";
 import { log } from "../observability/logger";
 import { join } from "node:path";
 import { fullSchema } from "./db-handle";
-import type { CartethyiaDatabase, DatabaseHandle } from "./db-handle";
+import type { ClovielaDatabase, DatabaseHandle } from "./db-handle";
 import { resolveDataDir, resolveDbMode } from "./db-mode";
 import {
   applySqlMigrations,
@@ -30,7 +30,7 @@ import {
 import type { MigrationLedgerStatus } from "./migrate";
 
 export { fullSchema };
-export type { CartethyiaDatabase, DatabaseHandle, MigrationLedgerStatus };
+export type { ClovielaDatabase, DatabaseHandle, MigrationLedgerStatus };
 export {
   MIGRATION_LEDGER_TABLE,
   applySqlMigrations,
@@ -63,9 +63,9 @@ export function isUniqueViolation(error: unknown): boolean {
 
 declare global {
   // eslint-disable-next-line no-var -- globalThis augmentation requires `var`
-  var __cartethyiaHandle: DatabaseHandle | undefined;
+  var __clovielaHandle: DatabaseHandle | undefined;
   // eslint-disable-next-line no-var
-  var __cartethyiaMigrated: boolean | undefined;
+  var __clovielaMigrated: boolean | undefined;
 }
 
 /**
@@ -77,7 +77,7 @@ declare global {
  * boots cheap, and a handle without migrated tables behind it is never valid.
  */
 export async function bootDatabase(): Promise<DatabaseHandle> {
-  if (globalThis.__cartethyiaHandle) return globalThis.__cartethyiaHandle;
+  if (globalThis.__clovielaHandle) return globalThis.__clovielaHandle;
   if (resolveDbMode() === "lite") {
     const client = await createPgliteClient(join(resolveDataDir(), "pglite"));
     try {
@@ -87,38 +87,38 @@ export async function bootDatabase(): Promise<DatabaseHandle> {
       throw error;
     }
     const handle = buildPgliteHandle(client);
-    globalThis.__cartethyiaHandle = handle;
+    globalThis.__clovielaHandle = handle;
     log.warn("[db] lite mode: embedded PGlite, single process only");
     return handle;
   }
   const handle = createPgHandle();
-  globalThis.__cartethyiaHandle = handle;
+  globalThis.__clovielaHandle = handle;
   return handle;
 }
 
 /** Active backend handle; throws when the database has not booted yet. */
 export function getDbHandle(): DatabaseHandle {
-  if (globalThis.__cartethyiaHandle) return globalThis.__cartethyiaHandle;
+  if (globalThis.__clovielaHandle) return globalThis.__clovielaHandle;
   if (resolveDbMode() === "lite") {
     throw new Error("Lite database is not booted: await bootDatabase() before getDb()");
   }
   const handle = createPgHandle();
-  globalThis.__cartethyiaHandle = handle;
+  globalThis.__clovielaHandle = handle;
   return handle;
 }
 
-export function getDb(): CartethyiaDatabase {
+export function getDb(): ClovielaDatabase {
   return getDbHandle().db;
 }
 
 export async function ensureMigrated(): Promise<void> {
-  if (globalThis.__cartethyiaMigrated) return;
+  if (globalThis.__clovielaMigrated) return;
   const handle = await bootDatabase();
   // Lite migrates during boot; pg migrates here under its advisory lock.
   if (isPgHandle(handle)) {
     await applySqlMigrations(handle.pool);
   }
-  globalThis.__cartethyiaMigrated = true;
+  globalThis.__clovielaMigrated = true;
 }
 
 /**
@@ -175,8 +175,8 @@ export async function assertPoolFitsServerCapacity(poolMax: number): Promise<voi
 }
 
 export async function closeDb(): Promise<void> {
-  const handle = globalThis.__cartethyiaHandle;
-  globalThis.__cartethyiaHandle = undefined;
-  globalThis.__cartethyiaMigrated = false;
+  const handle = globalThis.__clovielaHandle;
+  globalThis.__clovielaHandle = undefined;
+  globalThis.__clovielaMigrated = false;
   if (handle) await handle.close();
 }

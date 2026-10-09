@@ -181,19 +181,19 @@ export interface ElyxiaServer {
  * but keep `globalThis` alive — reuse the same instances instead of
  * spawning duplicate intervals/workers/DB pools on every saved file. Under
  * `--watch` or the compiled production binary the whole OS process restarts
- * fresh each time, so `globalThis.__cartethyiaBoot` is always unset there
+ * fresh each time, so `globalThis.__clovielaBoot` is always unset there
  * and this behaves exactly like a normal one-shot boot.
  */
-export interface CartethyiaBoot {
+export interface ClovielaBoot {
   deps: ProductionDeps;
   shutdownCoordinator: ShutdownCoordinator;
   server: ElyxiaServer | undefined;
 }
 
 
-export async function bootstrap(): Promise<CartethyiaBoot> {
+export async function bootstrap(): Promise<ClovielaBoot> {
   const deps = await buildProductionDeps();
-  const boot: CartethyiaBoot = {
+  const boot: ClovielaBoot = {
     deps,
     server: undefined,
     shutdownCoordinator: new ShutdownCoordinator(

@@ -476,7 +476,7 @@ export function composeAbortSignal(signal: AbortSignal | undefined, timeoutMs: n
 // namespace. Browser state is consumed atomically; device state remains until
 // the flow completes.
 export const DEFAULT_TTL_SECONDS = 900;
-const KEY_PREFIX = "cartethyia:oauth:";
+const KEY_PREFIX = "cloviela:oauth:";
 const PENDING_PREFIX = `${KEY_PREFIX}pending:`;
 const PENDING_PROVIDER_PREFIX = `${KEY_PREFIX}pending-provider:`;
 const DEVICE_PREFIX = `${KEY_PREFIX}device:`;

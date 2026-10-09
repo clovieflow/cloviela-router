@@ -1,6 +1,7 @@
 import { cpus, totalmem } from "node:os";
 import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import { envValue } from "../../env-compat";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { RedisClient } from "../../persistence/redis";
 import {
   apiKeys,
@@ -14,7 +15,7 @@ import {
 } from "../../persistence/schema";
 import { globalOrOwnedBy } from "../../persistence/tenant-scope";
 import { decodeDatedCursor, encodeCursor } from "../../persistence/page-cursor";
-import { CARTETHYIA_VERSION } from "../../transport/version";
+import { CLOVIELA_VERSION } from "../../transport/version";
 import { resolveMemoryLimitBytes } from "../../observability/runtime-metrics";
 import { CachedPreferencesReader, DrizzlePreferencesReader, type PreferencesReader } from "../../persistence/tenant-preferences";
 import type {
@@ -201,7 +202,7 @@ function mapUsageRequestItem(
   };
 }
 async function resolveProxyLabel(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   tenantId: string,
   poolId: string,
 ): Promise<string> {
@@ -228,7 +229,7 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
   private lastCpuSample: { readonly user: number; readonly system: number; readonly at: number } | undefined;
 
   constructor(
-    private readonly db: CartethyiaDatabase,
+    private readonly db: ClovielaDatabase,
     private readonly redis: RedisClient | undefined,
     /**
      * Tenant preferences, revision-cached. The Usage page reads the privacy
@@ -320,7 +321,7 @@ export class DrizzleObservabilityStore implements ObservabilityStore {
         : "healthy";
 
     return {
-      version: process.env.CARTETHYIA_VERSION ?? CARTETHYIA_VERSION,
+      version: envValue("CLOVIELA_VERSION") ?? CLOVIELA_VERSION,
       status,
       uptime_seconds: Math.floor(process.uptime()),
       database_healthy: databaseHealthy,

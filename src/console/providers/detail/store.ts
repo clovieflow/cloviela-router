@@ -1,6 +1,6 @@
 // Drizzle-backed persistence for provider routing (detail) settings.
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import { providerRoutingSettings } from "../../../persistence/schema";
 import { resolveTenantOverride } from "../../../persistence/tenant-scope";
 import { DEFAULT_PROXY_BYPASS_PROVIDER_IDS } from "../../../providers/provider-registry";
@@ -35,7 +35,7 @@ function tenantWhere(providerId: string, tenantId: string | null) {
 }
 
 export class DrizzleProviderDetailStore implements ProviderDetailStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async getRouting(providerId: string, tenantId: string | null): Promise<ProviderRoutingResponse> {
     let specificRow: typeof providerRoutingSettings.$inferSelect | undefined;

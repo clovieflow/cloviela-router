@@ -28,7 +28,7 @@ export function workosToken(token: string): string {
   return token.startsWith("workos:") ? token : `workos:${token}`;
 }
 
-// Cartethyia expresses this as a per-dispatch buildExtraHeaders hook so every
+// Cloviela expresses this as a per-dispatch buildExtraHeaders hook so every
 // request gets fresh client-version headers.
 // API-key credentials use direct Bearer format (no workos prefix);
 // OAuth and scoped credentials retain the required workos: prefix.
@@ -131,7 +131,7 @@ function clinePrePayload(
 }
 
 // (modelEntries / recommendedModels / fetchRecommendedModels) preserved
-// as Cartethyia discovery helpers. The factory's discovery endpoint is wired
+// as Cloviela discovery helpers. The factory's discovery endpoint is wired
 // to /ai/cline/recommended-models; these helpers can be used by a custom
 // discovery layer or tests. Keeping them guarantees the custom tag→vision
 // logic and clinePass vs free branching are not lost in the port.

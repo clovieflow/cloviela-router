@@ -261,7 +261,7 @@ export function createValidatedFetch(options: ValidatedFetchOptions = {}): Valid
         // The egress dials the pool/relay, which resolves the target itself.
         // Counting these lets ops confirm how much traffic depends on
         // proxy-resolved DNS rather than the local system resolver.
-        metrics.cartethyia_proxy_dial_dns_fallback_total.inc();
+        metrics.cloviela_proxy_dial_dns_fallback_total.inc();
       }
       try {
         if (!poolDialsTarget) {

@@ -157,7 +157,7 @@ export interface ShareLinkResponse {
 export const DEFAULT_API_KEY_PREFIX = "rk_";
 
 /** Label of the default gateway API key seeded at first boot; never revoked. */
-export const DEFAULT_API_KEY_LABEL = "Default Cartethyia API key";
+export const DEFAULT_API_KEY_LABEL = "Default Cloviela API key";
 
 /** Generates an inbound key and its one-way hash. */
 export function generateApiKeySecret(prefix = DEFAULT_API_KEY_PREFIX): {

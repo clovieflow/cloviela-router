@@ -95,7 +95,7 @@ export const hermesSpec: InjectorSpec = {
 
   messages: {
     applied: "Hermes Agent settings applied",
-    reset: "Cartethyia settings removed from Hermes Agent",
+    reset: "Cloviela settings removed from Hermes Agent",
   },
 };
 

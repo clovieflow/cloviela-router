@@ -11,7 +11,7 @@
  * too; the mapping is shared with `syncModels`.
  */
 import { and, eq, isNull, or } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { consoleSettings, models, providerAccounts } from "../../persistence/schema";
 import type {
   CanonicalEvent,
@@ -178,7 +178,7 @@ export interface ProbeTarget {
  * and a corrected family recomputes its endpoint.
  */
 export async function resolveProbeTarget(args: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly bundledModelCatalog: ReadonlyMap<string, readonly ModelDefinition[]>;
   readonly defaultEndpoints: Record<WireFamily, string>;
   readonly providerId: string;
@@ -344,7 +344,7 @@ export type ProbeAccountSelection =
  * not select them either. Tenant-owned accounts win over shared global ones.
  */
 export async function selectProbeAccount(args: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly tenantId: string;
   readonly providerId: string;
   readonly requestedAccountId: string | undefined;
@@ -456,7 +456,7 @@ export interface ProbePreferences {
  * preference.
  */
 export async function loadProbePreferences(args: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly tenantId: string;
   readonly wireFamily: WireFamily;
   readonly request: ProbeModelRequest;
@@ -557,7 +557,7 @@ export function buildProbeCanonicalRequest(args: {
  * active instead of staying stale).
  */
 export async function recordProbeHealth(args: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly invalidator: { invalidate(): unknown } | undefined;
   readonly accountId: string | undefined;
   readonly dispatchError: unknown;

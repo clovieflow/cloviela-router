@@ -7,7 +7,7 @@
  * non-fatal — a settings read outage must not fail an otherwise dispatchable
  * request.
  */
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { CanonicalRequest } from "../canonical-model";
 import type { PreparedProxyRequest } from "../request/preparer";
 import { normalizeThinkingConfig } from "../translation/thinking";
@@ -21,7 +21,7 @@ import { preferencesReaderFor } from "./attempt-finalize";
  */
 export async function applyTenantPreferences(
   prepared: PreparedProxyRequest,
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
 ): Promise<CanonicalRequest> {
   let canonicalRequest = prepared.canonicalRequest;
   const tenantId = prepared.authorization.snapshot.tenant_id;

@@ -320,7 +320,7 @@ export function DeviceCodeDialog({
   const [verificationPopupBlocked, setVerificationPopupBlocked] = useState(false);
   useEffect(() => {
     if (!session) return;
-    const popup = window.open(session.verificationUri, "cartethyia-device", "popup,width=720,height=820");
+    const popup = window.open(session.verificationUri, "cloviela-device", "popup,width=720,height=820");
     if (popup) {
       verificationPopupRef.current = popup;
     } else {

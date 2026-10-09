@@ -144,7 +144,7 @@ export interface OpenAICompatibleAdapterConfig {
    */
   readonly credential_forwarding?: "account" | "never";
   /**
-   * Stamps `user-agent: Cartethyia/<version>` on every dispatch. Explicit
+   * Stamps `user-agent: Cloviela/<version>` on every dispatch. Explicit
    * opt-in per provider spec — never a default — so first-party cloaking
    * (Codex, Claude Code) is untouched.
    */

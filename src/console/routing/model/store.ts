@@ -1,7 +1,7 @@
 // Drizzle-backed console persistence for model routing (aliases + combos).
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { globalOrOwnedBy } from "../../../persistence/tenant-scope";
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import {
   modelAliases,
   modelCombos,
@@ -64,7 +64,7 @@ function mapComboRow(row: ModelCombo): ModelComboRow {
 
 /** Real Drizzle-backed model-aliasing/combos repository. */
 export class DrizzleModelRoutingStore implements ModelRoutingStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async listAliases(tenantId: string): Promise<readonly ModelAliasRow[]> {
     // Ordered by the explicit `sort_index` so rows keep a stable position

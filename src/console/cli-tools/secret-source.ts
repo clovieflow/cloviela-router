@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { apiKeys } from "../../persistence/schema";
 import { decryptCredentialToString, hashSecret } from "../../security/crypto";
 import type { CliToolSecretSource, ResolvedApiKeySecret } from "./service";
@@ -21,7 +21,7 @@ import type { CliToolSecretSource, ResolvedApiKeySecret } from "./service";
  *   resolve another tenant's key.
  */
 export class DrizzleCliToolSecretSource implements CliToolSecretSource {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async resolveSecret(tenantId: string, keyId: string): Promise<ResolvedApiKeySecret | undefined> {
     const rows = await this.db

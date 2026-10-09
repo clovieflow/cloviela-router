@@ -90,9 +90,9 @@ const sharedEnv = {
   LOCALAPPDATA: join(isolatedHome, "AppData", "Local"),
   CODEX_HOME: join(isolatedHome, ".codex"),
   CLAUDE_CONFIG_DIR: join(isolatedHome, ".claude"),
-  CARTETHYIA_TEST_HOME_ROOT: sandbox,
-  CARTETHYIA_DATA_DIR: join(sandbox, "runtime-data"),
-  CARTETHYIA_DB_MODE: "full",
+  CLOVIELA_TEST_HOME_ROOT: sandbox,
+  CLOVIELA_DATA_DIR: join(sandbox, "runtime-data"),
+  CLOVIELA_DB_MODE: "full",
 };
 
 /**

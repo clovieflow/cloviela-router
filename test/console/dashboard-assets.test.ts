@@ -38,7 +38,7 @@ function bodyText(result: { body?: unknown }): string {
 }
 
 beforeAll(async () => {
-  buildDir = await mkdtemp(join(tmpdir(), "cartethyia-assets-"));
+  buildDir = await mkdtemp(join(tmpdir(), "cloviela-assets-"));
   await writeFile(
     join(buildDir, "index.html"),
     "<!doctype html><html><body><div id=\"root\"></div></body></html>",

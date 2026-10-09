@@ -1,9 +1,9 @@
 ---
 name: cloviela-engineering
-description: "Use for any Cloviela Router (Cartethyia fork) repository development, debugging, refactor, provider, routing, schema, dashboard/API contract, or removal task. Pick the reference, act, finish with evidence."
+description: "Use for any Cloviela Router (Cloviela fork) repository development, debugging, refactor, provider, routing, schema, dashboard/API contract, or removal task. Pick the reference, act, finish with evidence."
 ---
 
-# Cartethyia Engineering
+# Cloviela Engineering
 
 Entry point for repo work. Pick the row, read that reference, act.
 

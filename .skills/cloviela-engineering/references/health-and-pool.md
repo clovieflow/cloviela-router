@@ -29,7 +29,7 @@ Before changing a status or timeout, trace every reader and branch that uses it.
 - An account-scoped upstream failure is retryable regardless of HTTP status —
   that evidence is exactly what failover exists for. Provider-scoped failures
   still follow the status/code allowlist.
-- One request dials at most `CARTETHYIA_ROUTE_MAX_ATTEMPTS` candidates
+- One request dials at most `CLOVIELA_ROUTE_MAX_ATTEMPTS` candidates
   (default 8, range 1–64, resolved by `resolveRouteMaxAttempts()`).
 - Provider-specific exceptions must be explicit, narrow, and documented at the owner.
 

@@ -2,13 +2,13 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { mkdirSync, readFileSync } from "node:fs";
-import { fullSchema, type CartethyiaDatabase, type DatabaseHandle } from "./db-handle";
+import { fullSchema, type ClovielaDatabase, type DatabaseHandle } from "./db-handle";
 import {
   isToleratedMissingExtension,
   LEDGER_DDL,
-  MIGRATION_LEDGER_TABLE,
   migrationFiles,
   migrationIdFor,
+  resolveLedgerTable,
   resolveMigrationsFolder,
   splitStatements,
 } from "./migrate";
@@ -42,7 +42,7 @@ export function buildPgliteHandle(client: PGlite): DatabaseHandle {
   // Same pg-core PgDatabase base over the same schema as the pg driver; only
   // the session differs, so the instance is converted once here instead of
   // forcing a driver union through every store.
-  const db = drizzle(client, { schema: fullSchema }) as unknown as CartethyiaDatabase;
+  const db = drizzle(client, { schema: fullSchema }) as unknown as ClovielaDatabase;
   return {
     kind: "pglite",
     db,
@@ -78,9 +78,13 @@ export async function applyPgliteMigrations(
   if (!hasTransaction(client)) {
     throw new Error("PGlite client does not expose transaction()");
   }
+  // Which ledger holds this database's history. A pre-rename installation has
+  // its rows in the old table; reading the new one would find nothing and
+  // replay every migration against a schema that already exists.
+  const ledger = await resolveLedgerTable((sql) => client.query(sql));
   await client.exec(LEDGER_DDL);
   const appliedRows = await client.query<{ migration_id: string }>(
-    `SELECT migration_id FROM ${MIGRATION_LEDGER_TABLE}`,
+    `SELECT migration_id FROM ${ledger}`,
   );
   const applied = new Set(appliedRows.rows.map((row) => row.migration_id));
 
@@ -94,17 +98,17 @@ export async function applyPgliteMigrations(
         // extension) rolls back to the savepoint instead of poisoning the
         // file's transaction, while any other failure still aborts it.
         for (const statement of splitStatements(source)) {
-          await tx.exec("SAVEPOINT cartethyia_stmt");
+          await tx.exec("SAVEPOINT cloviela_stmt");
           try {
             await tx.exec(statement);
           } catch (error) {
-            await tx.exec("ROLLBACK TO SAVEPOINT cartethyia_stmt");
+            await tx.exec("ROLLBACK TO SAVEPOINT cloviela_stmt");
             if (isToleratedMissingExtension(statement, error)) continue;
             throw error;
           }
-          await tx.exec("RELEASE SAVEPOINT cartethyia_stmt");
+          await tx.exec("RELEASE SAVEPOINT cloviela_stmt");
         }
-        await tx.query(`INSERT INTO ${MIGRATION_LEDGER_TABLE} (migration_id) VALUES ($1)`, [
+        await tx.query(`INSERT INTO ${ledger} (migration_id) VALUES ($1)`, [
           migrationId,
         ]);
       });

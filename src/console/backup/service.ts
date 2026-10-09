@@ -16,7 +16,7 @@
  * database: the layer doc and the dashboard copy say so, and export requires
  * password re-authentication.
  */
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { ConsoleDomainError } from "../shared/errors";
 import { tablesForSection } from "./contracts";
 import type { BackupSection } from "./contracts";
@@ -26,7 +26,7 @@ import { convert9RouterBackup, type ImportReport } from "./nine-router";
 import type { RestoreRuntimeSync } from "./runtime-sync";
 
 export interface BackupServiceOptions {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   /** Verifies the signed-in operator's console password; supplied by the router. */
   readonly verifyPassword: (password: string) => Promise<boolean>;
 }

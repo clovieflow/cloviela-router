@@ -18,7 +18,7 @@
  *   bun run scripts/commands/grok-health-sweep.ts --provider grok --batch 10
  */
 import { asc, eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../src/persistence/postgres";
+import type { ClovielaDatabase } from "../../src/persistence/postgres";
 import { closeDb, getDb } from "../../src/persistence/postgres";
 import { providerAccounts } from "../../src/persistence/schema";
 import type { ProbeModelResult } from "../../src/providers/discovery/discovery-types";
@@ -74,7 +74,7 @@ interface AccountRow {
  * Lists the provider's accounts in the order the operator sees them: by list
  * position, not insert time or UUID, so the sweep reads top-to-bottom.
  */
-async function listAccounts(db: CartethyiaDatabase, providerId: string): Promise<AccountRow[]> {
+async function listAccounts(db: ClovielaDatabase, providerId: string): Promise<AccountRow[]> {
   return db
     .select({ id: providerAccounts.id, label: providerAccounts.label })
     .from(providerAccounts)

@@ -1,7 +1,7 @@
 import { providerAccounts, providerOauthStates } from "../../../persistence/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { encryptCredential, hashSecret } from "../../../security/crypto";
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import type { OAuthExchangeResult, OAuthLoginClient } from "../../../providers/authentication/oauth-flow-store";
 import type { OAuthDevicePollResponse } from "../catalog/contracts";
 import { providerJwtVerification, type ProviderRegistry } from "../../../providers/provider-registry";
@@ -38,7 +38,7 @@ function oauthIdentityFingerprint(input: { readonly label: string } & OAuthExcha
 }
 
 export class DrizzleOAuthAccountStore implements OAuthAccountStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async persistAccount(
     tenantId: string | null,
@@ -155,7 +155,7 @@ export class DrizzleOAuthAccountStore implements OAuthAccountStore {
  * and device-code start/poll — driven by whichever `OAuthLoginClient` is
  * registered for a given provider id.
  *
- * > **Koreksi.** An earlier comment here read "Cartethyia hosts the callback
+ * > **Koreksi.** An earlier comment here read "Cloviela hosts the callback
  * > itself (it's a server process, not a local CLI), so there is no
  * > loopback-listener/port-selection problem." That was wrong, and it is the
  * > premise that produced the bug. The redirect URIs these clients advertise
@@ -305,7 +305,7 @@ function successPage(providerId: string, wantsJson: boolean): Response {
  *
  * `GatewayError.origin` marks which boundary produced the error, and its own
  * contract calls a non-upstream error "a safe public error". So a
- * `cartethyia`-origin message — authored by one of our integrations, already
+ * `cloviela`-origin message — authored by one of our integrations, already
  * sanitized — is shown as-is: without it, an actionable failure such as "MiMo
  * Desktop is running and holds its cookie store locked" reaches the operator
  * only through the server log, and the dialog says nothing they can act on.
@@ -313,7 +313,7 @@ function successPage(providerId: string, wantsJson: boolean): Response {
  * the generic wording, because an upstream response can echo credentials.
  */
 function publicExchangeFailure(error: unknown): string {
-  if (error instanceof GatewayError && error.origin === "cartethyia") return error.message;
+  if (error instanceof GatewayError && error.origin === "cloviela") return error.message;
   return "token exchange failed — check the console log for details";
 }
 

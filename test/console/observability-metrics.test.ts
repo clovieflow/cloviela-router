@@ -120,7 +120,7 @@ describe("memory and CPU are process facts under honest names", () => {
     const expected = Math.round((health.memory_bytes / health.memory_limit_bytes) * 10000) / 100;
     expect(health.memory_percent).toBe(expected);
     // A budget over the host total is possible only when a limit was set.
-    if (process.env["CARTETHYIA_MEMORY_LIMIT_BYTES"] === undefined) {
+    if (process.env["CLOVIELA_MEMORY_LIMIT_BYTES"] === undefined) {
       expect(health.memory_limit_bytes).toBe(totalmem());
     }
   });

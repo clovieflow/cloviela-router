@@ -78,7 +78,7 @@ export const deepseekTuiSpec: InjectorSpec = {
 
   messages: {
     applied: "DeepSeek TUI settings applied",
-    reset: "Cartethyia settings removed from DeepSeek TUI",
+    reset: "Cloviela settings removed from DeepSeek TUI",
     resetMissing: "No config file to reset",
   },
 };

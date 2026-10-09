@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "./postgres";
+import type { ClovielaDatabase } from "./postgres";
 import {
   telemetryEvents,
   telemetryPayloads,
@@ -63,7 +63,7 @@ function aggregateUsage(rows: readonly (typeof telemetryEvents.$inferInsert)[]) 
  * operations, lifetime aggregates, and retention.
  */
 export class DrizzleTelemetryStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   /** Inserts events and their durable identity aggregates atomically. */
   async insertEvents(rows: Array<typeof telemetryEvents.$inferInsert>): Promise<void> {

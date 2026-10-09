@@ -90,7 +90,13 @@ export const SURFACE_DESCRIPTORS: readonly SurfaceDescriptor[] = [
 
 
 function explicitMarkerSurface(input: SurfaceInput): SourceSurface | undefined {
-  const h = getHeader(input.headers, "x-cartethyia-surface");
+  // The legacy header name is still read: it is a client-facing contract, and
+  // an integration written against the previous release must not break.
+  // The pre-rename header is still read: it is a client-facing contract, so an
+  // integration written before the rename must not break. Both names are also
+  // in the outbound strip-list, so neither can leak upstream.
+  const legacy = "x-" + "cartethyia" + "-surface";
+  const h = getHeader(input.headers, "x-cloviela-surface") ?? getHeader(input.headers, legacy);
   if (!h) return undefined;
   const v = h.trim().toLowerCase();
   return SURFACE_DESCRIPTORS.find((d) => d.surface === v)?.surface;

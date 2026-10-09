@@ -1,7 +1,7 @@
 # Architecture
 
 How one request flows through Cloviela Router, and which module owns each step.
-The gateway core is inherited from Cartethyia; this document describes the
+The gateway core is inherited from Cloviela; this document describes the
 shipped behavior, not an aspiration.
 
 ## Composition roots
@@ -14,7 +14,7 @@ shipped behavior, not an aspiration.
 | Environment contract | `src/config.ts` (`CONFIG_SPEC`) + `.env.example` (drift-tested) |
 | Browser application | `dashboard/src/App.tsx`, `dashboard/src/apps/*/entry.tsx` |
 
-`src/main.ts` resolves the listener from `PORT` and `CARTETHYIA_BIND_HOST`
+`src/main.ts` resolves the listener from `PORT` and `CLOVIELA_BIND_HOST`
 (default `127.0.0.1`). Nothing else may open a socket on behalf of the gateway.
 
 ## Request lifecycle
@@ -91,7 +91,7 @@ route-specific social metadata, because crawlers do not execute the bundle.
 
 | Mode | Owner |
 |---|---|
-| Lite | `src/persistence/db-pglite.ts` — embedded PGlite under `<CARTETHYIA_DATA_DIR>/pglite` |
+| Lite | `src/persistence/db-pglite.ts` — embedded PGlite under `<CLOVIELA_DATA_DIR>/pglite` |
 | Full | `src/persistence/postgres.ts` — external PostgreSQL via `DATABASE_URL` |
 | Migrations | `migrations/*.sql`, applied under an advisory lock at boot |
 | Coordination | `src/persistence/redis.ts` when `REDIS_URL` is set, in-process otherwise |
@@ -101,7 +101,7 @@ directory. Both modes expose the same application features.
 
 ## Security boundaries
 
-- Provider credentials are encrypted at rest with `CARTETHYIA_ENCRYPTION_KEY`
+- Provider credentials are encrypted at rest with `CLOVIELA_ENCRYPTION_KEY`
   and are decrypted only inside the dispatch path.
 - Dashboard code never receives a provider credential. The API returns masked
   prefixes (`keyPrefix`) and booleans.

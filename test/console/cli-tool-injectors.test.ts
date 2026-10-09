@@ -139,8 +139,8 @@ describe("isLocalEndpoint", () => {
     }
   });
 
-  test("recognizes a Cartethyia hostname", () => {
-    expect(isLocalEndpoint("https://cartethyia.example.com")).toBe(true);
+  test("recognizes a Cloviela hostname", () => {
+    expect(isLocalEndpoint("https://cloviela.example.com")).toBe(true);
     expect(isLocalEndpoint("https://CARTETHYIA.io")).toBe(true);
   });
 
@@ -156,7 +156,7 @@ describe("isLocalEndpoint", () => {
       "https://notlocalhost.com",
       "https://mylocalhostproxy.net",
       "https://LOCALHOST.example",
-      "https://my-cartethyia-clone.io",
+      "https://my-cloviela-clone.io",
     ]) {
       expect(isLocalEndpoint(url)).toBe(false);
     }
@@ -166,7 +166,7 @@ describe("isLocalEndpoint", () => {
     for (const url of [
       "https://evil.com/localhost",
       "https://evil.com/?next=localhost",
-      "https://x.com/cartethyia-fake",
+      "https://x.com/cloviela-fake",
     ]) {
       expect(isLocalEndpoint(url)).toBe(false);
     }
@@ -297,11 +297,11 @@ describe("textGet: section keys", () => {
   });
 
   test("reads a dotted section name, which codex uses for provider tables", () => {
-    const text = `[model_providers.cartethyia]\n  base_url = "http://localhost:12800/v1"\n`;
+    const text = `[model_providers.cloviela]\n  base_url = "http://localhost:12800/v1"\n`;
     expect(
       textGet(text, {
         kind: "sectionKey",
-        section: "model_providers.cartethyia",
+        section: "model_providers.cloviela",
         key: "base_url",
       }),
     ).toBe("http://localhost:12800/v1");
@@ -696,26 +696,26 @@ model_provider = "openai"
     text = textRemove(text, { kind: "flat", key: "model" });
     text = textRemove(text, { kind: "flat", key: "review_model" });
     text = textRemove(text, { kind: "flat", key: "model_provider" });
-    text = textUpsert(text, { kind: "flat", key: "model", insertAtTop: true }, "cartethyia-sonnet");
-    text = textUpsert(text, { kind: "flat", key: "model_provider", insertAtTop: true }, "cartethyia");
+    text = textUpsert(text, { kind: "flat", key: "model", insertAtTop: true }, "cloviela-sonnet");
+    text = textUpsert(text, { kind: "flat", key: "model_provider", insertAtTop: true }, "cloviela");
     text = textUpsert(
       text,
-      { kind: "section", section: "model_providers.cartethyia" },
-      [`  name = "Cartethyia"`, `  base_url = "http://localhost:12800/v1"`].join("\n"),
+      { kind: "section", section: "model_providers.cloviela" },
+      [`  name = "Cloviela"`, `  base_url = "http://localhost:12800/v1"`].join("\n"),
     );
     text = textUpsert(
       text,
       { kind: "sectionKey", section: "agents", key: "default_subagent_model" },
-      "cartethyia-haiku",
+      "cloviela-haiku",
     );
 
     expect(hasGluedHeader(text)).toBe(false);
     expect(hasGluedValue(text)).toBe(false);
-    expect(textGet(text, { kind: "flat", key: "model" })).toBe("cartethyia-sonnet");
-    expect(textGet(text, { kind: "flat", key: "model_provider" })).toBe("cartethyia");
+    expect(textGet(text, { kind: "flat", key: "model" })).toBe("cloviela-sonnet");
+    expect(textGet(text, { kind: "flat", key: "model_provider" })).toBe("cloviela");
     expect(
       textGet(text, { kind: "sectionKey", section: "agents", key: "default_subagent_model" }),
-    ).toBe("cartethyia-haiku");
+    ).toBe("cloviela-haiku");
     // The user's own unrelated content survives every edit.
     expect(text).toContain("# my codex config");
     expect(text).toContain("[model_providers.openai]");
@@ -727,14 +727,14 @@ model_provider = "openai"
     text = textUpsert(
       text,
       { kind: "sectionKey", section: "agents", key: "default_subagent_model" },
-      "cartethyia-haiku",
+      "cloviela-haiku",
     );
     text = textRemove(text, {
       kind: "sectionKey",
       section: "agents",
       key: "default_subagent_model",
     });
-    text = textRemove(text, { kind: "section", section: "model_providers.cartethyia" });
+    text = textRemove(text, { kind: "section", section: "model_providers.cloviela" });
     expect(hasGluedHeader(text)).toBe(false);
     expect(text).toContain("other_agent_setting = \"keep-me\"");
     expect(text).toContain("[model_providers.openai]");
@@ -747,19 +747,19 @@ describe("readJsonFile and writeJsonFile", () => {
   let savedRoot: string | undefined;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "cartethyia-fsops-"));
+    dir = mkdtempSync(join(tmpdir(), "cloviela-fsops-"));
     // Narrow the production write guard to this suite's own temp dir. Under
     // the harness the whole sandbox is allowed, but a direct `bun test` run
     // has no root set at all — and with `NODE_ENV=test` the guard then refuses
     // every write, including these. Pinning the root to the fixture keeps the
     // suite runnable both ways without ever widening it.
-    savedRoot = process.env.CARTETHYIA_TEST_HOME_ROOT;
-    process.env.CARTETHYIA_TEST_HOME_ROOT = dir;
+    savedRoot = process.env.CLOVIELA_TEST_HOME_ROOT;
+    process.env.CLOVIELA_TEST_HOME_ROOT = dir;
   });
 
   afterEach(() => {
-    if (savedRoot === undefined) delete process.env.CARTETHYIA_TEST_HOME_ROOT;
-    else process.env.CARTETHYIA_TEST_HOME_ROOT = savedRoot;
+    if (savedRoot === undefined) delete process.env.CLOVIELA_TEST_HOME_ROOT;
+    else process.env.CLOVIELA_TEST_HOME_ROOT = savedRoot;
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -826,16 +826,16 @@ describe("the production write guard", () => {
   let savedNodeEnv: string | undefined;
 
   beforeEach(() => {
-    sandbox = mkdtempSync(join(tmpdir(), "cartethyia-guard-root-"));
-    outside = mkdtempSync(join(tmpdir(), "cartethyia-guard-outside-"));
-    savedRoot = process.env.CARTETHYIA_TEST_HOME_ROOT;
+    sandbox = mkdtempSync(join(tmpdir(), "cloviela-guard-root-"));
+    outside = mkdtempSync(join(tmpdir(), "cloviela-guard-outside-"));
+    savedRoot = process.env.CLOVIELA_TEST_HOME_ROOT;
     savedNodeEnv = process.env.NODE_ENV;
-    process.env.CARTETHYIA_TEST_HOME_ROOT = sandbox;
+    process.env.CLOVIELA_TEST_HOME_ROOT = sandbox;
   });
 
   afterEach(() => {
-    if (savedRoot === undefined) delete process.env.CARTETHYIA_TEST_HOME_ROOT;
-    else process.env.CARTETHYIA_TEST_HOME_ROOT = savedRoot;
+    if (savedRoot === undefined) delete process.env.CLOVIELA_TEST_HOME_ROOT;
+    else process.env.CLOVIELA_TEST_HOME_ROOT = savedRoot;
     if (savedNodeEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = savedNodeEnv;
     rmSync(sandbox, { recursive: true, force: true });
@@ -904,7 +904,7 @@ describe("the production write guard", () => {
   });
 
   test("with no root under NODE_ENV=test the guard names the harness", async () => {
-    delete process.env.CARTETHYIA_TEST_HOME_ROOT;
+    delete process.env.CLOVIELA_TEST_HOME_ROOT;
     process.env.NODE_ENV = "test";
     const target = join(outside, "f.txt");
     await expect(writeTextFile(target, "x")).rejects.toThrow(/isolated bun run test harness/);
@@ -913,7 +913,7 @@ describe("the production write guard", () => {
 
   test("with no root outside a test run the write is allowed", async () => {
     // Production must not be blocked by a test-only guard.
-    delete process.env.CARTETHYIA_TEST_HOME_ROOT;
+    delete process.env.CLOVIELA_TEST_HOME_ROOT;
     delete process.env.NODE_ENV;
     const target = join(outside, "production.txt");
     await writeTextFile(target, "ok");

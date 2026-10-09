@@ -21,7 +21,7 @@
  * ── Why this suite owns its database ────────────────────────────────────────
  * It builds its own PGlite client in a temp directory instead of calling the
  * process-wide `bootDatabase()`. `bootDatabase()` resolves the operator's real
- * data directory when `CARTETHYIA_DATA_DIR` is unset — which it is for a plain
+ * data directory when `CLOVIELA_DATA_DIR` is unset — which it is for a plain
  * `bun test <file>` — so a suite that used it would write test tenants into a
  * developer's live gateway. The repository's test runner happens to sandbox
  * that variable, but a test must not depend on being launched a particular way
@@ -45,7 +45,7 @@ import {
   buildPgliteHandle,
   createPgliteClient,
 } from "../../src/persistence/db-pglite";
-import type { CartethyiaDatabase } from "../../src/persistence/postgres";
+import type { ClovielaDatabase } from "../../src/persistence/postgres";
 import {
   apiKeys,
   consoleUsers,
@@ -94,9 +94,9 @@ describe("readiness route registration", () => {
 
 /** One isolated PGlite database owned by this file, in the OS temp dir. */
 let client: PGlite | undefined;
-let db: CartethyiaDatabase | undefined;
+let db: ClovielaDatabase | undefined;
 
-async function database(): Promise<CartethyiaDatabase> {
+async function database(): Promise<ClovielaDatabase> {
   if (db) return db;
   const dir = mkdtempSync(join(tmpdir(), "readiness-suite-"));
   client = await createPgliteClient(dir);

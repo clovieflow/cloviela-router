@@ -1,6 +1,6 @@
 import { createGatewayApp, createGatewayShell } from "./app";
 import { bootstrap } from "./runtime/lifecycle";
-import type { CartethyiaBoot } from "./runtime/lifecycle";
+import type { ClovielaBoot } from "./runtime/lifecycle";
 import { resolveBindHost, resolveDrainToken, resolveIdleTimeout, resolveMaxBodyBytes, resolvePort } from "./config";
 import { Manifest } from "elysia";
 import { log } from "./observability/logger";
@@ -9,14 +9,14 @@ const port = resolvePort();
 
 declare global {
   // eslint-disable-next-line no-var -- globalThis augmentation requires `var`
-  var __cartethyiaBoot: CartethyiaBoot | undefined;
+  var __clovielaBoot: ClovielaBoot | undefined;
   // eslint-disable-next-line no-var
-  var __cartethyiaSignalsRegistered: boolean | undefined;
+  var __clovielaSignalsRegistered: boolean | undefined;
 }
 
 const boot = Manifest.isCapturing()
   ? undefined
-  : (globalThis.__cartethyiaBoot ??= await bootstrap());
+  : (globalThis.__clovielaBoot ??= await bootstrap());
 
 const app = boot
   ? createGatewayApp({
@@ -39,7 +39,7 @@ const app = boot
       scheduledTasks: boot.deps.scheduledTasks,
       shutdownCoordinator: boot.shutdownCoordinator,
       // Signal-free graceful stop for platforms where a catchable signal cannot
-      // be delivered (Windows). Off unless `CARTETHYIA_DRAIN_TOKEN` is set.
+      // be delivered (Windows). Off unless `CLOVIELA_DRAIN_TOKEN` is set.
       ...(resolveDrainToken() !== undefined
         ? { drainToken: resolveDrainToken() as string, triggerDrain: () => shutdown("SIGTERM") }
         : {}),
@@ -114,8 +114,8 @@ if (boot) {
   // the lease sweep and the health sweep should not run before the listener
   // exists to serve traffic.
   boot.deps.scheduledTasks.start();
-  if (!globalThis.__cartethyiaSignalsRegistered) {
-    globalThis.__cartethyiaSignalsRegistered = true;
+  if (!globalThis.__clovielaSignalsRegistered) {
+    globalThis.__clovielaSignalsRegistered = true;
     process.on("SIGINT", () => shutdown("SIGINT"));
     process.on("SIGTERM", () => shutdown("SIGTERM"));
     // An in-place update signals SIGUSR2 before swapping the image so the old

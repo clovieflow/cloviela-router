@@ -7,7 +7,7 @@ import type { OAuthTokenRefresher } from "../../providers/authentication/oauth-r
 import type { OAuthRefreshService } from "../../providers/authentication/oauth-refresh-service";
 import type { ValidatedNetworkBindingFactory } from "../../network/pool/resolver";
 import type { ByokUpstreamHost } from "../../providers/operations/provider-catalog-service";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { RouteSnapshotService } from "../routing/route-model";
 import { chatAdapter } from "../surface/chat/adapter";
 import { responsesAdapter } from "../surface/responses/adapter";
@@ -38,7 +38,7 @@ import { dispatchStreamingAttempt } from "./streaming-attempt";
 import { runWebSearchBridge, withServedWebSearch } from "./websearch-bridge";
 
 export interface ProviderProxyHandlerDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly providerAdapters: ReadonlyMap<string, ProviderAdapter>;
   /** Preferred over `providerAdapters`: resolves an adapter on demand and caches it. */
   readonly resolveProviderAdapter?: (providerId: string) => Promise<ProviderAdapter | undefined>;

@@ -63,7 +63,7 @@ export const SHARE_SOCIAL_META: SocialMeta = {
 
 /** Sentinel-delimited block in the shared index document that carries the card. */
 const SOCIAL_META_BLOCK =
-  /<!-- cartethyia:social-meta:start -->[\s\S]*?<!-- cartethyia:social-meta:end -->/;
+  /<!-- cloviela:social-meta:start -->[\s\S]*?<!-- cloviela:social-meta:end -->/;
 
 /** Escapes a value for use inside an HTML double-quoted attribute. */
 function escapeHtml(value: string): string {
@@ -81,7 +81,7 @@ function renderSocialMeta(meta: SocialMeta): string {
   const image = escapeHtml(meta.image);
   const imageAlt = escapeHtml(meta.imageAlt);
   return [
-    "<!-- cartethyia:social-meta:start -->",
+    "<!-- cloviela:social-meta:start -->",
     '<meta property="og:type" content="website" />',
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${description}" />`,
@@ -95,7 +95,7 @@ function renderSocialMeta(meta: SocialMeta): string {
     `<meta name="twitter:description" content="${description}" />`,
     `<meta name="twitter:image" content="${image}" />`,
     `<meta name="twitter:image:alt" content="${imageAlt}" />`,
-    "<!-- cartethyia:social-meta:end -->",
+    "<!-- cloviela:social-meta:end -->",
   ].join("\n    ");
 }
 

@@ -22,7 +22,7 @@
  * walks away and mints a fresh key. The address is the identity that cannot be
  * re-enrolled, which is the whole point of the escalation.
  *
- * **A ban lapses after a fixed TTL** (default 1 h, `CARTETHYIA_MODEL_BAN_TTL_MS`)
+ * **A ban lapses after a fixed TTL** (default 1 h, `CLOVIELA_MODEL_BAN_TTL_MS`)
  * rather than staying until an operator lifts it, so a false positive — a shared
  * NAT, an office behind one egress — heals without human intervention. The
  * console can still lift one early, which is the escape hatch when an operator
@@ -232,7 +232,7 @@ export class RedisModelAbuseStore implements ModelAbuseStore {
   ) {}
 
   private strikeKey(ip: string): string {
-    return `cartethyia:model-abuse:strike:ip:${ip}`;
+    return `cloviela:model-abuse:strike:ip:${ip}`;
   }
   /**
    * The ban index. It is a sorted set scored with each ban's expiry instant,
@@ -243,7 +243,7 @@ export class RedisModelAbuseStore implements ModelAbuseStore {
    * invent.
    */
   private banKey(): string {
-    return "cartethyia:model-abuse:bans:ip";
+    return "cloviela:model-abuse:bans:ip";
   }
 
   async record(attempt: ModelAbuseAttempt): Promise<ModelAbuseOutcome> {

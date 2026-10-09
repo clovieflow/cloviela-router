@@ -32,7 +32,7 @@ export const openclawSpec: InjectorSpec = {
     if (!settings) {
       return { configured: false, currentEndpoint: null, rawApiKey: null, currentModels: null };
     }
-    const provider = settings.models?.providers?.cartethyia;
+    const provider = settings.models?.providers?.cloviela;
     const primaryModel = resolveOpenclawModel(settings.agents?.defaults?.model);
     return {
       configured: !!provider,
@@ -64,15 +64,15 @@ export const openclawSpec: InjectorSpec = {
 
     const defaultModels = defaults.models as Record<string, unknown>;
     for (const key of Object.keys(defaultModels)) {
-      if (key.startsWith("cartethyia/")) delete defaultModels[key];
+      if (key.startsWith("cloviela/")) delete defaultModels[key];
     }
 
     (defaults.model as { primary: string }).primary =
-      `cartethyia/${input.activeModel ?? input.modelIds[0] ?? ""}`;
+      `cloviela/${input.activeModel ?? input.modelIds[0] ?? ""}`;
 
-    for (const m of allModels) defaultModels[`cartethyia/${m}`] = {};
+    for (const m of allModels) defaultModels[`cloviela/${m}`] = {};
 
-    providers.cartethyia = {
+    providers.cloviela = {
       baseUrl,
       apiKey: input.apiKey,
       api: "openai-completions",
@@ -81,7 +81,7 @@ export const openclawSpec: InjectorSpec = {
 
     if (Array.isArray(agents.list)) {
       agents.list = (agents.list as Array<Record<string, unknown>>).map((agent) => {
-        if (resolveOpenclawModel(agent.model).startsWith("cartethyia/")) {
+        if (resolveOpenclawModel(agent.model).startsWith("cloviela/")) {
           const { model: _m, ...rest } = agent;
           void _m;
           return rest;
@@ -102,17 +102,17 @@ export const openclawSpec: InjectorSpec = {
     } | null;
     if (!settings) return false;
 
-    delete settings.models?.providers?.cartethyia;
+    delete settings.models?.providers?.cloviela;
 
     const defaultModels = settings.agents?.defaults?.models;
     if (defaultModels) {
       for (const key of Object.keys(defaultModels)) {
-        if (key.startsWith("cartethyia/")) delete defaultModels[key];
+        if (key.startsWith("cloviela/")) delete defaultModels[key];
       }
     }
 
     const primary = resolveOpenclawModel(settings.agents?.defaults?.model);
-    if (primary.startsWith("cartethyia/")) {
+    if (primary.startsWith("cloviela/")) {
       if (settings.agents?.defaults?.model && typeof settings.agents.defaults.model === "object") {
         (settings.agents.defaults.model as { primary: string }).primary = "";
       }
@@ -130,7 +130,7 @@ export const openclawSpec: InjectorSpec = {
         {
           models: {
             providers: {
-              cartethyia: {
+              cloviela: {
                 baseUrl,
                 apiKey: input.apiKey,
                 api: "openai-completions",
@@ -140,8 +140,8 @@ export const openclawSpec: InjectorSpec = {
           },
           agents: {
             defaults: {
-              model: { primary: `cartethyia/${model}` },
-              models: Object.fromEntries(allModels.map((m) => [`cartethyia/${m}`, {}])),
+              model: { primary: `cloviela/${model}` },
+              models: Object.fromEntries(allModels.map((m) => [`cloviela/${m}`, {}])),
             },
           },
         },
@@ -155,7 +155,7 @@ export const openclawSpec: InjectorSpec = {
 
   messages: {
     applied: "Open Claw settings applied",
-    reset: "Cartethyia settings removed from Open Claw",
+    reset: "Cloviela settings removed from Open Claw",
   },
 };
 

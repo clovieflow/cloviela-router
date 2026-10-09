@@ -1,4 +1,4 @@
-# Cartethyia CI: backend + dashboard verification gates.
+# Cloviela CI: backend + dashboard verification gates.
 #
 # Runs the repo's own runners:
 # - backend job: typecheck.

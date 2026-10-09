@@ -11,7 +11,7 @@ import {
 } from "./service";
 import { consoleUsers, adminAuditLog } from "../../persistence/schema";
 import type { ConsoleCredentialService } from "./service";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import {
   type SessionCookiePolicy,
   defaultSessionCookiePolicy,
@@ -163,7 +163,7 @@ function parseSetupRequest(body: unknown): SetupRequest | undefined {
 }
 
 export function createConsoleAuthRoutes(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   credentialService: ConsoleCredentialService,
   sessionService: ConsoleSessionService,
   lockoutService: ConsoleLockoutService,
@@ -379,7 +379,7 @@ export function createConsoleAuthRoutes(
         } satisfies ChangePasswordResponse;
       }
       const newHash = await credentialService.hashPassword(newPassword);
-      const rotateInScope = async (scope: CartethyiaDatabase): Promise<number> => {
+      const rotateInScope = async (scope: ClovielaDatabase): Promise<number> => {
         const result = await returningRows(
           scope
             .update(consoleUsers)
@@ -400,7 +400,7 @@ export function createConsoleAuthRoutes(
         });
         return invalidated;
       };
-      await database.transaction((tx) => rotateInScope(tx as unknown as CartethyiaDatabase));
+      await database.transaction((tx) => rotateInScope(tx as unknown as ClovielaDatabase));
       set.status = 200;
       return { status: "success" } satisfies ChangePasswordResponse;
     },

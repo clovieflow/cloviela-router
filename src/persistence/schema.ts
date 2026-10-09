@@ -836,7 +836,7 @@ export const consoleSettings = pgTable("console_settings", {
 
 
 // CLI Tools (CLI tool configuration): per-tenant mapping table that lets a coding-agent
-// slot (e.g. Claude Code's "opus" slot) target a specific Cartethyia model. Rows
+// slot (e.g. Claude Code's "opus" slot) target a specific Cloviela model. Rows
 // are opaque strings — validation happens at the API boundary against the
 // tool registry, not in Postgres.
 export const cliToolMappings = pgTable(
@@ -884,7 +884,7 @@ export const cliToolSettings = pgTable(
 
 
 // Metadata-only request telemetry. Retention is configured independently of
-// payload capture (`CARTETHYIA_TELEMETRY_RETENTION_DAYS`, default 30 days).
+// payload capture (`CLOVIELA_TELEMETRY_RETENTION_DAYS`, default 30 days).
 // No prompt text, raw body, API key, encrypted-reasoning payload, or generic
 // `payload` column — the schema structurally prevents those fields.
 // Correlation columns intentionally have no catalog foreign keys, so a

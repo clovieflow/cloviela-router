@@ -9,7 +9,7 @@ function jcodeEnvFileDir(): string {
 }
 
 function jcodeEnvFilePath(): string {
-  return join(jcodeEnvFileDir(), "provider-cartethyia.env");
+  return join(jcodeEnvFileDir(), "provider-cloviela.env");
 }
 
 export const jcodeSpec: InjectorSpec = {
@@ -24,14 +24,14 @@ export const jcodeSpec: InjectorSpec = {
     if (!text) {
       return { configured: false, currentEndpoint: null, rawApiKey: null, currentModels: null };
     }
-    const configured = textHas(text, { kind: "section", section: "providers.cartethyia" });
-    // `base_url` is written inside `[providers.cartethyia]` by `apply` below, so
+    const configured = textHas(text, { kind: "section", section: "providers.cloviela" });
+    // `base_url` is written inside `[providers.cloviela]` by `apply` below, so
     // it must be read from that section. Reading it as a root key returned null
     // for a config this injector had just written, so a configured tool
     // reported no endpoint.
     const baseUrl = textGet(text, {
       kind: "sectionKey",
-      section: "providers.cartethyia",
+      section: "providers.cloviela",
       key: "base_url",
     });
     const envText = await readTextFile(jcodeEnvFilePath());
@@ -53,11 +53,11 @@ export const jcodeSpec: InjectorSpec = {
     let text = (await readTextFile(path)) ?? "";
     text = textUpsert(
       text,
-      { kind: "section", section: "providers.cartethyia" },
+      { kind: "section", section: "providers.cloviela" },
       [
         `  type = "openai"`,
         `  base_url = "${baseUrl}"`,
-        `  env_file = "provider-cartethyia.env"`,
+        `  env_file = "provider-cloviela.env"`,
         `  model = "${model}"`,
       ].join("\n"),
     );
@@ -76,7 +76,7 @@ export const jcodeSpec: InjectorSpec = {
   async reset(path) {
     let text = await readTextFile(path);
     if (text) {
-      text = textRemove(text, { kind: "section", section: "providers.cartethyia" });
+      text = textRemove(text, { kind: "section", section: "providers.cloviela" });
       await writeTextFile(path, text);
     }
     const envText = await readTextFile(jcodeEnvFilePath());
@@ -92,16 +92,16 @@ export const jcodeSpec: InjectorSpec = {
     const model = input.activeModel ?? input.modelIds[0] ?? "";
     const baseUrl = ensureV1Suffix(input.endpoint);
     const toml = [
-      `[providers.cartethyia]`,
+      `[providers.cloviela]`,
       `  type = "openai"`,
       `  base_url = "${baseUrl}"`,
-      `  env_file = "provider-cartethyia.env"`,
+      `  env_file = "provider-cloviela.env"`,
       `  model = "${model}"`,
       "",
     ].join("\n");
     const envFile = `OPENAI_API_KEY=${input.apiKey}\n`;
     return {
-      content: `# config.toml\n${toml}\n# provider-cartethyia.env\n${envFile}`,
+      content: `# config.toml\n${toml}\n# provider-cloviela.env\n${envFile}`,
       filename: "jcode-config.txt",
       mimeType: "text/plain",
     };
@@ -109,7 +109,7 @@ export const jcodeSpec: InjectorSpec = {
 
   messages: {
     applied: "jcode settings applied",
-    reset: "Cartethyia settings removed from jcode",
+    reset: "Cloviela settings removed from jcode",
   },
 };
 

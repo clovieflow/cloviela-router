@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { cliToolMappings, cliToolSettings } from "../../persistence/schema";
 import type {
   CliMappingMode,
@@ -29,7 +29,7 @@ export interface StoredSettings {
 }
 
 export class CliToolMappingStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async list(tenantId: string, toolId: string, apiKeyId: string): Promise<readonly StoredMappingRow[]> {
     const rows = await this.db

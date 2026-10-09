@@ -1,3 +1,4 @@
+import { envValue } from "../../env-compat";
 import { GatewayError, publicGatewayErrorBody } from "../gateway-error";
 // Attempt completion bookkeeping: one home for everything every dispatch attempt ends with.
 import type { ValidatedOutboundFetch } from "../../providers/provider-registry";
@@ -5,7 +6,7 @@ import { reportAttemptOutcome } from "../../providers/operations/account-health-
 import type { UsageRecord } from "../canonical-model";
 import { classifyUpstreamFailure } from "../failure-policy";
 import type { AdmissionLease } from "../../security/admission/contracts";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { TelemetryPayloadCapture } from "../../observability/payload-capture";
 import type { TelemetryBatchBuffer } from "../../observability/telemetry-buffer";
 import { CachedPreferencesReader, DrizzlePreferencesReader } from "../../persistence/tenant-preferences";
@@ -18,9 +19,9 @@ import {
   recordPoolDispatchOutcome,
 } from "../../network/pool-health-machine";
 
-let preferencesCache: { db: CartethyiaDatabase; reader: CachedPreferencesReader } | undefined;
+let preferencesCache: { db: ClovielaDatabase; reader: CachedPreferencesReader } | undefined;
 
-export function preferencesReaderFor(db: CartethyiaDatabase): CachedPreferencesReader {
+export function preferencesReaderFor(db: ClovielaDatabase): CachedPreferencesReader {
   // Rebound when the db identity changes (tests use a different database
   // per file); production passes the same singleton every request.
   if (!preferencesCache || preferencesCache.db !== db) {
@@ -43,7 +44,7 @@ export function clearConsoleSettingsCacheForTests(): void {
  * at the tenant's chosen depth. Fail-closed on error.
  */
 async function resolvePayloadCapture(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   tenantId: string | null,
 ): Promise<{ mode: TelemetryPayloadMode; depth: TelemetryPayloadDepth }> {
   if (!tenantId) return { mode: "none", depth: "minimum" };
@@ -99,7 +100,7 @@ function captureDepthMaxBytes(depth: TelemetryPayloadDepth): number {
  * is handled inside `resolvePayloadCapture` and yields `0`, i.e. no retention.
  */
 export async function resolveStreamTranscriptBudgetBytes(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   tenantId: string | null,
 ): Promise<number> {
   const { mode, depth } = await resolvePayloadCapture(db, tenantId);
@@ -134,7 +135,7 @@ export function errorClientResponseBody(error: unknown): string {
     return JSON.stringify(publicGatewayErrorBody(error));
   }
   return JSON.stringify({
-    error: { origin: "cartethyia", code: "internal_error", message: "Internal server error" },
+    error: { origin: "cloviela", code: "internal_error", message: "Internal server error" },
   });
 }
 
@@ -298,7 +299,7 @@ async function resolvedProviderResponse(
  * request-detail endpoint cannot race the payload row and report a false miss.
  */
 async function captureTerminalPayload(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   tenantId: string | null,
   requestId: string,
   requestBody: unknown,
@@ -354,7 +355,7 @@ let captureFailureReported = false;
 export function reportCaptureFailure(error: unknown): void {
   if (captureFailureReported) return;
   captureFailureReported = true;
-  const directory = process.env.CARTETHYIA_TELEMETRY_PAYLOAD_DIR?.trim() || "./data/telemetry-payloads";
+  const directory = envValue("CLOVIELA_TELEMETRY_PAYLOAD_DIR")?.trim() || "./data/telemetry-payloads";
   const reason = error instanceof Error ? error.message : String(error);
   log.warn(
     `[telemetry] payload capture is enabled for this tenant but the body was not stored ` +
@@ -457,7 +458,7 @@ export interface AttemptCompletion extends ProxyRequestOutcome {
   readonly responseBody: unknown;
   readonly clientResponseText?: string;
   readonly providerCapture?: ProviderExchangeCapture;
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly telemetryBuffer?: TelemetryBatchBuffer;
   readonly snapshotService?: { invalidate(): unknown };
   /** First content delta timestamp (for TTFT calculation). */
@@ -480,7 +481,7 @@ export function completionContext(input: {
   readonly tenantId: string | null;
   readonly ingressBody: unknown;
   readonly providerCapture?: ProviderExchangeCapture;
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly accountId?: string | undefined;
   readonly accountLabel?: string | undefined;
   readonly networkPoolId?: string | undefined;

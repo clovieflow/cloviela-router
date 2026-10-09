@@ -11,7 +11,7 @@
 // masked addresses. No request or response bodies cross this boundary.
 
 import { and, desc, eq, gte, inArray, or, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { maskClientIp } from "../../observability/redaction";
 import { gatewayErrorSql } from "../../observability/telemetry-status";
 import { telemetryEvents } from "../../persistence/schema";
@@ -171,7 +171,7 @@ const TOP_MODELS_LIMIT = 50;
 const TOP_IPS_LIMIT = 50;
 const HOURS_WINDOW = 24;
 
-export function createShareStatsPort(db: CartethyiaDatabase): ShareStatsPort {
+export function createShareStatsPort(db: ClovielaDatabase): ShareStatsPort {
   return {
     async getFamilyStats(tenantId, keyIds, recipients, allowedModels) {
       if (keyIds.length === 0) return emptyStats(recipients);

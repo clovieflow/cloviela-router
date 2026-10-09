@@ -8,7 +8,7 @@ import { decodeEncryptionKey, requireEncryptionKeyEnv } from "../config";
  * stores only the ciphertext produced here in its `bytea` columns.
  *
  * AES-256-GCM. Encoded buffer layout: `iv(12) || authTag(16) || ciphertext`.
- * The key is a 32-byte secret read from `CARTETHYIA_ENCRYPTION_KEY`
+ * The key is a 32-byte secret read from `CLOVIELA_ENCRYPTION_KEY`
  * (base64 or hex encoded); it is never inferred or defaulted.
  */
 const ALGORITHM = "aes-256-gcm";

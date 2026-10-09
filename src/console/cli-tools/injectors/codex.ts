@@ -4,13 +4,23 @@ import type { InjectorSpec } from "../contracts";
 
 
 // Codex injector spec.
-const CODEX_PROVIDER = "cartethyia";
-const CODEX_AUTH_HELPER_NAME = "cartethyia-auth.cjs";
+/**
+ * The provider id written into `~/.codex/config.toml` and `auth.json`.
+ *
+ * It was the old product name before the rename. Both are migrated on the next
+ * `apply`/`reset` — see {@link LEGACY_CODEX_PROVIDER} — so an installation that
+ * already has the old id does not end up with a dead provider entry beside the
+ * new one.
+ */
+const CODEX_PROVIDER = "cloviela";
+/** The pre-rename id, removed wherever it is found. */
+const LEGACY_CODEX_PROVIDER = "cartethyia";
+const CODEX_AUTH_HELPER_NAME = "cloviela-auth.cjs";
 const CODEX_AUTH_HELPER_SOURCE = [
   "const fs = require('node:fs');",
   "const path = require('node:path');",
   "const auth = JSON.parse(fs.readFileSync(path.join(__dirname, 'auth.json'), 'utf8'));",
-  "const key = auth.cartethyia;",
+  "const key = auth.cloviela;",
   "if (typeof key === 'string') process.stdout.write(key);",
   "",
 ].join("\n");
@@ -33,7 +43,7 @@ export const codexSpec: InjectorSpec = {
     if (!text) {
       return { configured: false, currentEndpoint: null, rawApiKey: null, currentModels: null };
     }
-    // `base_url` is written inside `[model_providers.cartethyia]` (see `apply`
+    // `base_url` is written inside `[model_providers.cloviela]` (see `apply`
     // below), so it must be read from that section. Reading it as a root key
     // returned null for a config this very injector had just written, leaving
     // the dashboard's endpoint field blank while the status said "configured".
@@ -63,6 +73,16 @@ export const codexSpec: InjectorSpec = {
     text = textRemove(text, { kind: "flat", key: "model" });
     text = textRemove(text, { kind: "flat", key: "review_model" });
     text = textRemove(text, { kind: "flat", key: "model_provider" });
+    // Migrate the pre-rename provider out of the file: leaving it behind would
+    // give Codex two entries pointing at this gateway, one of them stale.
+    text = textRemove(text, {
+      kind: "section",
+      section: `model_providers.${LEGACY_CODEX_PROVIDER}`,
+    });
+    text = textRemove(text, {
+      kind: "section",
+      section: `model_providers.${LEGACY_CODEX_PROVIDER}.auth`,
+    });
     text = textUpsert(text, { kind: "flat", key: "model", insertAtTop: true }, model);
     if (review !== undefined)
       text = textUpsert(text, { kind: "flat", key: "review_model", insertAtTop: true }, review);
@@ -75,7 +95,7 @@ export const codexSpec: InjectorSpec = {
     text = textUpsert(
       text,
       { kind: "section", section: `model_providers.${CODEX_PROVIDER}` },
-      [`  name = "Cartethyia"`, `  base_url = "${baseUrl}"`, `  wire_api = "responses"`].join("\n"),
+      [`  name = "Cloviela"`, `  base_url = "${baseUrl}"`, `  wire_api = "responses"`].join("\n"),
     );
     text = textUpsert(
       text,
@@ -97,6 +117,9 @@ export const codexSpec: InjectorSpec = {
 
     const auth = ((await readJsonFile(codexAuthPath())) as Record<string, string> | null) ?? {};
     auth[CODEX_PROVIDER] = input.apiKey;
+    // The credential is the same secret under a new key; keeping both would
+    // leave a stale copy of a live API key in the operator's home directory.
+    delete auth[LEGACY_CODEX_PROVIDER];
     await writeJsonFile(codexAuthPath(), auth);
     await writeTextFile(codexAuthHelperPath(), CODEX_AUTH_HELPER_SOURCE);
   },
@@ -140,7 +163,7 @@ export const codexSpec: InjectorSpec = {
       `model_provider = "${CODEX_PROVIDER}"`,
       "",
       `[model_providers.${CODEX_PROVIDER}]`,
-      `  name = "Cartethyia"`,
+      `  name = "Cloviela"`,
       `  base_url = "${baseUrl}"`,
       `  wire_api = "responses"`,
       "",
@@ -174,7 +197,7 @@ export const codexSpec: InjectorSpec = {
 
   messages: {
     applied: "Codex CLI settings applied",
-    reset: "Cartethyia settings removed from Codex",
+    reset: "Cloviela settings removed from Codex",
     resetMissing: "No config file to reset",
   },
 };

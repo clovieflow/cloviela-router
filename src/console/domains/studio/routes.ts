@@ -77,7 +77,7 @@ function htmlText(value: string): string {
 async function studioWebFetch(fetcher: ValidatedFetch, value: unknown, maxChars: number): Promise<unknown> {
   const url = webUrl(value);
   const response = await fetcher(url, {
-    headers: { accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1", "user-agent": "Cartethyia-Studio/1.0" },
+    headers: { accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1", "user-agent": "Cloviela-Studio/1.0" },
     redirect: "follow",
     signal: AbortSignal.timeout(WEB_TIMEOUT_MS),
   });

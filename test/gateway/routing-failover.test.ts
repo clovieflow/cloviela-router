@@ -11,7 +11,7 @@
  *   `accounts_rate_limited` (429), not `accounts_unavailable` (503);
  * - an account-scoped failure is retried against a sibling even when the
  *   provider chose a 400 for it;
- * - `CARTETHYIA_ROUTE_MAX_ATTEMPTS` bounds the number of candidates one request
+ * - `CLOVIELA_ROUTE_MAX_ATTEMPTS` bounds the number of candidates one request
  *   may dial.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -410,7 +410,7 @@ dbDescribe("account failover", () => {
     expect(reached.at(-1)).toBe(second);
   });
 
-  test("CARTETHYIA_ROUTE_MAX_ATTEMPTS caps the number of dialed candidates", async () => {
+  test("CLOVIELA_ROUTE_MAX_ATTEMPTS caps the number of dialed candidates", async () => {
     const ids = await Promise.all([
       world.addAccount({ label: "one" }),
       world.addAccount({ label: "two" }),
@@ -428,15 +428,15 @@ dbDescribe("account failover", () => {
       failWith: () => new GatewayError("transport_unavailable", 502, "upstream down"),
     });
 
-    const previous = process.env.CARTETHYIA_ROUTE_MAX_ATTEMPTS;
-    process.env.CARTETHYIA_ROUTE_MAX_ATTEMPTS = "2";
+    const previous = process.env.CLOVIELA_ROUTE_MAX_ATTEMPTS;
+    process.env.CLOVIELA_ROUTE_MAX_ATTEMPTS = "2";
     try {
       const response = await chat();
       expect(response.status).toBe(502);
       expect(dispatchedAccountIds()).toEqual([ids[0], ids[1]]);
     } finally {
-      if (previous === undefined) delete process.env.CARTETHYIA_ROUTE_MAX_ATTEMPTS;
-      else process.env.CARTETHYIA_ROUTE_MAX_ATTEMPTS = previous;
+      if (previous === undefined) delete process.env.CLOVIELA_ROUTE_MAX_ATTEMPTS;
+      else process.env.CLOVIELA_ROUTE_MAX_ATTEMPTS = previous;
     }
   });
 });

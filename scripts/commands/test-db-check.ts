@@ -5,7 +5,7 @@ import { join } from "node:path";
 /**
  * Verifies the isolated test database is reachable.
  *
- * The variable name is `CARTETHYIA_TEST_DATABASE_URL` — the same one the
+ * The variable name is `CLOVIELA_TEST_DATABASE_URL` — the same one the
  * suites read through `test/helpers/database.ts`. A second spelling
  * (`TEST_DATABASE_URL`) existed in an earlier script and made the check pass
  * while the suites skipped, so there is exactly one name now and this script
@@ -29,11 +29,11 @@ function readEnvTest(): Record<string, string> {
 
 const fileEnv = readEnvTest();
 const databaseUrl =
-  process.env.CARTETHYIA_TEST_DATABASE_URL ?? fileEnv.CARTETHYIA_TEST_DATABASE_URL;
+  process.env.CLOVIELA_TEST_DATABASE_URL ?? fileEnv.CLOVIELA_TEST_DATABASE_URL;
 
 if (!databaseUrl) {
   console.error(
-    "CARTETHYIA_TEST_DATABASE_URL is not set (checked the environment and .env.test).\n" +
+    "CLOVIELA_TEST_DATABASE_URL is not set (checked the environment and .env.test).\n" +
       "Point it at a disposable database; DATABASE_URL is deliberately never used here.",
   );
   process.exit(1);

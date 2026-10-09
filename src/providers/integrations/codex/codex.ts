@@ -1,7 +1,7 @@
 /**
  * Dedicated `codex` adapter.
  *
- * Cartethyia's `codex` provider is ChatGPT-OAuth-family only: subscriber
+ * Cloviela's `codex` provider is ChatGPT-OAuth-family only: subscriber
  * OAuth, enterprise scoped access tokens, and workload-identity federation
  * all bill against the same ChatGPT plan credits and dispatch through the
  * same ChatGPT backend. Plain OpenAI API-key traffic is served by the
@@ -199,7 +199,7 @@ interface CodexAdapterConfig {
   readonly concurrent_reasoning_summaries?: boolean;
   /**
    * Sub-agent context marker. When set, sends `x-openai-subagent`. No
-   * automatic trigger in Cartethyia's CanonicalRequest/ProviderDispatchTarget today —
+   * automatic trigger in Cloviela's CanonicalRequest/ProviderDispatchTarget today —
    * wiring is a no-op stub that only emits when explicitly set.
    */
   readonly subagent?: string;

@@ -125,7 +125,7 @@ Breakdown: GW 395, SEC 131, DB 132, CLI 120.
 
 Both build their own PGlite database in the OS temp directory rather than
 calling the process-wide `bootDatabase()`, which resolves the operator's real
-data directory when `CARTETHYIA_DATA_DIR` is unset.
+data directory when `CLOVIELA_DATA_DIR` is unset.
 
 ## Reproducing
 

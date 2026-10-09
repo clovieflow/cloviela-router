@@ -31,7 +31,7 @@ import {
 export { DAILY_CHECKIN_PROVIDER_IDS, checkinDayKey };
 export type { BuddyActivityReportResult, DailyCheckinResult };
 
-const LEDGER_KEY_PREFIX = "cartethyia:daily-checkin";
+const LEDGER_KEY_PREFIX = "cloviela:daily-checkin";
 /**
  * Ledger TTL. The key is already scoped to one calendar day, so the TTL only
  * needs to outlive that day; three days covers any timezone/clock skew without

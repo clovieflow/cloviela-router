@@ -11,7 +11,7 @@ import { lazy, type ComponentType, type LazyExoticComponent } from "react";
 export const LAZY_RETRY_TTL_MS = 5 * 60 * 1000;
 
 export function retryFlagKey(chunkName: string): string {
-  return `cartethyia:lazy-retry:${chunkName}`;
+  return `cloviela:lazy-retry:${chunkName}`;
 }
 
 /**

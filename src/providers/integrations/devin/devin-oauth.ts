@@ -12,12 +12,12 @@
  * code — that is expected, not a broken redirect. If the browser page itself
  * rejects the request it renders `Invalid authorize request`; that verdict
  * comes from Devin's server-side client/redirect validation, not from the
- * query parameters Cartethyia builds (response_type/code_challenge/
+ * query parameters Cloviela builds (response_type/code_challenge/
  * code_challenge_method/state/redirect_uri/prompt all match the catalog
  * contract). Registered redirect URIs are allowlisted per OAuth client on
  * Devin's side, so a self-hosted `http://127.0.0.1`/`http://localhost`
  * callback is rejected there — use the device-code path or a public
- * `CARTETHYIA_PUBLIC_ORIGIN` the Devin application trusts.
+ * `CLOVIELA_PUBLIC_ORIGIN` the Devin application trusts.
  *
  * Access and refresh are the same JWT; expiry comes from the JWT `exp` claim
  * with a 365-day fallback. There is no refresh grant (`refresh "none"`), so

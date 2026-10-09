@@ -104,7 +104,7 @@ dbDescribe("migration: retire the per-account max_inflight", () => {
       expect(await accountInflightColumns(client)).toBe(0);
 
       const recorded = await client.query(
-        "select migration_id from cartethyia_schema_migrations where migration_id = $1",
+        "select migration_id from cloviela_schema_migrations where migration_id = $1",
         [MIGRATION_FILE],
       );
       expect(recorded.rows.length).toBe(1);

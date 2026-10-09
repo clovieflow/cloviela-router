@@ -1,6 +1,6 @@
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import { apiKeys, telemetryEvents } from "../../../persistence/schema";
 
 /**
@@ -29,7 +29,7 @@ export function utcMonthStart(now: Date): Date {
 }
 
 export async function familyBucketSpend(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   keyId: string,
   now: Date,
 ): Promise<{ daily: number; monthly: number }> {

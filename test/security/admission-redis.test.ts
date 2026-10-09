@@ -22,7 +22,7 @@
  * the Redis store records the bucket keys inside the lease hash for exactly
  * this reason. That case is tested with a real day boundary.
  *
- * These tests need a live Redis (`CARTETHYIA_TEST_REDIS_URL`) and skip with a
+ * These tests need a live Redis (`CLOVIELA_TEST_REDIS_URL`) and skip with a
  * stated reason when one is not configured. Every key is namespaced under a
  * per-run prefix and deleted afterwards, so two files cannot observe each
  * other.
@@ -37,7 +37,7 @@ import { testRedisUrl } from "../helpers/database";
 const redisDescribe = testRedisUrl ? describe : describe.skip;
 if (!testRedisUrl) {
   console.info(
-    "[test-redis] skipped: set CARTETHYIA_TEST_REDIS_URL to run the admission store suite",
+    "[test-redis] skipped: set CLOVIELA_TEST_REDIS_URL to run the admission store suite",
   );
 }
 

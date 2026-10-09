@@ -13,7 +13,7 @@
  * page headers, the new screens (onboarding, route simulator, health, help,
  * about, not-found, system error), and the shared state/action vocabulary.
  *
- * The pre-existing Cartethyia pages (Providers, Usage, Quota, Proxy, Model Lab,
+ * The pre-existing Cloviela pages (Providers, Usage, Quota, Proxy, Model Lab,
  * Combos, CLI Tools, Settings internals, and every dialog inside them) still
  * render their original English copy. They are functional and unchanged; their
  * strings are NOT translated yet. `LOCALIZATION_STATUS` below reports that gap

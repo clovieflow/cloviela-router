@@ -1,9 +1,9 @@
 # Cloviela Router Agent Guide
 
-Cloviela Router's gateway core derives from Cartethyia (GPLv3). Persisted
-contracts deliberately keep their original names — the `CARTETHYIA_*`
-environment variables, the `Cartethyia` data directory, `/console/api` paths,
-and `cartethyia:*` storage keys — because they are compatibility surface for
+Cloviela Router's gateway core derives from Cloviela (GPLv3). Persisted
+contracts deliberately keep their original names — the `CLOVIELA_*`
+environment variables, the `Cloviela` data directory, `/console/api` paths,
+and `cloviela:*` storage keys — because they are compatibility surface for
 existing installations. Presentation is Cloviela-branded. Renaming a persisted
 contract breaks upgrades; renaming a label does not.
 
@@ -31,7 +31,7 @@ acceptance criteria.
   command for environment creation, encryption-key generation, Lite/Full
   selection, database checks, and optional Redis checks. Use
   `bun setup --non-interactive` for automation.
-- `.env.example` defaults to `CARTETHYIA_DB_MODE=lite`; Docker Compose defaults
+- `.env.example` defaults to `CLOVIELA_DB_MODE=lite`; Docker Compose defaults
   to Full with external PostgreSQL and bundled Redis configuration. Keep these
   defaults intentional and document changes in `documentation/getting-started.md`.
 - Lite uses embedded PGlite and in-process coordination when `REDIS_URL` is

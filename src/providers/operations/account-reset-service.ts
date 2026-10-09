@@ -21,7 +21,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { healthEvents, providerAccounts } from "../../persistence/schema";
 import { CLAUDE_CODE_USER_AGENT } from "../integrations/claude/claude-fingerprint";
 import { authCredential, codexJwtAccountId, text } from "../quota/quota-contracts";
@@ -409,7 +409,7 @@ async function resolveClaudeOrg(access: string, fetcher: typeof fetch): Promise<
  * `creditId` is omitted, the soonest-expiring available credit is selected.
  */
 export async function consumeAccountResetCredit(args: {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly accountId: string;
   readonly providerId: string;
   readonly credentialRaw: string;
@@ -611,7 +611,7 @@ function describeResetCode(code: string): string {
  * cooldown that no longer reflects reality.
  */
 async function recordResetActivity(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   result: ResetConsumeResult,
   snapshotInvalidator?: { invalidate(): Promise<number> },

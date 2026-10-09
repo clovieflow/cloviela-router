@@ -177,14 +177,14 @@ export function hasPlaceholderSecrets(value: string): boolean {
 }
 
 /**
- * Generates a 256-bit hex cartethyia encryption key.
+ * Generates a 256-bit hex cloviela encryption key.
  *
  * Hex is preferred over base64 because it never carries padding or `+`/`/`
  * characters that confuse some dotenv shells, and it round-trips through
  * every adapter that accepts either encoding. The install/setup helpers call
  * this when the key is absent or still a placeholder.
  */
-export function generateCartethyiaEncryptionKey(): string {
+export function generateClovielaEncryptionKey(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   let hex = "";
@@ -199,7 +199,7 @@ export function generateCartethyiaEncryptionKey(): string {
  * (leading `#`) carry built-in defaults and must not be copied into a fresh
  * `.env` — they would override the default with a literal `example` value.
  * The generated body therefore contains only mandatory rows, plus a single
- * `CARTETHYIA_ENCRYPTION_KEY` replacement when the caller supplies one.
+ * `CLOVIELA_ENCRYPTION_KEY` replacement when the caller supplies one.
  */
 export async function mandatoryEnvBody(
   examplePath: string,

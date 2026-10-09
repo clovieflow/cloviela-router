@@ -66,7 +66,7 @@ const START: CanonicalEvent = {
 const DELTA: CanonicalEvent = {
   type: "content_delta",
   sequence_number: 1,
-  content: { kind: "text", text: "Hello from Cartethyia" },
+  content: { kind: "text", text: "Hello from Cloviela" },
 };
 
 const COMPLETE: CanonicalEvent = {
@@ -207,7 +207,7 @@ dbDescribe("streaming dispatch contract", () => {
     test("delivers the provider's content to the client", async () => {
       gateway.adapter(world.providerId, { events: () => [START, DELTA, COMPLETE] });
       const { body } = await streamChat();
-      expect(body).toContain("Hello from Cartethyia");
+      expect(body).toContain("Hello from Cloviela");
     });
   });
 
@@ -371,9 +371,9 @@ dbDescribe("streaming dispatch contract", () => {
       // 3000-delta stream must still reach the client in full with exactly
       // one terminal/usage frame, while the stored transcript is capped and
       // says so — a bounded capture must not read as a complete trace.
-      const payloadDir = await mkdtemp(join(tmpdir(), "cartethyia-capture-"));
-      const previousDir = process.env["CARTETHYIA_TELEMETRY_PAYLOAD_DIR"];
-      process.env["CARTETHYIA_TELEMETRY_PAYLOAD_DIR"] = payloadDir;
+      const payloadDir = await mkdtemp(join(tmpdir(), "cloviela-capture-"));
+      const previousDir = process.env["CLOVIELA_TELEMETRY_PAYLOAD_DIR"];
+      process.env["CLOVIELA_TELEMETRY_PAYLOAD_DIR"] = payloadDir;
       try {
         await gateway.db
           .insert(consoleSettings)
@@ -443,8 +443,8 @@ dbDescribe("streaming dispatch contract", () => {
         expect(storedTerminal).toBeDefined();
         expect(storedTerminal?.["state"]).toBe("complete");
       } finally {
-        if (previousDir === undefined) delete process.env["CARTETHYIA_TELEMETRY_PAYLOAD_DIR"];
-        else process.env["CARTETHYIA_TELEMETRY_PAYLOAD_DIR"] = previousDir;
+        if (previousDir === undefined) delete process.env["CLOVIELA_TELEMETRY_PAYLOAD_DIR"];
+        else process.env["CLOVIELA_TELEMETRY_PAYLOAD_DIR"] = previousDir;
         await gateway.db.delete(consoleSettings).where(eq(consoleSettings.tenantId, world.tenantId));
         clearConsoleSettingsCacheForTests();
         await rm(payloadDir, { recursive: true, force: true });

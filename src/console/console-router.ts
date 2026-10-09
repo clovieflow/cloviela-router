@@ -14,7 +14,7 @@ import {
 } from "../transport/middleware/gateway-guards";
 import { registerConsoleDomains, type ConsoleDomainContext } from "./domain-registration";
 import type { ConsoleAccessResolver } from "./auth/access";
-import type { CartethyiaDatabase } from "../persistence/postgres";
+import type { ClovielaDatabase } from "../persistence/postgres";
 import { createAccessDecision, type AccessDecision } from "../security/access-control";
 import { resolveApiKeyAuthorization } from "../security/api-key-auth";
 import type { RouteSnapshotService } from "../transport/routing/route-model";
@@ -37,7 +37,7 @@ import type { TrustedProxyBoundary } from "../config";
 import { gzipResponse } from "./response-compression";
 
 export interface ConsoleApiCompositionDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly accessResolver: ConsoleAccessResolver;
   readonly routeSnapshotService: RouteSnapshotService;
   readonly poolSelector: NetworkPoolSelector;

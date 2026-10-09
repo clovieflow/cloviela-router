@@ -4,7 +4,12 @@ export interface ApiErrorShape {
   readonly status: number;
   readonly message: string;
   readonly code?: string;
-  readonly origin?: "cartethyia" | "upstream" | "network";
+  /**
+   * `cloviela` is the pre-rename wire value. It is accepted on read so a
+   * console bundle cached in a browser keeps working across the rename, and
+   * normalised to `cloviela` before any caller sees it.
+   */
+  readonly origin?: "cloviela" | "cloviela" | "upstream" | "network";
   readonly details?: Readonly<Record<string, unknown>>;
 }
 
@@ -55,7 +60,10 @@ function responseOrigin(payload: unknown): ApiErrorShape["origin"] {
       : isRecord(payload.error) && typeof payload.error.origin === "string"
         ? payload.error.origin
         : undefined;
-  return candidate === "cartethyia" || candidate === "upstream" || candidate === "network"
+  // `cloviela` is the pre-rename wire value: accepted, then normalised, so
+  // no consumer has to know the old name existed.
+  if (candidate === "cloviela") return "cloviela";
+  return candidate === "cloviela" || candidate === "upstream" || candidate === "network"
     ? candidate
     : undefined;
 }

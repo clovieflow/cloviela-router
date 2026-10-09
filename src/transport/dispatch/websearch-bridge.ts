@@ -23,7 +23,7 @@ import type {
   ProviderDispatchTarget,
   WebSearchOutcome,
 } from "../../providers/provider-registry";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { ValidatedNetworkBindingFactory } from "../../network/pool/resolver";
 import { resolveCredentialForAccount } from "../../providers/operations/provider-credential-service";
 import type { ProxyRequestState } from "../request/state";
@@ -38,7 +38,7 @@ export interface WebSearchBridgeResult {
 
 /** Collaborators the bridge reads from the dispatch handler. */
 export interface WebSearchBridgeDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly resolveProviderAdapter?: (providerId: string) => Promise<ProviderAdapter | undefined>;
   readonly providerAdapters?: ReadonlyMap<string, ProviderAdapter>;
   readonly networkBindingFactory?: ValidatedNetworkBindingFactory;

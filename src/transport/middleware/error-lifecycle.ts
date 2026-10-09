@@ -86,7 +86,7 @@ export function createErrorNormalizationMiddleware(deps: {
                 code,
                 isBuiltinError ? builtin?.message ?? "Unable to process request" : "Internal server error",
               );
-      const origin = gateway?.origin ?? "cartethyia";
+      const origin = gateway?.origin ?? "cloviela";
       // `afterResponse` telemetry hook can enqueue it even when the request
       // never reached canonical parse / auth / preparation.
       if (state && !state.outcome) {

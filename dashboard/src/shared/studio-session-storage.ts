@@ -3,9 +3,9 @@
  * Reads fall back from sessionStorage to localStorage; writes are explicit per
  * scope so the key can stay per-visit while the active session survives.
  */
-export const ACTIVE_KEY = "cartethyia:studio:active-session";
-export const STUDIO_KEY_STORAGE = "cartethyia:studio:key";
-export const STUDIO_PREFIX_STORAGE = "cartethyia:studio:key-prefix";
+export const ACTIVE_KEY = "cloviela:studio:active-session";
+export const STUDIO_KEY_STORAGE = "cloviela:studio:key";
+export const STUDIO_PREFIX_STORAGE = "cloviela:studio:key-prefix";
 
 export function readStorage(key: string): string | null {
   if (typeof window === "undefined") return null;

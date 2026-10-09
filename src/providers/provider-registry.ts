@@ -298,7 +298,7 @@ export interface ProviderAuthentication {
   readonly refresher?: OAuthTokenRefresher;
 }
 
-/** Returns true for one of Cartethyia's reserved builtin IDs, case-insensitively. */
+/** Returns true for one of Cloviela's reserved builtin IDs, case-insensitively. */
 export function isBundledProviderId(value: string): value is BundledProviderId {
   const normalized = value.trim().toLowerCase();
   return (BUNDLED_PROVIDER_IDS as readonly string[]).includes(normalized);
@@ -598,7 +598,7 @@ export interface CredentialResolution {
 
 /**
  * Selects the first usable upstream credential alternative in operator order.
- * Public Cartethyia authentication is intentionally absent from this interface.
+ * Public Cloviela authentication is intentionally absent from this interface.
  */
 export class CredentialResolver {
   /**

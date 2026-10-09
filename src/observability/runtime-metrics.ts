@@ -37,7 +37,7 @@ const PRESSURE_THRESHOLD = 0.8;
 /**
  * Resolves the effective memory limit for the process.
  *
- * Precedence: an explicit `CARTETHYIA_MEMORY_LIMIT_BYTES` override, then the
+ * Precedence: an explicit `CLOVIELA_MEMORY_LIMIT_BYTES` override, then the
  * cgroup v2/v1 limit when running in a container. Returns `undefined` when no
  * limit is discoverable (native development, macOS, Windows).
  */
@@ -80,20 +80,20 @@ export class RuntimeMetricsSampler {
 
   sample(): void {
     const memory = process.memoryUsage();
-    metrics.cartethyia_memory_rss_bytes.set(memory.rss);
-    metrics.cartethyia_memory_heap_used_bytes.set(memory.heapUsed);
-    metrics.cartethyia_memory_heap_total_bytes.set(memory.heapTotal);
-    metrics.cartethyia_memory_limit_bytes.set(this.limitBytes ?? 0);
+    metrics.cloviela_memory_rss_bytes.set(memory.rss);
+    metrics.cloviela_memory_heap_used_bytes.set(memory.heapUsed);
+    metrics.cloviela_memory_heap_total_bytes.set(memory.heapTotal);
+    metrics.cloviela_memory_limit_bytes.set(this.limitBytes ?? 0);
     trackMemoryUsage("rss", memory.rss);
     trackMemoryUsage("heap_used", memory.heapUsed);
     trackMemoryUsage("heap_total", memory.heapTotal);
     trackMemoryUsage("external", memory.external);
 
     const roundRobin = this.sources.routingRoundRobinEntries();
-    metrics.cartethyia_routing_roundrobin_entries.set(roundRobin.combo, { scope: "combo" });
-    metrics.cartethyia_routing_roundrobin_entries.set(roundRobin.provider, { scope: "provider" });
-    metrics.cartethyia_ip_abuse_keys.set(this.sources.ipAbuseKeys());
-    metrics.cartethyia_quota_cache_entries.set(this.sources.quotaCacheEntries());
+    metrics.cloviela_routing_roundrobin_entries.set(roundRobin.combo, { scope: "combo" });
+    metrics.cloviela_routing_roundrobin_entries.set(roundRobin.provider, { scope: "provider" });
+    metrics.cloviela_ip_abuse_keys.set(this.sources.ipAbuseKeys());
+    metrics.cloviela_quota_cache_entries.set(this.sources.quotaCacheEntries());
 
     this.checkPressure(memory.rss);
   }

@@ -5,7 +5,7 @@
  * Three properties carry the risk.
  *
  * 1. **The key is never inferred or defaulted.** A missing
- *    `CARTETHYIA_ENCRYPTION_KEY` must fail closed rather than fall back to a
+ *    `CLOVIELA_ENCRYPTION_KEY` must fail closed rather than fall back to a
  *    fixed or derived key — a fallback would encrypt production credentials
  *    under a key an attacker can compute from the source.
  * 2. **Every ciphertext is authenticated.** AES-GCM's auth tag is what makes a
@@ -106,7 +106,7 @@ describe("decodeEncryptionKey", () => {
     } catch (error: unknown) {
       message = error instanceof Error ? error.message : String(error);
     }
-    expect(message).toContain("CARTETHYIA_ENCRYPTION_KEY");
+    expect(message).toContain("CLOVIELA_ENCRYPTION_KEY");
     expect(message).toContain("32 bytes");
     expect(message).toContain("base64 or hex");
   });
@@ -140,13 +140,13 @@ describe("getCredentialEncryptionKey", () => {
     setCredentialEncryptionKeyForTesting(undefined);
     // With no environment variable in the test process the read throws, which is
     // the fail-closed behaviour: there is no silent fallback to a fixed key.
-    const previous = process.env.CARTETHYIA_ENCRYPTION_KEY;
-    delete process.env.CARTETHYIA_ENCRYPTION_KEY;
+    const previous = process.env.CLOVIELA_ENCRYPTION_KEY;
+    delete process.env.CLOVIELA_ENCRYPTION_KEY;
     try {
       expect(() => getCredentialEncryptionKey()).toThrow();
     } finally {
-      if (previous === undefined) delete process.env.CARTETHYIA_ENCRYPTION_KEY;
-      else process.env.CARTETHYIA_ENCRYPTION_KEY = previous;
+      if (previous === undefined) delete process.env.CLOVIELA_ENCRYPTION_KEY;
+      else process.env.CLOVIELA_ENCRYPTION_KEY = previous;
       setCredentialEncryptionKeyForTesting(KEY_BYTES);
     }
   });

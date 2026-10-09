@@ -31,7 +31,7 @@
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { getTableColumns, type Column, type SQL, type Table } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import {
   apiKeys,
   cliToolMappings,
@@ -170,7 +170,7 @@ function ownershipOwnerColumn(parent: Table): Column {
 
 /** Reads every row of one table that `tenantId` owns, encoded for JSON. */
 async function exportTable(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   table: Table,
   tenantId: string,
 ): Promise<BackupRow[]> {
@@ -196,7 +196,7 @@ async function exportTable(
  * `seedBundledModels`), so a payload never contains another tenant's data.
  */
 export async function exportBackup(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   tables: readonly Table[],
   tenantId: string,
 ): Promise<BackupExportResult> {
@@ -272,7 +272,7 @@ function createdAtIso(value: unknown): string {
  * so the two sides are comparable regardless of how the driver types them.
  */
 async function existingTelemetryKeys(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   rows: readonly BackupRow[],
 ): Promise<Set<string>> {
   const requestIds = [
@@ -314,7 +314,7 @@ async function existingTelemetryKeys(
  * unavoidable. It is confined to this helper rather than scattered across the
  * restore path.
  */
-function insertRow(tx: CartethyiaDatabase, table: Table, values: Record<string, unknown>) {
+function insertRow(tx: ClovielaDatabase, table: Table, values: Record<string, unknown>) {
   return tx.insert(table).values(values as never);
 }
 
@@ -328,7 +328,7 @@ function insertRow(tx: CartethyiaDatabase, table: Table, values: Record<string, 
  * tenant.
  */
 async function clearOwnedRows(
-  tx: CartethyiaDatabase,
+  tx: ClovielaDatabase,
   table: Table,
   tenantId: string,
 ): Promise<void> {
@@ -344,7 +344,7 @@ async function clearOwnedRows(
  * duplicate.
  */
 async function insertRows(
-  tx: CartethyiaDatabase,
+  tx: ClovielaDatabase,
   table: Table,
   rows: readonly BackupRow[],
   options: {
@@ -414,7 +414,7 @@ async function insertRows(
  * only the rows this tenant owns.
  */
 export async function applyRestore(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   validation: ValidatedRestore,
   order: readonly Table[],
   tenantId: string,
@@ -423,7 +423,7 @@ export async function applyRestore(
   const skipped: Record<string, number> = {};
 
   await db.transaction(async (tx) => {
-    const scoped = tx as unknown as CartethyiaDatabase;
+    const scoped = tx as unknown as ClovielaDatabase;
 
     // The tenant row is ensured, never replaced: it almost always exists, and
     // its PK is `id`, so a conflict means "already there" rather than an error.
@@ -529,7 +529,7 @@ export interface DeleteAllResult {
  * are explicit and ordered child-first; no table-wide delete is permitted.
  */
 export async function deleteAll(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   scopes: readonly DeleteAllScope[],
   tenantId: string,
 ): Promise<DeleteAllResult> {
@@ -549,7 +549,7 @@ export async function deleteAll(
   const apiKeyIds: string[] = [];
 
   await db.transaction(async (tx) => {
-    const scoped = tx as unknown as CartethyiaDatabase;
+    const scoped = tx as unknown as ClovielaDatabase;
     const remove = async (table: Table, filter: SQL, name = tableName(table)): Promise<void> => {
       const rows = await scoped.delete(table).where(filter).returning();
       if (rows.length > 0) deleted[name] = (deleted[name] ?? 0) + rows.length;

@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { globalOrOwnedBy, ownedByOnly } from "../../../persistence/tenant-scope";
-import type { CartethyiaDatabase } from "../../../persistence/postgres";
+import type { ClovielaDatabase } from "../../../persistence/postgres";
 import { adminAuditLog, consoleUsers } from "../../../persistence/schema";
 import { decodeDatedCursor, encodeCursor } from "../../../persistence/page-cursor";
 import type { AuditEntry, AuditListPage, AuditReadStore } from "./contracts";
@@ -44,7 +44,7 @@ function likePattern(filter: string): string {
  * access decision already carries `platform:admin`.
  */
 export class DrizzleAuditReadStore implements AuditReadStore {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   /**
    * Console user ids whose username, email, or display name matches `filter`

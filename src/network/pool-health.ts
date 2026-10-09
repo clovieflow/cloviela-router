@@ -1,4 +1,4 @@
-import type { CartethyiaDatabase } from "../persistence/postgres";
+import type { ClovielaDatabase } from "../persistence/postgres";
 import { healthEvents } from "../persistence/schema";
 import type { NetworkPoolSelector } from "./pool/selector";
 import type { GatewayError } from "../transport/gateway-error";
@@ -30,7 +30,7 @@ const lastRecordedByPoolProvider = new Map<string, number>();
 
 /** Durable half of `flagPoolCooldown`; not a second public entry point. */
 async function recordPoolCooldownEvent(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   poolId: string,
   providerId: string,
   reason: string,
@@ -82,7 +82,7 @@ const DEFAULT_PROVIDER_COOLDOWN_MS = 15 * 60 * 1000;
  */
 export function flagPoolCooldown(
   poolSelector: NetworkPoolSelector,
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   poolId: string,
   providerId: string,
   error: GatewayError,

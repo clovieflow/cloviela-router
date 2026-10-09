@@ -1,7 +1,7 @@
 /**
  * The three public wire surfaces, end to end.
  *
- * Cartethyia accepts OpenAI Chat, OpenAI Responses, and Anthropic Messages on
+ * Cloviela accepts OpenAI Chat, OpenAI Responses, and Anthropic Messages on
  * one canonical pipeline. This suite proves the property that makes that
  * promise real: the same canonical event stream is encoded into each surface's
  * own vocabulary, and each surface's request is parsed into the same canonical
@@ -52,7 +52,7 @@ dbDescribe("public wire surfaces", () => {
       };
       expect(body.object).toBe("chat.completion");
       expect(body.choices[0]?.message.role).toBe("assistant");
-      expect(body.choices[0]?.message.content).toBe("Hello from Cartethyia");
+      expect(body.choices[0]?.message.content).toBe("Hello from Cloviela");
       expect(body.choices[0]?.finish_reason).toBe("stop");
       // Usage must be present and internally consistent: a client that bills
       // from these numbers cannot be given a total that disagrees with its parts.
@@ -160,7 +160,7 @@ dbDescribe("public wire surfaces", () => {
       expect(body.object).toBe("response");
       expect(body.status).toBe("completed");
       const message = body.output.find((item) => item.type === "message");
-      expect(message?.content?.[0]?.text).toBe("Hello from Cartethyia");
+      expect(message?.content?.[0]?.text).toBe("Hello from Cloviela");
     });
 
     test("a streaming request emits named SSE events", async () => {
@@ -214,7 +214,7 @@ dbDescribe("public wire surfaces", () => {
       expect(body.type).toBe("message");
       expect(body.role).toBe("assistant");
       expect(body.content[0]?.type).toBe("text");
-      expect(body.content[0]?.text).toBe("Hello from Cartethyia");
+      expect(body.content[0]?.text).toBe("Hello from Cloviela");
       expect(body.stop_reason).toBe("end_turn");
       expect(typeof body.usage.input_tokens).toBe("number");
     });

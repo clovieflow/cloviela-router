@@ -996,7 +996,7 @@ export async function runBackupRestore(
     method: "GET",
     path: `/console/api/backup/export?password=${encodeURIComponent(world.password)}&sections=config`,
   });
-  const exportedOk = exported.status === 200 && exported.body?.app === "cartethyia";
+  const exportedOk = exported.status === 200 && exported.body?.app === "cloviela";
 
   // Delete the tenant's providers, then restore them from the exported file.
   const deleted = await world.console.json({

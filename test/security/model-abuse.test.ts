@@ -455,7 +455,7 @@ describe("modelAbuseBannedError", () => {
     const error = modelAbuseBannedError();
     expect(error.status).toBe(403);
     expect(error.code).toBe("model_abuse_banned");
-    expect(error.origin).toBe("cartethyia");
+    expect(error.origin).toBe("cloviela");
   });
 
   test("the message names the cause without naming the threshold", () => {

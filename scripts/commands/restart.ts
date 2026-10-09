@@ -7,11 +7,11 @@
  * but Windows has no deliverable catchable signal — `process.kill(pid,
  * "SIGTERM")` of a console-less Bun process runs no JS handler (measured). So
  * this script stops the running instance through the drain endpoint when
- * `CARTETHYIA_DRAIN_TOKEN` is set (loopback + `x-drain-token`), and only falls
+ * `CLOVIELA_DRAIN_TOKEN` is set (loopback + `x-drain-token`), and only falls
  * back to a hard kill when no token is configured.
  *
  * Env:
- *   CARTETHYIA_DRAIN_TOKEN  token for POST /admin/drain (required for graceful stop)
+ *   CLOVIELA_DRAIN_TOKEN  token for POST /admin/drain (required for graceful stop)
  *   PORT                    gateway port (default 12800)
  *   DRAIN_WAIT_MS           how long to wait for the drain to finish (default 30000)
  */
@@ -62,9 +62,9 @@ async function waitForPortFree(port: number, timeoutMs: number): Promise<boolean
 }
 
 async function stopGracefully(): Promise<boolean> {
-  const token = process.env.CARTETHYIA_DRAIN_TOKEN?.trim();
+  const token = process.env.CLOVIELA_DRAIN_TOKEN?.trim();
   if (token === undefined || token.length === 0) {
-    console.warn("[restart] CARTETHYIA_DRAIN_TOKEN unset — cannot drain gracefully");
+    console.warn("[restart] CLOVIELA_DRAIN_TOKEN unset — cannot drain gracefully");
     return false;
   }
   try {

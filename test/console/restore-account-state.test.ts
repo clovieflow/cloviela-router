@@ -27,14 +27,14 @@ import {
   buildPgliteHandle,
   createPgliteClient,
 } from "../../src/persistence/db-pglite";
-import type { CartethyiaDatabase } from "../../src/persistence/postgres";
+import type { ClovielaDatabase } from "../../src/persistence/postgres";
 import { apiKeys, models, providerAccounts, providers, tenants } from "../../src/persistence/schema";
 
 let client: PGlite | undefined;
-let db: CartethyiaDatabase | undefined;
+let db: ClovielaDatabase | undefined;
 let tempDir: string | undefined;
 
-async function database(): Promise<CartethyiaDatabase> {
+async function database(): Promise<ClovielaDatabase> {
   if (db) return db;
   tempDir = mkdtempSync(join(tmpdir(), "restore-probe-"));
   client = await createPgliteClient(tempDir);

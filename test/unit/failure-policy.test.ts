@@ -983,7 +983,7 @@ describe("classifyUpstreamFailure", () => {
     }
   });
 
-  test("never mutates an account for a cartethyia-origin failure", () => {
+  test("never mutates an account for a cloviela-origin failure", () => {
     // Our own error is not evidence about the upstream credential, even when it
     // carries credential-shaped details.
     const policy = classifyUpstreamFailure(
@@ -1664,7 +1664,7 @@ describe("classifyTerminalOutcome", () => {
     expect(outcome).toEqual({
       status: "cancelled",
       errorCategory: "transport_closed",
-      errorOrigin: "cartethyia",
+      errorOrigin: "cloviela",
     });
   });
 
@@ -1688,7 +1688,7 @@ describe("classifyTerminalOutcome", () => {
     ).toEqual({
       status: "failed",
       errorCategory: "deadline_exceeded",
-      errorOrigin: "cartethyia",
+      errorOrigin: "cloviela",
     });
     expect(
       classifyTerminalOutcome(
@@ -1698,15 +1698,15 @@ describe("classifyTerminalOutcome", () => {
     ).toEqual({
       status: "failed",
       errorCategory: "deadline_exceeded",
-      errorOrigin: "cartethyia",
+      errorOrigin: "cloviela",
     });
   });
 
-  test("attributes a non-GatewayError outcome to cartethyia, never to the upstream", () => {
+  test("attributes a non-GatewayError outcome to the gateway, never to the upstream", () => {
     // A failure with no typed origin has no upstream to blame; claiming one
     // would send the operator to the wrong provider.
     const outcome = classifyTerminalOutcome(new Error("bare"), new AbortController().signal);
-    expect(outcome.errorOrigin).toBe("cartethyia");
+    expect(outcome.errorOrigin).toBe("cloviela");
     expect(outcome.errorCategory).toBe("unknown_error");
     expect(outcome.status).toBe("failed");
   });
@@ -1821,7 +1821,7 @@ describe("fallbackRetryDelayMs", () => {
   });
 
   test("honors the operator-tunable base and cap", () => {
-    const env = { CARTETHYIA_FALLBACK_RETRY_BASE_MS: "400", CARTETHYIA_FALLBACK_RETRY_CAP_MS: "1000" };
+    const env = { CLOVIELA_FALLBACK_RETRY_BASE_MS: "400", CLOVIELA_FALLBACK_RETRY_CAP_MS: "1000" };
     expect(withEnv(env, () => withRandom(0.5, () => fallbackRetryDelayMs(0)))).toBe(200);
     expect(withEnv(env, () => withRandom(0.5, () => fallbackRetryDelayMs(3)))).toBe(500);
     // The cap wins once the exponential passes it.
@@ -1833,28 +1833,28 @@ describe("fallbackRetryDelayMs", () => {
     // the growth rather than a multiplication of the base.
     expect(
       withEnv(
-        { CARTETHYIA_FALLBACK_RETRY_BASE_MS: "100", CARTETHYIA_FALLBACK_RETRY_CAP_MS: "40" },
+        { CLOVIELA_FALLBACK_RETRY_BASE_MS: "100", CLOVIELA_FALLBACK_RETRY_CAP_MS: "40" },
         () => withRandom(0.25, () => fallbackRetryDelayMs(3)),
       ),
     ).toBe(10);
   });
 
   test("collapses to zero when the base or the cap is zero", () => {
-    expect(withEnv({ CARTETHYIA_FALLBACK_RETRY_BASE_MS: "0" }, () => withRandom(0.25, () => fallbackRetryDelayMs(5)))).toBe(0);
-    expect(withEnv({ CARTETHYIA_FALLBACK_RETRY_CAP_MS: "0" }, () => withRandom(0.25, () => fallbackRetryDelayMs(0)))).toBe(0);
+    expect(withEnv({ CLOVIELA_FALLBACK_RETRY_BASE_MS: "0" }, () => withRandom(0.25, () => fallbackRetryDelayMs(5)))).toBe(0);
+    expect(withEnv({ CLOVIELA_FALLBACK_RETRY_CAP_MS: "0" }, () => withRandom(0.25, () => fallbackRetryDelayMs(0)))).toBe(0);
   });
 
   test("throws on an out-of-range configured base rather than silently using a default", () => {
     // The config layer validates at read time, so a bad value surfaces here
     // instead of becoming an unexplained delay.
     expect(() =>
-      withEnv({ CARTETHYIA_FALLBACK_RETRY_BASE_MS: "nope" }, () => fallbackRetryDelayMs(0)),
-    ).toThrow(/CARTETHYIA_FALLBACK_RETRY_BASE_MS/);
+      withEnv({ CLOVIELA_FALLBACK_RETRY_BASE_MS: "nope" }, () => fallbackRetryDelayMs(0)),
+    ).toThrow(/CLOVIELA_FALLBACK_RETRY_BASE_MS/);
   });
 
   test("restores the environment after a configured read", () => {
-    withEnv({ CARTETHYIA_FALLBACK_RETRY_BASE_MS: "400" }, () => fallbackRetryDelayMs(0));
-    expect(process.env.CARTETHYIA_FALLBACK_RETRY_BASE_MS).toBeUndefined();
+    withEnv({ CLOVIELA_FALLBACK_RETRY_BASE_MS: "400" }, () => fallbackRetryDelayMs(0));
+    expect(process.env.CLOVIELA_FALLBACK_RETRY_BASE_MS).toBeUndefined();
     expect(withRandom(0.5, () => fallbackRetryDelayMs(0))).toBe(50);
   });
 });

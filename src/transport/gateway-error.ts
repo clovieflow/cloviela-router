@@ -53,7 +53,7 @@ export type GatewayErrorCode =
   | "restart_for_update";
 
 /** Identifies which boundary produced a safe public error. */
-export type GatewayErrorOrigin = "cartethyia" | "upstream" | "network";
+export type GatewayErrorOrigin = "cloviela" | "upstream" | "network";
 
 /**
  * Error with a client-safe stable code, origin, and sanitized metadata.
@@ -69,7 +69,7 @@ export class GatewayError extends Error {
     status: number,
     message: string,
     details: Readonly<Record<string, unknown>> = {},
-    origin: GatewayErrorOrigin = "cartethyia",
+    origin: GatewayErrorOrigin = "cloviela",
   ) {
     super(message);
     this.name = "GatewayError";
@@ -85,12 +85,12 @@ export class GatewayError extends Error {
  * `message`; strip them so a value that crossed two shapers is not doubled
  * and so clients never see product branding in the error text.
  *
- * Blame lives in the structured `origin` field (`cartethyia` | `upstream` |
+ * Blame lives in the structured `origin` field (`cloviela` | `upstream` |
  * `network`). The public message is always `code: explanatory` for every
  * origin — gateway and upstream look the same on the wire.
  */
 const LEGACY_ORIGIN_LABELS: readonly string[] = [
-  "Cartethyia Error:",
+  "Cloviela Error:",
   "Upstream Error:",
   "Network Error:",
 ];

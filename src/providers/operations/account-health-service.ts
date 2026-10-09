@@ -1,6 +1,6 @@
 // Account health: error classification, failure/success recording, recovery and cooldown sweeps.
 import { and, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { isRecord } from "../../protocol/primitives";
 import { BUDDY_PROVIDER_IDS } from "../provider-metadata";
 import { healthEvents, providerAccounts } from "../../persistence/schema";
@@ -24,7 +24,7 @@ import {
  * Every delay below is a *fallback*: an upstream `Retry-After`/reset header or
  * a duration stated in the provider message always wins. They are read through
  * `src/config.ts` so an operator can tune the health machine without a code
- * change (`CARTETHYIA_ACCOUNT_*_COOLDOWN_MS`).
+ * change (`CLOVIELA_ACCOUNT_*_COOLDOWN_MS`).
  */
 const DEFAULT_RATE_LIMIT_COOLDOWN_MS = resolveAccountRateLimitCooldownMs;
 // Fallback when the error states no usable duration: deliberately short (1h,
@@ -88,7 +88,7 @@ export type AccountErrorCategory =
   | "server_error"
   | "timeout"
   | "unknown";
-export type AccountFailureOrigin = "cartethyia" | "upstream" | "network";
+export type AccountFailureOrigin = "cloviela" | "upstream" | "network";
 export type AccountFailureScope =
   | "account"
   | "provider"
@@ -152,7 +152,7 @@ export function classifyAccountError(
   const statusCode =
     options?.statusCode ??
     (typeof errorRecord?.status === "number" ? errorRecord.status : null);
-  const origin = options?.origin ?? "cartethyia";
+  const origin = options?.origin ?? "cloviela";
   const scope = options?.scope ?? "unknown";
   const accountEvidence =
     options?.credentialEvidence === true ||
@@ -477,7 +477,7 @@ export function classifyAccountError(
 
 /** Persists one classified failure to the account row and appends a health event. */
 async function persistAccountFailure(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   error: unknown,
   options?: AccountFailureEvidence,
@@ -485,7 +485,7 @@ async function persistAccountFailure(
   const classification = classifyAccountError(error, options);
   if (!classification.mutatesAccount) return classification;
 
-  const persist = async (client: CartethyiaDatabase): Promise<AccountErrorClassification | null> => {
+  const persist = async (client: ClovielaDatabase): Promise<AccountErrorClassification | null> => {
     const accountRows = await client
       .select()
       .from(providerAccounts)
@@ -597,7 +597,7 @@ async function persistAccountFailure(
     // tests pass a narrow double), and a transaction is an optimization here,
     // not a requirement — the same writes are correct without one.
     if (typeof db.transaction === "function") {
-      return await db.transaction((tx) => persist(tx as CartethyiaDatabase));
+      return await db.transaction((tx) => persist(tx as ClovielaDatabase));
     }
     return await persist(db);
   } catch {
@@ -607,10 +607,10 @@ async function persistAccountFailure(
 
 /** Clears failure state after a successful dispatch; true when the account changed. */
 async function persistAccountSuccess(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
 ): Promise<boolean> {
-  const mutate = async (client: CartethyiaDatabase): Promise<boolean> => {
+  const mutate = async (client: ClovielaDatabase): Promise<boolean> => {
     const rows = await client
       .select()
       .from(providerAccounts)
@@ -646,7 +646,7 @@ async function persistAccountSuccess(
   };
   try {
     if (typeof db.transaction === "function") {
-      return await db.transaction((tx) => mutate(tx as CartethyiaDatabase));
+      return await db.transaction((tx) => mutate(tx as ClovielaDatabase));
     }
     return await mutate(db);
   } catch {
@@ -656,11 +656,11 @@ async function persistAccountSuccess(
 
 /** Operator-initiated recovery: forces the account back to active and logs the transition. */
 async function persistAccountRecovery(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   reason: string,
 ): Promise<boolean> {
-  const recover = async (client: CartethyiaDatabase): Promise<boolean> => {
+  const recover = async (client: ClovielaDatabase): Promise<boolean> => {
     const accountRows = await client
       .select()
       .from(providerAccounts)
@@ -706,7 +706,7 @@ async function persistAccountRecovery(
   };
   try {
     if (typeof db.transaction === "function") {
-      return await db.transaction((tx) => recover(tx as CartethyiaDatabase));
+      return await db.transaction((tx) => recover(tx as ClovielaDatabase));
     }
     return await recover(db);
   } catch {
@@ -715,8 +715,8 @@ async function persistAccountRecovery(
 }
 
 /** Recovers accounts whose cooldown elapsed and prunes expired per-model keys. */
-async function sweepExpiredCooldownsFor(db: CartethyiaDatabase): Promise<number> {
-  const recover = async (client: CartethyiaDatabase): Promise<number> => {
+async function sweepExpiredCooldownsFor(db: ClovielaDatabase): Promise<number> {
+  const recover = async (client: ClovielaDatabase): Promise<number> => {
     const now = new Date();
     const nowIso = now.toISOString();
     const expired = await client
@@ -796,7 +796,7 @@ async function sweepExpiredCooldownsFor(db: CartethyiaDatabase): Promise<number>
   };
   try {
     if (typeof db.transaction === "function") {
-      return await db.transaction((tx) => recover(tx as CartethyiaDatabase));
+      return await db.transaction((tx) => recover(tx as ClovielaDatabase));
     }
     return await recover(db);
   } catch {
@@ -805,7 +805,7 @@ async function sweepExpiredCooldownsFor(db: CartethyiaDatabase): Promise<number>
 }
 
 export async function recordAccountFailure(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   error: unknown,
   options?: AccountFailureEvidence,
@@ -814,7 +814,7 @@ export async function recordAccountFailure(
 }
 
 export async function recordAccountSuccess(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
 ): Promise<boolean> {
   return persistAccountSuccess(db, accountId);
@@ -836,7 +836,7 @@ export interface AttemptHealthReport {
 }
 
 export async function reportAttemptOutcome(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   report: AttemptHealthReport,
 ): Promise<void> {
   if (!report.accountId) return;
@@ -853,19 +853,19 @@ export async function reportAttemptOutcome(
 }
 
 export async function recoverAccount(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   reason = "manual_operator_recovery",
 ): Promise<boolean> {
   return persistAccountRecovery(db, accountId, reason);
 }
 
-export async function sweepExpiredCooldowns(db: CartethyiaDatabase): Promise<number> {
+export async function sweepExpiredCooldowns(db: ClovielaDatabase): Promise<number> {
   return sweepExpiredCooldownsFor(db);
 }
 
 export async function listAccountHealthEvents(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   limit = 50,
 ): Promise<readonly AccountHealthEventRecord[]> {

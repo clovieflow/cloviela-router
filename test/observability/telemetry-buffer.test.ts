@@ -15,7 +15,7 @@
  *    live producer is asserted end to end.
  * 2. **Loss is counted, never silent.** A dropped event is indistinguishable
  *    from a request that never happened, so both drop paths must increment
- *    `cartethyia_telemetry_dropped_total`.
+ *    `cloviela_telemetry_dropped_total`.
  * 3. **A failed drain must not take the queue with it.** The retry loop and the
  *    outage gate are what keep a database blip from becoming a retry storm or
  *    an unbounded queue.
@@ -32,7 +32,7 @@ import {
   type TelemetryEventInput,
 } from "../../src/observability/telemetry-buffer";
 import { metrics } from "../../src/observability/metrics";
-import { getDb, type CartethyiaDatabase } from "../../src/persistence/postgres";
+import { getDb, type ClovielaDatabase } from "../../src/persistence/postgres";
 import { telemetryEvents } from "../../src/persistence/schema";
 import { createRunId, getTestPool, requireDatabase } from "../helpers/database";
 import { createTenant } from "../helpers/fixtures";
@@ -49,7 +49,7 @@ const buffers: TelemetryBatchBuffer[] = [];
  * (see `test/helpers/database.ts`), so this is the same connection the
  * fixtures use and the same one production code would get.
  */
-function db(): CartethyiaDatabase {
+function db(): ClovielaDatabase {
   return getDb();
 }
 
@@ -192,12 +192,12 @@ describe("TelemetryBatchBuffer — drop accounting", () => {
     // log, no row appears in Usage, and nothing explains the gap.
     const scope = await tenantScope("telemetry-items");
     try {
-      const before = metricValue("cartethyia_telemetry_dropped_total");
+      const before = metricValue("cloviela_telemetry_dropped_total");
       const buffer = startBuffer({ maxItems: 2 });
       buffer.enqueue(makeEvent(scope.tenantId));
       buffer.enqueue(makeEvent(scope.tenantId));
       buffer.enqueue(makeEvent(scope.tenantId));
-      expect(metricValue("cartethyia_telemetry_dropped_total") - before).toBe(1);
+      expect(metricValue("cloviela_telemetry_dropped_total") - before).toBe(1);
       await buffer.flush();
       // The two admitted events still land; the drop is the third alone.
       expect(await rowsFor(scope.tenantId)).toHaveLength(2);
@@ -211,11 +211,11 @@ describe("TelemetryBatchBuffer — drop accounting", () => {
     // events carrying long user agents defeats the item cap's intent.
     const scope = await tenantScope("telemetry-bytes");
     try {
-      const before = metricValue("cartethyia_telemetry_dropped_total");
+      const before = metricValue("cloviela_telemetry_dropped_total");
       const buffer = startBuffer({ maxBytes: 700 });
       buffer.enqueue(makeEvent(scope.tenantId));
       buffer.enqueue(makeEvent(scope.tenantId));
-      expect(metricValue("cartethyia_telemetry_dropped_total") - before).toBeGreaterThanOrEqual(1);
+      expect(metricValue("cloviela_telemetry_dropped_total") - before).toBeGreaterThanOrEqual(1);
       await buffer.flush();
       expect((await rowsFor(scope.tenantId)).length).toBeLessThan(2);
     } finally {
@@ -226,14 +226,14 @@ describe("TelemetryBatchBuffer — drop accounting", () => {
   test("the buffered gauge tracks the queue through enqueue and drain", async () => {
     const scope = await tenantScope("telemetry-gauge");
     try {
-      const before = metricValue("cartethyia_telemetry_buffered");
+      const before = metricValue("cloviela_telemetry_buffered");
       const buffer = startBuffer();
       buffer.enqueue(makeEvent(scope.tenantId));
       buffer.enqueue(makeEvent(scope.tenantId));
-      expect(metricValue("cartethyia_telemetry_buffered") - before).toBe(2);
+      expect(metricValue("cloviela_telemetry_buffered") - before).toBe(2);
       await buffer.flush();
       // Drained: the gauge returns to where it started.
-      expect(metricValue("cartethyia_telemetry_buffered") - before).toBe(0);
+      expect(metricValue("cloviela_telemetry_buffered") - before).toBe(0);
     } finally {
       await scope.cleanup();
     }
@@ -588,9 +588,9 @@ describe("TelemetryBatchBuffer — failed drain", () => {
       // know that a single bad row can take a good one with it.
       buffer.enqueue(makeEvent(scope.tenantId));
       buffer.enqueue(makeEvent("not-a-uuid"));
-      const before = metricValue("cartethyia_telemetry_dropped_total");
+      const before = metricValue("cloviela_telemetry_dropped_total");
       await buffer.flush();
-      expect(metricValue("cartethyia_telemetry_dropped_total") - before).toBe(2);
+      expect(metricValue("cloviela_telemetry_dropped_total") - before).toBe(2);
       expect(await rowsFor(scope.tenantId)).toHaveLength(0);
       // Still usable: one bad batch must not wedge telemetry for every later
       // request, and the queue must be empty so nothing is retried forever.
@@ -609,12 +609,12 @@ describe("TelemetryBatchBuffer — failed drain", () => {
     // grows the queue while it fails.
     const buffer = startBuffer();
     for (let index = 0; index < 3; index += 1) buffer.enqueue(makeEvent("not-a-uuid"));
-    const before = metricValue("cartethyia_telemetry_dropped_total");
+    const before = metricValue("cloviela_telemetry_dropped_total");
     await buffer.flush();
-    expect(metricValue("cartethyia_telemetry_dropped_total") - before).toBe(3);
+    expect(metricValue("cloviela_telemetry_dropped_total") - before).toBe(3);
     // Empty queue, so a second flush has nothing to retry and must not
     // re-count the same loss.
     await expect(buffer.flush()).resolves.toBeUndefined();
-    expect(metricValue("cartethyia_telemetry_dropped_total") - before).toBe(3);
+    expect(metricValue("cloviela_telemetry_dropped_total") - before).toBe(3);
   });
 });

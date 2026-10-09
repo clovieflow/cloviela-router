@@ -1,6 +1,6 @@
 
 import { assertPoolFitsServerCapacity, bootDatabase, ensureMigrated, poolMaxFromEnv } from "../persistence/postgres";
-import type { CartethyiaDatabase } from "../persistence/postgres";
+import type { ClovielaDatabase } from "../persistence/postgres";
 import { resolveRedisBackend, resolveRedisClient } from "../persistence/redis";
 import type { RedisClient } from "../persistence/redis";
 import {
@@ -72,7 +72,7 @@ import { refreshProviderClientVersions } from "../providers/operations/client-ve
 
 
 export interface ProductionDeps {
-  db: CartethyiaDatabase;
+  db: ClovielaDatabase;
   redis: RedisClient | undefined;
   snapshotService: InMemoryRouteSnapshotService;
   /** Live routing admission snapshot scoped to one provider/tenant for console reads. */

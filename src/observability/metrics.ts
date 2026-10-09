@@ -242,25 +242,25 @@ const REQUEST_LATENCY_BUCKETS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10
 const ADAPTER_LOAD_BUCKETS = [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500] as const;
 
 export class PrometheusRegistry {
-  readonly cartethyia_pg_pool_total: GaugeMetric;
-  readonly cartethyia_pg_pool_idle: GaugeMetric;
-  readonly cartethyia_pg_pool_waiting: GaugeMetric;
-  readonly cartethyia_redis_up: GaugeMetric;
+  readonly cloviela_pg_pool_total: GaugeMetric;
+  readonly cloviela_pg_pool_idle: GaugeMetric;
+  readonly cloviela_pg_pool_waiting: GaugeMetric;
+  readonly cloviela_redis_up: GaugeMetric;
   readonly proxy_requests_total: CounterMetric;
   readonly proxy_admission_total: CounterMetric;
   readonly proxy_in_flight: GaugeMetric;
   readonly proxy_request_latency_ms: HistogramMetric;
-  readonly cartethyia_telemetry_buffered: GaugeMetric;
-  readonly cartethyia_telemetry_dropped_total: CounterMetric;
-  readonly cartethyia_memory_rss_bytes: GaugeMetric;
-  readonly cartethyia_memory_heap_used_bytes: GaugeMetric;
-  readonly cartethyia_memory_heap_total_bytes: GaugeMetric;
-  readonly cartethyia_memory_limit_bytes: GaugeMetric;
-  readonly cartethyia_routing_roundrobin_entries: GaugeMetric;
-  readonly cartethyia_ip_abuse_keys: GaugeMetric;
-  readonly cartethyia_quota_cache_entries: GaugeMetric;
-  readonly cartethyia_pool_agent_entries: GaugeMetric;
-  readonly cartethyia_proxy_dial_dns_fallback_total: CounterMetric;
+  readonly cloviela_telemetry_buffered: GaugeMetric;
+  readonly cloviela_telemetry_dropped_total: CounterMetric;
+  readonly cloviela_memory_rss_bytes: GaugeMetric;
+  readonly cloviela_memory_heap_used_bytes: GaugeMetric;
+  readonly cloviela_memory_heap_total_bytes: GaugeMetric;
+  readonly cloviela_memory_limit_bytes: GaugeMetric;
+  readonly cloviela_routing_roundrobin_entries: GaugeMetric;
+  readonly cloviela_ip_abuse_keys: GaugeMetric;
+  readonly cloviela_quota_cache_entries: GaugeMetric;
+  readonly cloviela_pool_agent_entries: GaugeMetric;
+  readonly cloviela_proxy_dial_dns_fallback_total: CounterMetric;
   readonly proxy_provider_adapter_load_ms: HistogramMetric;
   readonly pool_cooldown_record_failed: CounterMetric;
   readonly quota_cache_invalidate_failed: CounterMetric;
@@ -268,19 +268,19 @@ export class PrometheusRegistry {
   private readonly all: RenderableMetric[] = [];
 
   constructor() {
-    this.cartethyia_pg_pool_total = this.gauge(
-      "cartethyia_pg_pool_total",
+    this.cloviela_pg_pool_total = this.gauge(
+      "cloviela_pg_pool_total",
       "Total connections in the Postgres pool",
     );
-    this.cartethyia_pg_pool_idle = this.gauge(
-      "cartethyia_pg_pool_idle",
+    this.cloviela_pg_pool_idle = this.gauge(
+      "cloviela_pg_pool_idle",
       "Idle connections in the Postgres pool",
     );
-    this.cartethyia_pg_pool_waiting = this.gauge(
-      "cartethyia_pg_pool_waiting",
+    this.cloviela_pg_pool_waiting = this.gauge(
+      "cloviela_pg_pool_waiting",
       "Clients waiting for a Postgres pool connection",
     );
-    this.cartethyia_redis_up = this.gauge("cartethyia_redis_up", "Redis connectivity (1 = ready)");
+    this.cloviela_redis_up = this.gauge("cloviela_redis_up", "Redis connectivity (1 = ready)");
     this.proxy_requests_total = this.counter(
       "proxy_requests_total",
       "Completed proxy requests by outcome status",
@@ -300,49 +300,49 @@ export class PrometheusRegistry {
       "Request latency in milliseconds",
       REQUEST_LATENCY_BUCKETS,
     );
-    this.cartethyia_telemetry_buffered = this.gauge(
-      "cartethyia_telemetry_buffered",
+    this.cloviela_telemetry_buffered = this.gauge(
+      "cloviela_telemetry_buffered",
       "Telemetry events waiting to be flushed",
     );
-    this.cartethyia_telemetry_dropped_total = this.counter(
-      "cartethyia_telemetry_dropped_total",
+    this.cloviela_telemetry_dropped_total = this.counter(
+      "cloviela_telemetry_dropped_total",
       "Telemetry events dropped because the buffer was full",
     );
-    this.cartethyia_memory_rss_bytes = this.gauge(
-      "cartethyia_memory_rss_bytes",
+    this.cloviela_memory_rss_bytes = this.gauge(
+      "cloviela_memory_rss_bytes",
       "Resident set size of the process in bytes",
     );
-    this.cartethyia_memory_heap_used_bytes = this.gauge(
-      "cartethyia_memory_heap_used_bytes",
+    this.cloviela_memory_heap_used_bytes = this.gauge(
+      "cloviela_memory_heap_used_bytes",
       "JavaScript heap used in bytes",
     );
-    this.cartethyia_memory_heap_total_bytes = this.gauge(
-      "cartethyia_memory_heap_total_bytes",
+    this.cloviela_memory_heap_total_bytes = this.gauge(
+      "cloviela_memory_heap_total_bytes",
       "JavaScript heap reserved in bytes",
     );
-    this.cartethyia_memory_limit_bytes = this.gauge(
-      "cartethyia_memory_limit_bytes",
+    this.cloviela_memory_limit_bytes = this.gauge(
+      "cloviela_memory_limit_bytes",
       "Container/cgroup memory limit in bytes (0 when unknown)",
     );
-    this.cartethyia_routing_roundrobin_entries = this.gauge(
-      "cartethyia_routing_roundrobin_entries",
+    this.cloviela_routing_roundrobin_entries = this.gauge(
+      "cloviela_routing_roundrobin_entries",
       "Round-robin routing state entries by scope",
       ["scope"],
     );
-    this.cartethyia_ip_abuse_keys = this.gauge(
-      "cartethyia_ip_abuse_keys",
+    this.cloviela_ip_abuse_keys = this.gauge(
+      "cloviela_ip_abuse_keys",
       "Tracked keys in the in-memory IP abuse store (0 when Redis-backed)",
     );
-    this.cartethyia_quota_cache_entries = this.gauge(
-      "cartethyia_quota_cache_entries",
+    this.cloviela_quota_cache_entries = this.gauge(
+      "cloviela_quota_cache_entries",
       "Entries in the in-process provider quota cache",
     );
-    this.cartethyia_pool_agent_entries = this.gauge(
-      "cartethyia_pool_agent_entries",
+    this.cloviela_pool_agent_entries = this.gauge(
+      "cloviela_pool_agent_entries",
       "Cached per-pool egress agents",
     );
-    this.cartethyia_proxy_dial_dns_fallback_total = this.counter(
-      "cartethyia_proxy_dial_dns_fallback_total",
+    this.cloviela_proxy_dial_dns_fallback_total = this.counter(
+      "cloviela_proxy_dial_dns_fallback_total",
       "Pool/relay-bound dials whose local DNS resolution failed and were downgraded to proxy-resolved egress",
     );
     this.proxy_provider_adapter_load_ms = this.histogram(

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { CartethyiaDatabase } from "./postgres";
+import type { ClovielaDatabase } from "./postgres";
 import { consoleSettings } from "./schema";
 import type { ConsoleSettingsPreferences } from "./schema";
 import { TtlCache } from "../runtime/ttl-cache";
@@ -16,7 +16,7 @@ export interface PreferencesReader {
 
 /** Postgres-backed preferences read. */
 export class DrizzlePreferencesReader implements PreferencesReader {
-  constructor(private readonly db: CartethyiaDatabase) {}
+  constructor(private readonly db: ClovielaDatabase) {}
 
   async readPreferences(tenantId: string): Promise<ConsoleSettingsPreferences | null> {
     const rows = await this.db

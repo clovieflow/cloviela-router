@@ -66,11 +66,11 @@ import type { RedisClient } from "../persistence/redis";
 import type { ProviderRegistry } from "../providers/provider-registry";
 import type { BundledProviderCatalog } from "../providers/operations/provider-catalog-service";
 import type { ValidatedNetworkBindingFactory } from "../network/pool/resolver";
-import type { CartethyiaDatabase } from "../persistence/postgres";
+import type { ClovielaDatabase } from "../persistence/postgres";
 import type { ConsoleAccessResolver } from "./auth/access";
 
 export interface ConsoleDomainContext {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly accessResolver: ConsoleAccessResolver;
   readonly providerRegistry: ProviderRegistry;
   readonly bundledModelCatalog: BundledProviderCatalog;

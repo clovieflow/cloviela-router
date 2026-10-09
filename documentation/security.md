@@ -5,7 +5,7 @@ Everything below describes shipped behavior in `src/`.
 
 ## Network exposure
 
-The listener binds `CARTETHYIA_BIND_HOST`, default `127.0.0.1`. Nothing is
+The listener binds `CLOVIELA_BIND_HOST`, default `127.0.0.1`. Nothing is
 reachable from another machine until an operator explicitly sets `0.0.0.0` (the
 Docker image does this for the container's own interface, and the Compose file
 publishes it to the host as `127.0.0.1` only).
@@ -16,12 +16,12 @@ Before exposing the gateway to a network:
    unauthenticated by design — it creates the *first* admin — so it must not be
    reachable by an untrusted party before you complete it.
 2. Put a TLS-terminating reverse proxy in front and set
-   `CARTETHYIA_PUBLIC_ORIGIN` to the public URL. Session cookies upgrade to
+   `CLOVIELA_PUBLIC_ORIGIN` to the public URL. Session cookies upgrade to
    `Secure` when the request arrives over TLS or through a trusted proxy that
    asserts `x-forwarded-proto: https`.
 3. Configure `TRUSTED_PROXY_CIDRS` to the proxy's ranges only. Forwarded client
    IPs are honored exclusively from inside that boundary.
-4. Consider restricting `CARTETHYIA_ALLOWED_NETWORKS`; private upstream
+4. Consider restricting `CLOVIELA_ALLOWED_NETWORKS`; private upstream
    addresses require an explicit opt-in.
 
 ## Authentication
@@ -44,7 +44,7 @@ effect without depending on a stale cache.
 
 | Where | Rule |
 |---|---|
-| At rest | Provider credentials are encrypted with `CARTETHYIA_ENCRYPTION_KEY` (AES-GCM). |
+| At rest | Provider credentials are encrypted with `CLOVIELA_ENCRYPTION_KEY` (AES-GCM). |
 | Dashboard | Never receives a provider credential; only a masked `keyPrefix` and booleans. |
 | API keys | Stored hashed for verification and encrypted for authorized re-display; the plaintext is shown once at creation. |
 | Logs | Argument values pass through the credential redactor before reaching the terminal or the console log ring. |
@@ -71,7 +71,7 @@ than entire messages, so a provider's rejection reason remains readable.
 - IP-based admission limits and per-key rate limits (`requestsPerMinute`,
   daily/monthly token limits, lifetime budget, concurrency caps).
 - Graduated model-abuse strikes with operator-visible bans.
-- Request body cap (`CARTETHYIA_SERVER_MAX_BODY_BYTES`, default 8 MiB) and idle
+- Request body cap (`CLOVIELA_SERVER_MAX_BODY_BYTES`, default 8 MiB) and idle
   socket timeout, so a slow or oversized client cannot pin resources.
 - Corrupt inline media (a truncated or CRC-mismatched image) is dropped from a
   request with an explicit log entry instead of being forwarded to a provider

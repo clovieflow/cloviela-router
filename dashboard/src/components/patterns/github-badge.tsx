@@ -14,7 +14,7 @@ export const GITHUB_REPO_URL = "https://github.com/clovieflow/cloviela-router";
  * attribution required by GPL-3.0, shown in About -> Credits. Pointing the star
  * badge at it would send this product's visitors to someone else's project.
  */
-export const UPSTREAM_PROJECT_URL = "https://github.com/risunCode/Cartethyia";
+export const UPSTREAM_PROJECT_URL = "https://github.com/risunCode/Cloviela";
 
 /**
  * The badge host, declared here rather than imported from the backend CSP

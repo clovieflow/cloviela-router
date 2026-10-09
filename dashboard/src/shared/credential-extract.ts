@@ -30,7 +30,7 @@ const CREDENTIAL_FIELD_PRIORITY = [
 const OAUTH_SHAPE_FIELDS = ["refresh", "refreshToken", "refresh_token"] as const;
 
 /**
- * Fields whose presence identifies one record as a Cartethyia account export
+ * Fields whose presence identifies one record as a Cloviela account export
  * row (`ProviderAccountExport`). Such a row carries its credential under
  * `accessToken` and its kind under `credentialKind`; without this, an exported
  * row is read as an opaque blob and loses its credential during re-import.
@@ -38,7 +38,7 @@ const OAUTH_SHAPE_FIELDS = ["refresh", "refreshToken", "refresh_token"] as const
 const EXPORT_ROW_FIELDS = ["credentialKind", "providerId", "accessToken"] as const;
 
 /**
- * Wrapper keys a batch export nests its rows under. Cartethyia's own export
+ * Wrapper keys a batch export nests its rows under. Cloviela's own export
  * uses `accounts`; the batch-import shape shared by the reference dashboards
  * uses the same key, so one unwrap serves both.
  */
@@ -307,7 +307,7 @@ function entryFromObject(obj: Record<string, unknown>): ParsedCredentialEntry {
 
 /**
  * Rows a batch export nests under a wrapper key, or `undefined` when the blob
- * is not a wrapper. Cartethyia's own export is `{ exportedAt, accounts: [...] }`
+ * is not a wrapper. Cloviela's own export is `{ exportedAt, accounts: [...] }`
  * and the reference batch-import shape is `{ accounts: [...] }`, so without
  * this an export re-import became one opaque entry.
  */

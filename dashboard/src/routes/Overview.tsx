@@ -37,16 +37,16 @@ function SystemOverviewPanel({
 }) {
   const healthQuery = useSystemHealth();
   const poolsQuery = useNetworkPools();
-  const CARTETHYIA_OVERVIEW_LOW_STRESS_KEY = "cartethyia:overview:low-stress";
+  const CLOVIELA_OVERVIEW_LOW_STRESS_KEY = "cloviela:overview:low-stress";
   const readLowStress = (): boolean => {
     if (typeof window === "undefined" || !window.localStorage) return true;
-    const raw = window.localStorage.getItem(CARTETHYIA_OVERVIEW_LOW_STRESS_KEY);
+    const raw = window.localStorage.getItem(CLOVIELA_OVERVIEW_LOW_STRESS_KEY);
     return raw === null ? true : raw === "1" || raw === "true";
   };
   const [lowStress, setLowStress] = useState<boolean>(() => readLowStress());
   useEffect(() => {
     if (typeof window === "undefined" || !window.localStorage) return;
-    window.localStorage.setItem(CARTETHYIA_OVERVIEW_LOW_STRESS_KEY, lowStress ? "1" : "0");
+    window.localStorage.setItem(CLOVIELA_OVERVIEW_LOW_STRESS_KEY, lowStress ? "1" : "0");
   }, [lowStress]);
   const health = healthQuery.data;
   const pools = poolsQuery.data ?? [];

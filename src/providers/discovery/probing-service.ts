@@ -5,7 +5,7 @@
  * catalog repository while sharing the provider catalog contract.
  */
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { models, providerAccounts, providers } from "../../persistence/schema";
 import type { CanonicalEvent, CanonicalRequest, WireFamily } from "../../transport/canonical-model";
 import { WIRE_FAMILIES } from "../../transport/canonical-model";
@@ -85,7 +85,7 @@ export type ProbeOutboundResolver = (
 ) => Promise<ValidatedOutboundFetch | ProbeOutboundBinding> | ValidatedOutboundFetch | ProbeOutboundBinding;
 
 interface ProviderProbingDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly telemetryBuffer: TelemetryBatchBuffer | undefined;
   readonly defaultEndpoints: Record<WireFamily, string>;
   readonly bundledModelCatalog: ReadonlyMap<string, readonly ModelDefinition[]>;
@@ -95,7 +95,7 @@ interface ProviderProbingDeps {
 }
 
 interface ProviderProbingTestDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly telemetryBuffer?: TelemetryBatchBuffer;
   readonly defaultEndpoints?: Record<WireFamily, string>;
   readonly bundledModelCatalog?: ReadonlyMap<string, readonly ModelDefinition[]>;
@@ -138,7 +138,7 @@ function asOutboundBinding(
   return typeof resolved === "function" ? { fetch: resolved } : resolved;
 }
 export class ProviderProbingService {
-  private readonly db: CartethyiaDatabase;
+  private readonly db: ClovielaDatabase;
   private readonly telemetryBuffer: TelemetryBatchBuffer | undefined;
   private readonly payloadCapture: TelemetryPayloadCapture;
   private readonly defaultEndpoints: Record<WireFamily, string>;
@@ -293,7 +293,7 @@ export class ProviderProbingService {
               `Provider ${providerId} has no web search transport`,
             );
           }
-          const searchProbeQuery = request.prompt?.trim() || "Cartethyia gateway probe";
+          const searchProbeQuery = request.prompt?.trim() || "Cloviela gateway probe";
           const response = await adapter.websearch(
             { model: modelId, query: searchProbeQuery, max_results: 3 },
             candidate,

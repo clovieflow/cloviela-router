@@ -15,7 +15,7 @@ export interface CompatibilityProfile {
   readonly cli_identity?: boolean;
   /**
    * Opts this provider into the gateway identity (`user-agent:
-   * `Cartethyia/<version>`) instead of official CLI cloaking. Explicit only:
+   * `Cloviela/<version>`) instead of official CLI cloaking. Explicit only:
    * Codex/Claude-Code-shaped traffic can never take this path, and unsetting
    * it restores CLI headers. Persisted on the provider row for BYOK rows;
    * bundled specs declare it on `ApiKeyProviderSpec.gatewayUserAgent`.

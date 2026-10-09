@@ -96,7 +96,7 @@ Verified on a production-mode instance with its own data directory:
    (`{"status":"success","user_id":"0a1bb536-…"}`).
 
 One caveat worth recording: restarting with a **different**
-`CARTETHYIA_ENCRYPTION_KEY` makes the instance report `requires_setup: true`
+`CLOVIELA_ENCRYPTION_KEY` makes the instance report `requires_setup: true`
 again, because the stored credentials can no longer be decrypted. That is
 correct behaviour for an encryption-key change, not a persistence defect, but
 an operator who rotates the key without re-provisioning will see it.

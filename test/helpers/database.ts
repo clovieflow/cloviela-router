@@ -26,18 +26,27 @@ import { randomUUID } from "node:crypto";
 import { applySqlMigrations } from "../../src/persistence/postgres";
 
 /** Isolated PostgreSQL URL, or `undefined` when the suite must skip. */
-export const testDatabaseUrl = process.env.CARTETHYIA_TEST_DATABASE_URL?.trim() || undefined;
+/** Reads a variable, falling back to its pre-rename spelling. */
+function testEnv(name: string): string | undefined {
+  const current = process.env[name]?.trim();
+  if (current) return current;
+  return name.startsWith("CLOVIELA_")
+    ? process.env[`CARTETHYIA_${name.slice("CLOVIELA_".length)}`]?.trim() || undefined
+    : undefined;
+}
+
+export const testDatabaseUrl = testEnv("CLOVIELA_TEST_DATABASE_URL");
 
 /** Isolated Redis URL, or `undefined` when the suite must skip. */
-export const testRedisUrl = process.env.CARTETHYIA_TEST_REDIS_URL?.trim() || undefined;
+export const testRedisUrl = testEnv("CLOVIELA_TEST_REDIS_URL");
 
 if (!testDatabaseUrl) {
   console.info(
-    "[test-db] skipped: set CARTETHYIA_TEST_DATABASE_URL to run database suites",
+    "[test-db] skipped: set CLOVIELA_TEST_DATABASE_URL to run database suites",
   );
 }
 if (!testRedisUrl) {
-  console.info("[test-redis] skipped: set CARTETHYIA_TEST_REDIS_URL to run Redis suites");
+  console.info("[test-redis] skipped: set CLOVIELA_TEST_REDIS_URL to run Redis suites");
 }
 
 /**
@@ -48,8 +57,8 @@ if (!testRedisUrl) {
  * this module first. Without it a suite that passed the gate still wrote its
  * fixtures into whatever `DATABASE_URL` pointed at.
  */
-if (testDatabaseUrl && !process.env.CARTETHYIA_TEST_DATABASE_ISOLATED) {
-  process.env.CARTETHYIA_TEST_DATABASE_ISOLATED = "1";
+if (testDatabaseUrl && !process.env.CLOVIELA_TEST_DATABASE_ISOLATED) {
+  process.env.CLOVIELA_TEST_DATABASE_ISOLATED = "1";
   process.env.DATABASE_URL = testDatabaseUrl;
 }
 
@@ -71,7 +80,7 @@ let suitePool: Pool | undefined;
  * order a file's hooks ran in.
  */
 export async function getTestPool(): Promise<Pool> {
-  if (!testDatabaseUrl) throw new Error("CARTETHYIA_TEST_DATABASE_URL is not configured");
+  if (!testDatabaseUrl) throw new Error("CLOVIELA_TEST_DATABASE_URL is not configured");
   if (suitePool && !suitePool.ended) return suitePool;
   const pool = new Pool({
     connectionString: testDatabaseUrl,

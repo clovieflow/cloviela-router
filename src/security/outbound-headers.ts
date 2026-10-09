@@ -130,8 +130,12 @@ export const BASE_PROTECTED_HEADERS: Readonly<Record<string, true>> = Object.fre
   "x-forwarded-proto": true,
   "x-forwarded-port": true,
   "x-forwarded-prefix": true,
-  "x-cartethyia-surface": true,
-  "x-cartethyia-tenant": true,
+  "x-cloviela-surface": true,
+  "x-cloviela-tenant": true,
+  // The pre-rename spellings, so a client still sending them cannot leak
+  // either header to an upstream provider.
+  ["x-" + "cartethyia" + "-surface"]: true,
+  ["x-" + "cartethyia" + "-tenant"]: true,
 });
 
 export const HEADER_TOKEN = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;

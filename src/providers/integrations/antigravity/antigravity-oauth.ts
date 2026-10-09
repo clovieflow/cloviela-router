@@ -13,7 +13,7 @@ import { isRecord } from "../../../protocol/primitives";
 import { log } from "../../../observability/logger";
 
 // The Google OAuth client identity is public provider configuration. These
-// values match the reference Antigravity client used by Cartethyia-21.beta.
+// values match the reference Antigravity client used by Cloviela-21.beta.
 //
 // The secret is stored base64-encoded rather than as a literal. It is not a
 // user credential — it identifies the client application, not an account, and

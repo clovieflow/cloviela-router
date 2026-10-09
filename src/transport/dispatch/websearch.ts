@@ -19,7 +19,7 @@ import { GatewayError } from "../gateway-error";
 import { resolveCredentialForAccount } from "../../providers/operations/provider-credential-service";
 import type { OAuthTokenRefresher, OAuthRefreshService } from "../../providers/authentication/oauth-refresh-service";
 import type { ValidatedNetworkBindingFactory } from "../../network/pool/resolver";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import type { RouteSnapshotService } from "../routing/route-model";
 import { metrics } from "../../observability/metrics";
 import type { NetworkPoolSelector } from "../../network/pool/selector";
@@ -31,7 +31,7 @@ import { completeAttempt, estimatedUsage } from "./attempt-finalize";
 import { runAttemptLoop } from "./attempt-loop";
 
 export interface WebsearchHandlerDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly providerAdapters: ReadonlyMap<string, ProviderAdapter>;
   readonly resolveProviderAdapter?: (providerId: string) => Promise<ProviderAdapter | undefined>;
   readonly proxyPreparer: ProxyRequestPreparer;

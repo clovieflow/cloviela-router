@@ -7,7 +7,7 @@
 // A drift between them would mean the page and the worker disagree about what
 // "refreshed" means.
 import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { providerAccounts } from "../../persistence/schema";
 import type { RedisClient } from "../../persistence/redis";
 import { log } from "../../observability/logger";
@@ -31,7 +31,7 @@ export interface QuotaRefreshOutcome {
 export const QUOTA_REFRESH_TIMEOUT_MS = 15_000;
 
 export interface QuotaRefreshDeps {
-  readonly db: CartethyiaDatabase;
+  readonly db: ClovielaDatabase;
   readonly redis: RedisClient | undefined;
   readonly providerRegistry: ProviderRegistry;
   /**
@@ -92,7 +92,7 @@ export function timeoutSignal(requestSignal: AbortSignal, ms: number): AbortSign
  * its own failure is still visible through the quota cache the page renders.
  */
 export async function recordAccountCheck(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   outcome: { ok: boolean; error?: string | null; category?: string | null },
 ): Promise<void> {
@@ -155,7 +155,7 @@ export function targetLens(target: QuotaRefreshTarget): string {
  * `true` when the row changed so the caller can invalidate the route snapshot.
  */
 export async function stampRemainingCredit(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   remaining: number | null,
 ): Promise<boolean> {
@@ -187,7 +187,7 @@ export async function stampRemainingCredit(
  * account that reports both keeps both figures fresh independently.
  */
 export async function stampRemainingPercent(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   remainingPercent: number | null,
 ): Promise<boolean> {
@@ -241,7 +241,7 @@ const TARGET_COLUMNS = {
  * die silently while the row still reads healthy.
  */
 export async function listQuotaRefreshTargets(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
 ): Promise<readonly QuotaRefreshTarget[]> {
   return db
     .select(TARGET_COLUMNS)
@@ -266,7 +266,7 @@ export async function listQuotaRefreshTargets(
  * accounts by id.
  */
 export async function loadQuotaTarget(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   accountId: string,
   tenantId?: string | null,
 ): Promise<QuotaRefreshTarget | undefined> {

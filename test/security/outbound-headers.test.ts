@@ -8,7 +8,7 @@
  * decide which custom headers an operator may set on a provider. The list is the
  * set of names that carry routing, identity, or framing meaning, so a caller who
  * could set one would redirect the request (`host`), impersonate a tenant
- * (`x-cartethyia-tenant`), forge the client address (`x-forwarded-for`), or break
+ * (`x-cloviela-tenant`), forge the client address (`x-forwarded-for`), or break
  * the connection (`transfer-encoding`). The two regexes are the other boundary:
  * a header name or value carrying CR/LF is a request-splitting primitive, and a
  * name outside the token grammar is not a header at all.
@@ -58,8 +58,8 @@ describe("isProtectedHeader", () => {
       "transfer-encoding",
       "content-length",
       "connection",
-      "x-cartethyia-tenant",
-      "x-cartethyia-surface",
+      "x-cloviela-tenant",
+      "x-cloviela-surface",
     ]) {
       expect(isProtectedHeader(name)).toBe(true);
     }
@@ -98,14 +98,14 @@ describe("isProtectedHeader", () => {
 
   test("a name that merely resembles a protected one is not protected", () => {
     // Exact membership plus the `x-forwarded-` prefix. A near-miss like
-    // `x-forwardedx` or `host-header` must not be blocked, and `x-cartethyia-tenantx`
+    // `x-forwardedx` or `host-header` must not be blocked, and `x-cloviela-tenantx`
     // must not be either.
     for (const name of [
       "x-forwardedx",
       "xforwarded-for",
       "host-header",
-      "x-cartethyia-tenantx",
-      "x-cartethyia",
+      "x-cloviela-tenantx",
+      "x-cloviela",
       "authorization-header",
     ]) {
       expect(isProtectedHeader(name)).toBe(false);
@@ -133,7 +133,7 @@ describe("isProtectedHeader", () => {
 
 describe("HEADER_TOKEN — the name grammar", () => {
   test("accepts the documented token shapes", () => {
-    for (const name of ["a", "x", "x-custom", "anthropic-version", "x1", "1x", "a-b-c", "x-cartethyia-surface"]) {
+    for (const name of ["a", "x", "x-custom", "anthropic-version", "x1", "1x", "a-b-c", "x-cloviela-surface"]) {
       expect(HEADER_TOKEN.test(name)).toBe(true);
     }
   });

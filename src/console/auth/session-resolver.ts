@@ -4,7 +4,7 @@
  */
 import { eq } from "drizzle-orm";
 import { parseCookieValue, SESSION_COOKIE_NAME } from "../../security/csrf";
-import type { CartethyiaDatabase } from "../../persistence/postgres";
+import type { ClovielaDatabase } from "../../persistence/postgres";
 import { consoleUsers } from "../../persistence/schema";
 import { createAccessDecision, consoleSessionScopes, type AccessDecision } from "../../security/access-control";
 import { isRecord } from "../../protocol/primitives";
@@ -30,7 +30,7 @@ export function readSessionCookie(cookies: unknown): string | undefined {
 
 /** Resolves a dashboard session cookie to the signed-in user's real tenant and scopes. */
 export async function resolveConsoleAccess(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   sessionService: ConsoleSessionService,
   request: Request,
 ): Promise<AccessDecision | undefined> {
@@ -61,7 +61,7 @@ export interface ResolvedConsoleUser {
  * without the scope decision that access resolution derives from it.
  */
 export async function resolveConsoleUser(
-  db: CartethyiaDatabase,
+  db: ClovielaDatabase,
   sessionService: ConsoleSessionService,
   request: Request,
 ): Promise<ResolvedConsoleUser | null> {

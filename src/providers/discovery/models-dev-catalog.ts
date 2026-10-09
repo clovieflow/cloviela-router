@@ -96,7 +96,7 @@ function toMetadata(row: BaseModelRow): ModelsDevModelMetadata {
 }
 
 /**
- * Cartethyia provider id → the provider key models.dev files it under.
+ * Cloviela provider id → the provider key models.dev files it under.
  *
  * Only ids that genuinely differ belong here, and each entry is backed by the
  * deployment's own upstream: `opencodeft` serves `opencode.ai/zen/v1`, and 78
@@ -124,7 +124,7 @@ const MODELS_DEV_PROVIDER_IDS: Readonly<Record<string, string>> = {
   ollamacloud: "ollama-cloud",
   xiaomipg: "xiaomi-token-plan-sgp",
   xiaomitp: "xiaomi-token-plan-cn",
-  // Cartethyia ids that are shorter than the name models.dev files the provider
+  // Cloviela ids that are shorter than the name models.dev files the provider
   // under. Without these the exact lookup misses for every model, and each row
   // falls through to the bare lookup — which fails closed when providers
   // disagree about the id — so the catalog would publish invented defaults.
@@ -133,7 +133,7 @@ const MODELS_DEV_PROVIDER_IDS: Readonly<Record<string, string>> = {
 
 /**
  * Resolves model metadata and pricing exclusively from the prebuilt base
- * catalog shipped with Cartethyia. Runtime network access is intentionally
+ * catalog shipped with Cloviela. Runtime network access is intentionally
  * absent: deployed instances use the exact catalog selected at build time.
  */
 export class ModelsDevCatalog {
@@ -144,7 +144,7 @@ export class ModelsDevCatalog {
    * A bare id is not unique: `claude-sonnet-4-6` appears under 32 providers in
    * the base catalog, and 428 bare keys disagree about `context`, 503 about
    * `output`, and 551 about pricing. Keeping only the first row meant the
-   * winner was whichever provider sorted first (`302ai`), so a Cartethyia
+   * winner was whichever provider sorted first (`302ai`), so a Cloviela
    * model could report another reseller's limits and price.
    */
   private readonly bareMap = new Map<string, ModelsDevModelMetadata[]>();

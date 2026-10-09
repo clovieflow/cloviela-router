@@ -1,6 +1,6 @@
 // Telemetry buffer: coalesces per-request telemetry into batched multi-row inserts.
 import { DrizzleTelemetryStore } from "../persistence/telemetry-store";
-import type { CartethyiaDatabase } from "../persistence/postgres";
+import type { ClovielaDatabase } from "../persistence/postgres";
 import { metrics } from "./metrics";
 import { DEFAULT_BOUNDS } from "../transport/resources";
 import { type SourceSurface, type UsageRecord } from "../transport/canonical-model";
@@ -202,7 +202,7 @@ export class TelemetryBatchBuffer {
   private drainBlockedUntil = 0;
 
   constructor(
-    db: CartethyiaDatabase,
+    db: ClovielaDatabase,
     opts: TelemetryBatchBufferOptions = {},
   ) {
     this.store = new DrizzleTelemetryStore(db);
@@ -235,13 +235,13 @@ export class TelemetryBatchBuffer {
   enqueue(event: TelemetryEventInput): void {
     const bytes = estimateTelemetryEventBytes(event);
     if (this.queue.length >= this.maxItems || this.queuedBytes + bytes > this.maxBytes) {
-      metrics.cartethyia_telemetry_dropped_total.inc();
+      metrics.cloviela_telemetry_dropped_total.inc();
       return;
     }
     const wasEmpty = this.queue.length === 0;
     this.queue.push({ event, bytes });
     this.queuedBytes += bytes;
-    metrics.cartethyia_telemetry_buffered.inc();
+    metrics.cloviela_telemetry_buffered.inc();
     if (this.queue.length >= this.maxBatch) {
       void this.flushScheduled();
     } else if (wasEmpty && this.timer !== undefined) {
@@ -327,7 +327,7 @@ export class TelemetryBatchBuffer {
         // Success: clear the streak and lift the outage gate immediately.
         this.drainFailureStreak = 0;
         this.drainBlockedUntil = 0;
-        metrics.cartethyia_telemetry_buffered.inc(-batch.length);
+        metrics.cloviela_telemetry_buffered.inc(-batch.length);
         return;
       } catch (error) {
         if (attempt === 0) firstError = error;
@@ -338,8 +338,8 @@ export class TelemetryBatchBuffer {
     this.drainBlockedUntil =
       Date.now() + drainRetryDelayMs(Math.min(this.drainFailureStreak - 1, 6));
     this.logDrainOutage(lastError, firstError);
-    metrics.cartethyia_telemetry_dropped_total.inc(batch.length);
-    metrics.cartethyia_telemetry_buffered.inc(-batch.length);
+    metrics.cloviela_telemetry_dropped_total.inc(batch.length);
+    metrics.cloviela_telemetry_buffered.inc(-batch.length);
   }
 
   /**

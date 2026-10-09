@@ -82,7 +82,7 @@ export default function About(): ReactNode {
                 <strong>{t("about.upstream")}</strong>
               </p>
               <p className="about-prose">
-                {t("about.upstreamBody", { repo: "Cartethyia" })}
+                {t("about.upstreamBody", { repo: "Cloviela" })}
               </p>
               <Button
                 variant="secondary"

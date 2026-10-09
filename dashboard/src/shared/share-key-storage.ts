@@ -5,7 +5,7 @@ export interface StoredShareKey {
   readonly createdAt: string;
 }
 
-const DATABASE_NAME = "cartethyia-share-keys";
+const DATABASE_NAME = "cloviela-share-keys";
 const STORE_NAME = "issued-keys";
 const DATABASE_VERSION = 1;
 
