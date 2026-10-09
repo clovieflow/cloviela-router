@@ -1,7 +1,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { existsSync, mkdirSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   generateClovielaEncryptionKey,
@@ -150,6 +150,23 @@ async function setup(): Promise<void> {
     console.log("✓ .env file created\n");
   } else {
     console.log("✓ .env file already exists\n");
+  }
+
+  // The database-backed suites read `.env.test`, and the documentation has
+  // always said setup creates it. It did not, so a fresh clone ran every
+  // database suite as a skip and reported a green run that had verified
+  // nothing. Copy the template when it is absent and leave an existing file
+  // untouched — a developer's local URLs are not ours to overwrite.
+  const testEnvPath = resolve(projectRoot, ".env.test");
+  if (!existsSync(testEnvPath)) {
+    const templatePath = resolve(projectRoot, ".env.test.example");
+    if (existsSync(templatePath)) {
+      await copyFile(templatePath, testEnvPath);
+      console.log("✓ .env.test created from .env.test.example");
+      console.log("  (database-backed suites stay skipped until it points at a live database)\n");
+    }
+  } else {
+    console.log("✓ .env.test already exists\n");
   }
 
   // Step 2: Load environment and choose the database mode in the same command.
