@@ -883,12 +883,21 @@
 :root[data-theme="dark"] .app-bg {
   /* Warm, calm fields: vermilion top-left, gold top-right, a deep sumi pool
      bottom-centre. The bottom stop mixes toward the page ink rather than a
-     hue so large screens stay quiet behind dense tables. */
+     hue so large screens stay quiet behind dense tables.
+     ── The hairline grid ──────────────────────────────────────────────────
+     Carried over from the landing page, where it is what makes the surface
+     read as crafted paper rather than a flat fill. Two 1px rules on a 44x40
+     tile at 2.2% — visible as texture, never as lines — masked so it fades
+     out below the fold and never competes with dense tables. */
   background:
     radial-gradient(52rem 36rem at 6% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
     radial-gradient(44rem 32rem at 104% 4%, color-mix(in srgb, var(--gold) 7%, transparent), transparent 62%),
     radial-gradient(40rem 40rem at 50% 116%, color-mix(in srgb, var(--surface-hover) 42%, transparent), transparent 62%),
+    linear-gradient(to right, color-mix(in srgb, var(--text-primary) 2.2%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--text-primary) 2.2%, transparent) 1px, transparent 1px),
     var(--page-bg);
+  background-size: auto, auto, auto, 44px 100%, 100% 40px, auto;
+  mask-image: linear-gradient(to bottom, black 0, black 62vh, transparent 108vh);
 }
 @media (max-width: 1024px) {
   .app-sidebar {

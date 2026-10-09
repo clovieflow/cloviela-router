@@ -29,7 +29,7 @@ interface StoryChapter {
 const ASSET_BASE = import.meta.env.BASE_URL;
 const CONSOLE_PATH = "/console";
 
-const storyImage = (name: string): string => `${ASSET_BASE}when_yah/${name}`;
+const storyImage = (name: string): string => `${ASSET_BASE}rikka/story/${name}`;
 const titleCase = (value: string): string => value.toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 const nextChapterLabel = (index: number): string => {
   const next = CHAPTERS[index + 1];
@@ -39,16 +39,16 @@ const nextChapterLabel = (index: number): string => {
 
 const CHAPTERS: readonly StoryChapter[] = [
   {
-    id: "blessed-maiden",
+    id: "first-signal",
     number: "01",
-    label: "The Blessed Maiden",
+    label: "The First Signal",
     location: "THE FIRST CROSSING",
     theme: "night",
-    title: "A single signal enters the unknown.",
+    title: "One request arrives, and someone has to answer it.",
     description:
-      "Every client begins with one request and a question: where should it go? Cartethyia gives that signal a reliable gateway — self-hosted, authenticated, and ready for the crossing.",
-    image: storyImage("fleurdelys_plus.webp"),
-    imageAlt: "The Blessed Maiden beneath a luminous blue sky",
+      "Every client starts the same way: a single request and a question about where it should go. Cloviela gives that signal a dependable gateway — self-hosted, authenticated, and ready for the crossing.",
+    image: storyImage("01-first-signal.webp"),
+    imageAlt: "Rikka standing at a riverside railing as dawn light crosses the water",
     signals: [
       { label: "The first crossing", value: "OPEN", icon: "network" },
       { label: "The chosen vessel", value: "YOURS", icon: "shield" },
@@ -57,16 +57,16 @@ const CHAPTERS: readonly StoryChapter[] = [
     sectionClass: "story-page-section--first",
   },
   {
-    id: "resonant-core",
+    id: "many-voices",
     number: "02",
-    label: "The Resonant Core",
+    label: "The Many Voices",
     location: "THE ROUTING SANCTUM",
     theme: "core",
-    title: "The route becomes the power.",
+    title: "One surface, many providers.",
     description:
-      "One surface can speak to many providers. Cartethyia translates protocols, balances targets, and keeps each request moving through the right vessel — even when the first path goes quiet.",
-    image: storyImage("cartethyia-god.webp"),
-    imageAlt: "Cartethyia surrounded by a celestial blue routing field",
+      "Cloviela speaks every major protocol and translates between them, so an OpenAI client, an Anthropic client and everything else reach the same gateway. Balance the targets, keep each request moving, and let the first path go quiet without anyone noticing.",
+    image: storyImage("02-welcome.webp"),
+    imageAlt: "Rikka turning at a lit doorway at dusk, looking back in welcome",
     signals: [
       { label: "The many voices", value: "30+", icon: "network" },
       { label: "The bridge", value: "ALIGNED", icon: "terminal" },
@@ -74,16 +74,16 @@ const CHAPTERS: readonly StoryChapter[] = [
     ],
   },
   {
-    id: "pink-blossom",
+    id: "quiet-control",
     number: "03",
-    label: "The Pink Blossom Calm",
-    location: "THE QUIET CONTROL",
+    label: "The Quiet Control",
+    location: "THE CALM CONSOLE",
     theme: "blossom",
-    title: "Behind every powerful system, there is a quiet place to govern.",
+    title: "Behind every powerful system is a quiet place to govern it.",
     description:
-      "Observe the flow, tune the balance, and let the models answer. Provider accounts, credentials, usage, and health stay in one calm console built for the person operating the route.",
-    image: storyImage("jinhsi-blossom.webp"),
-    imageAlt: "Jinhsi beneath soft pink blossoms",
+      "Watch the flow, tune the balance, and let the models answer. Provider accounts, credentials, usage and health live in one calm console built for the person actually operating the route — not for a dashboard demo.",
+    image: storyImage("06-quiet-control.webp"),
+    imageAlt: "Rikka reviewing live figures at a desk lit by one warm lamp",
     signals: [
       { label: "The quiet engine", value: "AWAKE", icon: "activity" },
       { label: "The studio", value: "READY", icon: "sparkles" },
@@ -92,16 +92,16 @@ const CHAPTERS: readonly StoryChapter[] = [
     sectionClass: "story-page-section--blossom",
   },
   {
-    id: "many-voices",
+    id: "forked-path",
     number: "04",
-    label: "The Many Voices",
+    label: "The Forked Path",
     location: "THE LIVING NETWORK",
     theme: "voices",
     title: "Every route carries a living world.",
     description:
-      "Providers, clients, and models bring different voices to the crossing. Cartethyia gives them one dependable gateway without silencing what makes each path unique.",
-    image: storyImage("wuthering-waves-hiyuki-aemeath-hiyuki-rover.webp"),
-    imageAlt: "A bright celebration of characters and connected voices",
+      "Providers, models and clients bring different voices to the crossing. Cloviela gives them one dependable gateway without flattening what makes each path distinct — aliases, combos, weights and failover order all stay yours to shape.",
+    image: storyImage("03-many-voices.webp"),
+    imageAlt: "Rikka standing among many floating lanterns of different colours",
     signals: [
       { label: "The many voices", value: "CONNECTED", icon: "network" },
       { label: "The shared world", value: "OPEN", icon: "sparkles" },
@@ -109,16 +109,16 @@ const CHAPTERS: readonly StoryChapter[] = [
     ],
   },
   {
-    id: "red-thread",
+    id: "boundary",
     number: "05",
-    label: "The Red Thread",
+    label: "The Boundary",
     location: "THE FRACTURED PATH",
     theme: "red",
     title: "A beautiful signal can still be dangerous.",
     description:
-      "Every powerful route attracts pressure. Cartethyia watches the boundary, rejects hostile paths, and keeps a single failure from tearing through the whole network.",
-    image: storyImage("phrolova-a.webp"),
-    imageAlt: "A figure surrounded by dark red threads and fractured signals",
+      "Every open route attracts pressure. Cloviela watches the boundary, refuses hostile paths, and keeps one failing provider from tearing through the whole network — with scoped keys, origin checks and rate limits that hold under load.",
+    image: storyImage("05-boundary.webp"),
+    imageAlt: "Rikka holding a calm stop gesture in a rain-lit alley",
     signals: [
       { label: "The threat", value: "SEEN", icon: "activity" },
       { label: "The boundary", value: "HELD", icon: "shield" },
@@ -126,33 +126,16 @@ const CHAPTERS: readonly StoryChapter[] = [
     ],
   },
   {
-    id: "request-denial",
+    id: "open-shore",
     number: "06",
-    label: "The Gate of Discernment",
-    location: "THE GATE OF DISCERNMENT",
-    theme: "denial",
-    title: "Not every signal should pass.",
-    description:
-      "Every game needs a gatekeeper. Cartethyia verifies intent, protects the route, and denies the requests that would fracture the system.",
-    image: storyImage("requestdeniawokkjpg.webp"),
-    imageAlt: "A radiant gatekeeper surrounded by cascading signals",
-    signals: [
-      { label: "The verdict", value: "CLEAR", icon: "shield" },
-      { label: "The boundary", value: "GUARDED", icon: "network" },
-      { label: "The route", value: "TRUSTED", icon: "sparkles" },
-    ],
-  },
-  {
-    id: "shorekeeper",
-    number: "07",
     label: "The Open Shore",
-    location: "THE SHOREKEEPER",
+    location: "THE OPEN SHORE",
     theme: "shore",
     title: "The gateway is yours to shape.",
     description:
-      "Find your way back to the source, share your route, and join the people building a dependable gateway across a changing AI landscape.",
-    image: storyImage("Shorekeeper.webp"),
-    imageAlt: "Shorekeeper watching over a luminous open shore",
+      "Run it on a laptop with an embedded database, or move to PostgreSQL when the load grows — same backup file, same console, no rebuild. Then point your own clients at it and start the next crossing.",
+    image: storyImage("07-open-shore.webp"),
+    imageAlt: "Rikka at the top of a coastal hill at first light, looking out over open country",
     signals: [
       { label: "The source", value: "OPEN", icon: "terminal" },
       { label: "The shore", value: "AWAITS", icon: "network" },
@@ -259,8 +242,8 @@ export function LandingPage(): ReactElement {
               <img src={`${ASSET_BASE}favicon.webp`} alt="" />
             </span>
             <span>
-              <strong>Cartethyia</strong>
-              <small>AI PROXY ROUTER</small>
+              <strong>Cloviela Router</strong>
+              <small>PERSONAL AI GATEWAY</small>
             </span>
           </a>
           <nav className="story-desktop-nav" aria-label="Primary navigation">
@@ -330,9 +313,9 @@ export function LandingPage(): ReactElement {
         <main className="mx-auto w-[min(100%-2rem,1280px)] pb-10 pt-[88px] sm:w-[min(100%-3rem,1280px)]">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/50">All chapters · 7 stories</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/50">{`All chapters · ${CHAPTERS.length} stories`}</p>
               <h2 className="mt-2 font-serif text-[28px] font-normal leading-none tracking-tight text-white">Everything at a glance</h2>
-              <p className="mt-2 max-w-[60ch] text-[13px] leading-5 text-white/65">Hover a card to lift it — click to jump to its story. All 7 visuals, captions and signals visible without scrolling forever.</p>
+              <p className="mt-2 max-w-[60ch] text-[13px] leading-5 text-white/65">{`Hover a card to lift it — click to jump to its story. All ${CHAPTERS.length} visuals, captions and signals visible without scrolling forever.`}</p>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-white/50">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" aria-hidden={true} /> Stylish overview

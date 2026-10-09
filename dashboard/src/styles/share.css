@@ -15,7 +15,7 @@ html[data-app="share"] #root {
 }
 
 html[data-app="share"] body {
-  /* The public share page carries the "cartesa" key art behind the HUD. The
+  /* The public share page carries the riverside key art behind the HUD. The
      gradient layer sits on top of the image and is what makes it translucent:
      raise the veil to fade the art further, lower it to let more through. The
      dark theme keeps the art far more visible because the art itself is dark. */
@@ -25,7 +25,7 @@ html[data-app="share"] body {
       color-mix(in srgb, var(--page-bg) calc(var(--share-backdrop-veil) * 100%), transparent),
       color-mix(in srgb, var(--page-bg) calc(var(--share-backdrop-veil) * 100%), transparent)
     ),
-    url("/when_yah/cartesa.webp");
+    url("/rikka/story/01-first-signal.webp");
   background-position: center, center 28%;
   background-repeat: no-repeat, no-repeat;
   background-size: cover, cover;
