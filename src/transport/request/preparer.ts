@@ -516,17 +516,18 @@ export class ProxyRequestPreparer {
       });
     }
     // ── Bansos ────────────────────────────────────────────────────────────
-    // A subsidized key resolves against the program's own allowlist, which the
-    // key's `modelList` cannot express: that list names what the *key* may use
-    // on this gateway, while the program decides which upstream models the
-    // administrator is willing to pay for. Checked against `resolvedTarget`,
-    // after aliases have resolved, so a client cannot reach an unsubsidized
-    // upstream by naming an alias that points at it.
+    // The program publishes its own model names — `bansos-sonnet` — and each
+    // maps to one upstream id the administrator agreed to pay for. The client
+    // sends the published name; the gateway sends the upstream one.
+    //
+    // Translation happens here rather than through the tenant alias table so a
+    // participant cannot reach an upstream the program did not name: the map is
+    // the program's own allowlist, and anything absent from it is refused
+    // before a route is planned.
+    let upstreamModel = resolvedTarget;
     if (bansos !== undefined) {
-      const permitted =
-        bansos.allowedUpstreamModels.includes(resolvedTarget) ||
-        bansos.allowedUpstreamModels.includes(request.model);
-      if (!permitted) {
+      const mapped = bansos.modelMap.get(request.model) ?? bansos.modelMap.get(resolvedTarget);
+      if (mapped === undefined) {
         throw new GatewayError(
           "model_not_found",
           404,
@@ -534,7 +535,13 @@ export class ProxyRequestPreparer {
           { model: request.model },
         );
       }
+      upstreamModel = mapped;
     }
+    // What the router plans against. For every ordinary key this is the
+    // resolved target unchanged; for a subsidized key it is the upstream the
+    // program authorized. One binding, used everywhere the plan is built, so
+    // the two cannot drift apart between the several `plan()` calls below.
+    const routingModel = bansos === undefined ? request.model : upstreamModel;
     // An inline image that cannot survive the upstream is dropped here rather
     // than dispatched: a provider rejects the whole request for one corrupt
     // attachment, and the buddy family reports it with no field named, so the
@@ -564,7 +571,7 @@ export class ProxyRequestPreparer {
     for (const variant of degradedRequestVariants(variantRequest)) {
       try {
         plan = await this.deps.routingEngine.plan(
-          request.model,
+          routingModel,
           snapshot,
           authorization.tenantId,
           variant.required,

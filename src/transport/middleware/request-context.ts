@@ -273,7 +273,14 @@ export function createProxyRoutePreparationMiddleware(deps: {
         // Only a *model* rejection is a strike: an invalid model the key may not
         // use, or a name that resolves to nothing. A store outage, an aborted
         // request, or any other failure is not the caller probing for models.
-        if (strikeIdentity && isModelRejection(error)) {
+        //
+        // A Bansos key is exempt. The strike system exists to stop a caller
+        // enumerating which models a *private* key may reach; a subsidized
+        // participant is already limited to a published allowlist they can read
+        // in their own portal, so naming a model outside it is a mistake rather
+        // than probing — and banning their IP would cut off every other
+        // participant behind the same address.
+        if (strikeIdentity && state.bansos === undefined && isModelRejection(error)) {
           const outcome = await strikeIdentity.strikes
             .noteInvalid({ ip: strikeIdentity.ip })
             .catch(() => null);

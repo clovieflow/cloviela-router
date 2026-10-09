@@ -3,6 +3,7 @@ import { ConsoleDomainError } from "./shared/errors";
 import { createCliToolsRoutes } from "./cli-tools/routes";
 import { createAccountQuotaRoutes } from "./quota/account-quota";
 import { createApiKeyRoutes } from "./domains/api-keys/routes";
+import { createBansosRoutes } from "./bansos/routes";
 import { familyBucketSpend } from "./domains/api-keys/bucket-spend";
 import { createProviderCatalogRoutes } from "./providers/catalog/routes";
 import {
@@ -326,6 +327,7 @@ export function registerConsoleDomains(
           },
         }),
   }));
+  console.use(createBansosRoutes(ctx));
   console.use(createApiKeyRoutes({ store: apiKeyStore, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, shareStore, shareActivity, admissionService: ctx.admissionService, bucketSpend: (keyId, now) => familyBucketSpend(ctx.db, keyId, now) }));
   console.use(createCliToolsRoutes({ service: ctx.cliToolService, accessResolver: ctx.accessResolver, auditSink: ctx.auditRecorder, snapshotInvalidator: ctx.routeSnapshotService }));
   console.use(createAccountQuotaRoutes({
