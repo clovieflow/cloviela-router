@@ -34,23 +34,22 @@ WORKDIR /app
 
 # curl powers HEALTHCHECK; util-linux provides setpriv for non-root startup.
 RUN apk add --no-cache ca-certificates curl libgcc libstdc++ util-linux \
-    && addgroup -S -g 10001 cartethyia \
-    && adduser -S -D -H -u 10001 -G cartethyia cartethyia \
+    && addgroup -S -g 10001 cloviela \
+    && adduser -S -D -H -u 10001 -G cloviela cloviela \
     && mkdir -p /app/data \
-    && chown -R cartethyia:cartethyia /app
+    && chown -R cloviela:cloviela /app
 
-COPY --from=builder --chown=cartethyia:cartethyia /build/migrations ./migrations
-COPY --from=builder --chown=cartethyia:cartethyia /build/dist/dashboard ./dist/dashboard
+COPY --from=builder --chown=cloviela:cloviela /build/migrations ./migrations
+COPY --from=builder --chown=cloviela:cloviela /build/dist/dashboard ./dist/dashboard
 COPY --chmod=755 docker-entrypoint.sh ./entrypoint.sh
-COPY --from=builder --chown=cartethyia:cartethyia /build/dist/cloviela-router ./cloviela-router
+COPY --from=builder --chown=cloviela:cloviela /build/dist/cloviela-router ./cloviela-router
 COPY LICENSE ./LICENSE
 
-ENV CARTETHYIA_VERSION=2.0 \
-    NODE_ENV=production \
-    CARTETHYIA_BIND_HOST=0.0.0.0 \
+ENV NODE_ENV=production \
+    CLOVIELA_BIND_HOST=0.0.0.0 \
     DASHBOARD_DIST=/app/dist/dashboard \
-    CARTETHYIA_DATA_DIR=/app/data \
-    CARTETHYIA_INSTALL_ID_DIR=/app/data/.cartethyia
+    CLOVIELA_DATA_DIR=/app/data \
+    CLOVIELA_INSTALL_ID_DIR=/app/data/.cloviela
 
 EXPOSE 12800
 STOPSIGNAL SIGTERM

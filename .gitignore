@@ -48,6 +48,7 @@ data/
 # file left here is a secret leak waiting for `git add -A`. Keep them out of the
 # repo entirely; a real backup belongs wherever the operator stores it.
 backup-probe.json
+cloviela-backup-*.json
 cartethyia-backup-*.json
 
 # Rikka E2E matrix evidence. The runner writes sanitized JSON/JUnit/traces here

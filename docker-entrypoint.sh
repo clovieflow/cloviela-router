@@ -1,5 +1,5 @@
 #!/bin/sh
-# Cartethyia container entrypoint
+# Cloviela container entrypoint
 # Fixes the data directories' ownership, then executes the application as the
 # unprivileged runtime identity.
 
@@ -34,11 +34,11 @@ fi
 # root): nothing can be repaired from here, so report the exact ownership the
 # host directory needs.
 if [ ! -w "$STATE_DIR" ]; then
-  echo "cartethyia: $STATE_DIR is not writable by uid $(id -u); the lite database cannot start here." >&2
-  echo "cartethyia: chown it to $APP_UID:$APP_GID on the host, or let the entrypoint start as root so it can fix the mount." >&2
+  echo "cloviela: $STATE_DIR is not writable by uid $(id -u); the lite database cannot start here." >&2
+  echo "cloviela: chown it to $APP_UID:$APP_GID on the host, or let the entrypoint start as root so it can fix the mount." >&2
 fi
 if [ ! -w "$PAYLOAD_DIR" ]; then
-  echo "cartethyia: $PAYLOAD_DIR is not writable by uid $(id -u); telemetry payload capture will fail." >&2
+  echo "cloviela: $PAYLOAD_DIR is not writable by uid $(id -u); telemetry payload capture will fail." >&2
 fi
 
 exec "$@"
