@@ -1,10 +1,8 @@
 # Contributing to Cloviela Router
 
-Cloviela Router is GPLv3 software. Its gateway core derives from
-[Cartethyia](https://github.com/risunCode/Cartethyia), so a bug in shared
-routing, protocol, or persistence behavior usually belongs upstream where every
-downstream project benefits. Keep presentation changes (theme, artwork,
-localization) separate from those core changes so either can move on its own.
+Cloviela Router is GPLv3 software. Keep changes to routing, protocol, and
+persistence separate from presentation changes (theme, artwork, localization)
+so either can move on its own.
 
 This page covers contribution workflow, code conventions, and pull requests.
 

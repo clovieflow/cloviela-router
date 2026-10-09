@@ -17,13 +17,11 @@
  * endorsement or commercial rights.
  */
 import { type ReactNode } from "react";
-import { ExternalLink, Info, Scale, Sparkles } from "lucide-react";
+import { Info, Scale, Sparkles } from "lucide-react";
 import { Card, CardBody, CardHeader } from "../components/ui/card";
-import { Button } from "../components/ui/button";
 import { Stack } from "../components/ui/stack";
 import { useMissingArtNames } from "../components/rikka/RikkaArt";
 import { RIKKA_ART_NAMES } from "../components/rikka/rikka-art-manifest";
-import { UPSTREAM_PROJECT_URL } from "../components/patterns/github-badge";
 import { PageHead } from "../components/PageHead";
 import { useT } from "../shared/locale-context";
 import { UNTRANSLATED_SURFACES } from "../shared/i18n";
@@ -77,23 +75,6 @@ export default function About(): ReactNode {
         <CardBody>
           <Stack gap="12px">
             <p className="about-prose">{t("about.licenseBody")}</p>
-            <div>
-              <p className="about-prose" style={{ marginBottom: 6 }}>
-                <strong>{t("about.upstream")}</strong>
-              </p>
-              <p className="about-prose">
-                {t("about.upstreamBody", { repo: "Cloviela" })}
-              </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<ExternalLink size={13} />}
-                style={{ marginTop: 8 }}
-                onClick={() => window.open(UPSTREAM_PROJECT_URL, "_blank", "noopener,noreferrer")}
-              >
-                {UPSTREAM_PROJECT_URL.replace("https://github.com/", "")}
-              </Button>
-            </div>
             <div>
               <p className="about-prose" style={{ marginBottom: 6 }}>
                 <strong>{t("about.derivative")}</strong>
