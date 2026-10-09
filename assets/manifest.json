@@ -751,6 +751,36 @@
       "crop": "object-fit: cover, object-position: right center",
       "acceptanceAsset": "overview-hero",
       "visualQA": "PASS — rendered at 1440px and 390px; face intact at both, no overflow"
+    },
+    {
+      "id": "night-hero",
+      "path": "dashboard/public/rikka/night-hero.webp",
+      "publicUrl": "/rikka/night-hero.webp",
+      "sourceId": "night",
+      "width": 1600,
+      "height": 396,
+      "mime": "image/webp",
+      "bytes": 46154,
+      "sha256": "566ab014694cbd281546c603fd3cd59e9c88c76a77b9ec338ccc62c5b560062b",
+      "placement": "Overview hero banner; cropped from the source scene to the strip's 4:1 ratio",
+      "crop": "top 62% of the source, keeping crown, face and ribbon whole",
+      "acceptanceAsset": "night-hero",
+      "visualQA": "PASS — head and ribbon intact at 1440/1920/2302/2560px"
+    },
+    {
+      "id": "day-hero",
+      "path": "dashboard/public/rikka/day-hero.webp",
+      "publicUrl": "/rikka/day-hero.webp",
+      "sourceId": "day",
+      "width": 1600,
+      "height": 396,
+      "mime": "image/webp",
+      "bytes": 65490,
+      "sha256": "a7f6374f9eb1bfa249b48082c4ef42dd113dfc07fabf681d57e90b493810b746",
+      "placement": "Overview hero banner; cropped from the source scene to the strip's 4:1 ratio",
+      "crop": "top 62% of the source, keeping crown, face and ribbon whole",
+      "acceptanceAsset": "day-hero",
+      "visualQA": "PASS — head and ribbon intact at 1440/1920/2302/2560px"
     }
   ],
   "generationAttempts": [
