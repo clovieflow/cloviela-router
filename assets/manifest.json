@@ -736,6 +736,36 @@
       "crop": null,
       "acceptanceAsset": "readme-banner",
       "visualQA": "PASS source inspected; renders at repository header width"
+    },
+    {
+      "id": "overview-hero",
+      "path": "dashboard/public/rikka/night.webp",
+      "publicUrl": "/rikka/night.webp",
+      "sourceId": "night",
+      "width": 1600,
+      "height": 640,
+      "mime": "image/webp",
+      "bytes": 80736,
+      "sha256": "6ca6188dae9573f9980441da1721e9642feb9550cbc76f12ab2fa8f13027246d",
+      "placement": "Ringkasan hero banner (dark theme); day.webp serves the light theme",
+      "crop": "object-fit: cover, object-position: right center",
+      "acceptanceAsset": "overview-hero",
+      "visualQA": "PASS — rendered at 1440px and 390px; face intact at both, no overflow"
+    }
+  ],
+  "generationAttempts": [
+    {
+      "requestedAt": "2026-10-09T10:40:00+07:00",
+      "purpose": "Frontend transformation — replacement hero banner (16:9, subject right, wide city panorama)",
+      "tool": "OMP generate_image",
+      "resolvedChain": [
+        "openai-codex/gpt-image-2",
+        "google-antigravity/gemini-3-pro-image"
+      ],
+      "result": "FAILED",
+      "error": "Image generation exhausted the resolved image chain: openai-codex/gpt-image-2, google-antigravity/gemini-3-pro-image",
+      "consequence": "No new image file was produced. The hero uses the existing assets/sources/night.webp (dark) and day.webp (light), which already carry the requested composition: subject on the right, city panorama through the centre, quiet left third for interface text.",
+      "verifiedNoFileWritten": true
     }
   ]
 }
