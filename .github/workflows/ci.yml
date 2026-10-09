@@ -1,31 +1,35 @@
-# Cloviela CI: backend + dashboard verification gates.
+# Cloviela CI: the gates a change has to pass.
 #
-# Runs the repo's own runners:
-# - backend job: typecheck.
-# - dashboard job: dashboard:typecheck.
+# Runs on every push and pull request. The backend suite needs a real
+# PostgreSQL — several of its cases exercise migrations and restore, which a
+# mock cannot stand in for — so one is provided as a service container. Redis
+# is optional: a suite that needs it skips with an explicit reason when its URL
+# is absent, so a runner without it still gets a meaningful result.
+#
+# What is NOT here, and why: the end-to-end browser matrix and the performance
+# runs. Both need a live gateway with provider credentials and take long enough
+# that they belong on a schedule rather than on every push. They are documented
+# in documentation/release-evidence.md.
 
 name: ci
 
 on:
+  push:
+    branches: ["**"]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  backend:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - run: bun run typecheck
+env:
+  CLOVIELA_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/cloviela_test
+  CLOVIELA_TEST_REDIS_URL: redis://localhost:6379/15
 
-  dashboard:
+jobs:
+  typecheck:
+    name: typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -34,4 +38,64 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+      - run: bun run typecheck
       - run: bun run dashboard:typecheck
+
+  backend:
+    name: backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cloviela_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run test:backend
+
+  dashboard:
+    name: dashboard tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run dashboard:test
+      - run: bun run dashboard:build
+
+  build:
+    name: build binary
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      # The whole point of the build job is that a release artefact can be
+      # produced from a clean checkout — not only from the author's machine.
+      - run: bun run build
