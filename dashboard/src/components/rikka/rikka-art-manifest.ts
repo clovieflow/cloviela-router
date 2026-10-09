@@ -118,6 +118,18 @@ export const RIKKA_ART = {
     height: 400,
     placement: "Onboarding welcome banner",
   },
+  "night-hero": {
+    path: "/rikka/night-hero.webp",
+    width: 1600,
+    height: 396,
+    placement: "Overview hero banner (dark): the riverside scene cropped to the strip's ratio",
+  },
+  "day-hero": {
+    path: "/rikka/day-hero.webp",
+    width: 1600,
+    height: 396,
+    placement: "Overview hero banner (light): the daylight scene cropped to the strip's ratio",
+  },
   "dashboard-hero": {
     path: "/rikka/dashboard-hero.webp",
     width: 1280,

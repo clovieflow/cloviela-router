@@ -48,13 +48,15 @@ export function OverviewHero(): ReactNode {
     <section className="cl-hero" aria-labelledby="cl-hero-title">
       <div className="cl-hero__media" aria-hidden="true">
         {/*
-          `night` is the wide riverside scene: subject on the right, city
-          panorama through the centre, quiet sky on the left for the copy. The
-          close-up `dashboard-hero` portrait is a different composition and
-          clips the face at strip height; this is the asset drawn for a banner.
+          `night-hero` / `day-hero` are the riverside scenes cropped at the
+          source to the strip's ratio. The uncropped scenes are 2.5:1 and a
+          hero is nearer 4:1, so `object-fit: cover` had to discard a third of
+          the height — and whichever third it chose, something was lost: centre
+          took the crown, top took the bow. Cropping once, here, keeps the
+          whole head and the ribbon and leaves the CSS a ratio it can honour.
         */}
         <RikkaArt
-          name={theme === "light" ? "day" : "night"}
+          name={theme === "light" ? "day-hero" : "night-hero"}
           width="100%"
           height="100%"
           fit="cover"

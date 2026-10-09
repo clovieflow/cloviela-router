@@ -3828,10 +3828,16 @@
   isolation: isolate;
   display: flex;
   align-items: center;
-  min-height: 200px;
-  /* 0.16 x viewport ≈ 230px at 1440, 307px at 1920 — the range in which the
-     subject stays whole without the strip becoming a landing-page banner. */
-  height: clamp(200px, 16vw, 320px);
+  /* The strip takes its artwork's ratio, so `object-fit: cover` has nothing to
+     discard and the scene is shown whole at every width.
+     This is `aspect-ratio`, not a `cqw` clamp: a container query unit inside
+     the element that declares `container-type` resolves against the nearest
+     ANCESTOR container, so `25cqw` measured the viewport and the ratio drifted
+     with the window — the exact instability this is meant to remove.
+     `max-height` keeps a very wide window from making the strip taller than
+     the metrics below it. */
+  aspect-ratio: 4 / 1;
+  max-height: 400px;
   padding: var(--space-7);
   overflow: hidden;
   border: 1px solid var(--border-subtle);
@@ -3850,9 +3856,13 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* Biased above centre: the subject's face sits in the upper half of the
-     source, so centring the crop pushes the chin out of frame. */
-  object-position: right 32%;
+  /* Anchored to the TOP, not the centre. The subject's crown starts at y=0 of
+     the artwork and her eyes sit around 20%, so any vertical centring trades
+     the top of her head for the bottom of the frame — which is what produced a
+     visibly sliced head on a wide monitor. Anchoring to the top means the
+     crown and face are always whole; what gets cropped is her waist, which the
+     composition survives. */
+  object-position: right top;
 }
 
 /* Opaque behind the text, fully transparent before the illustration begins.
