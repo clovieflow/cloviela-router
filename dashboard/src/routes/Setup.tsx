@@ -19,8 +19,12 @@ export default function Setup(): ReactNode {
   const navigate = useNavigate();
   const [username, setUsername] = useState("admin");
   const [displayName, setDisplayName] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  // Prefilled so a new installation can be opened immediately: the operator
+  // changes it here, or from Settings after signing in. It is deliberately a
+  // value the form's own 8-character rule accepts, and the field is a normal
+  // editable input — nothing about it is hidden from the person setting up.
+  const [password, setPassword] = useState("12345678");
+  const [confirm, setConfirm] = useState("12345678");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
