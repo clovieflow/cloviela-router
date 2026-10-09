@@ -15,12 +15,13 @@
  * whose URL the operator already chose to share.
  */
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { Check, Copy, KeyRound, Sparkles, Terminal } from "lucide-react";
+import { Activity, Check, Copy, KeyRound, Sparkles, Terminal } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardBody, CardHeader } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { DataTable, StatCard } from "../components/ui/layout";
-import { ErrorState, LoadingState } from "../components/ui/state";
+import { EmptyState, ErrorState, LoadingState } from "../components/ui/state";
+import { Input } from "../components/ui/input";
 import { useT } from "../shared/locale-context";
 import { formatNumber } from "../shared/format";
 
@@ -41,6 +42,29 @@ interface PublicKey {
   readonly expiresAt: string | null;
 }
 
+interface CatalogueModel {
+  readonly name: string;
+  readonly provider: string | null;
+  readonly contextLimit: number | null;
+  readonly outputLimit: number | null;
+  readonly reasoning: boolean;
+  readonly toolCall: boolean;
+  readonly vision: boolean;
+}
+
+interface LogEntry {
+  readonly id: string;
+  readonly at: string;
+  readonly keyLabel: string;
+  readonly model: string | null;
+  readonly ok: boolean;
+  readonly httpStatus: number | null;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly latencyMs: number | null;
+  readonly stream: boolean;
+}
+
 interface PublicPayload {
   readonly baseUrl: string;
   readonly keys: readonly PublicKey[];
@@ -49,6 +73,14 @@ interface PublicPayload {
     readonly tokensConsumed: number;
     readonly tokenBudget: number | null;
   };
+  readonly models: readonly CatalogueModel[];
+  readonly last24h: {
+    readonly requests: number;
+    readonly inputTokens: number;
+    readonly outputTokens: number;
+    readonly failed: number;
+  };
+  readonly recent: readonly LogEntry[];
 }
 
 function CopyButton({ value, label }: { value: string; label: string }): ReactNode {
@@ -102,6 +134,7 @@ export default function BansosPublic(): ReactNode {
   const [payload, setPayload] = useState<PublicPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [snippet, setSnippet] = useState<"curl" | "python" | "node">("curl");
+  const [modelFilter, setModelFilter] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -147,12 +180,22 @@ export default function BansosPublic(): ReactNode {
     );
   }
 
+  const shownModels =
+    modelFilter.trim().length === 0
+      ? payload.models
+      : payload.models.filter((entry) =>
+          entry.name.toLowerCase().includes(modelFilter.trim().toLowerCase()),
+        );
+
   const endpoint = `${payload.baseUrl}/v1`;
   // The first key drives the snippet; a recipient with several picks one from
   // the table below and the code still matches what the page shows.
   const primary = payload.keys[0];
   const key = primary?.secret ?? "YOUR_KEY";
-  const model = primary?.models[0] ?? "model-name";
+  // The key's own first allowed model, else the first the catalogue offers.
+  // A placeholder here produces a snippet that fails on paste, which is worse
+  // than no snippet — the recipient cannot tell our example from their mistake.
+  const model = primary?.models[0] ?? payload.models[0]?.name ?? "MODEL_NAME";
 
   // Generated from the live values, so a snippet can never show a URL or key
   // the page does not also show.
@@ -224,35 +267,42 @@ console.log(reply.choices[0].message.content);`,
           tone="green"
         />
         <StatCard
-          label={t("bansos.rpm")}
-          value={primary?.requestsPerMinute === null || primary === undefined ? t("bansos.unlimited") : String(primary.requestsPerMinute)}
-          detail={t("portal.perMinute")}
-          tone="orange"
+          label={t("bansos.last24h")}
+          value={formatNumber(payload.last24h.requests)}
+          detail={`${formatNumber(payload.last24h.failed)} ${t("bansos.failed")}`}
+          tone={payload.last24h.failed > 0 ? "orange" : "accent"}
         />
       </div>
 
+      {/* Three numbered steps rather than two labelled fields. The people
+          receiving a subsidized key are frequently not the people who
+          configure their own tooling, and "where does this go" is the
+          question the page has to answer without a support message. */}
       <Card glass>
-        <CardHeader title={t("bansos.publicHowTo")} icon={<Sparkles size={18} />} />
+        <CardHeader title={t("bansos.publicHowTo")} icon={<Sparkles size={18} />} subtitle={t("bansos.publicCompat")} />
         <CardBody>
-          <div className="two-column-grid">
-            <div>
-              <div className="account-row-meta">{t("bansos.publicBaseUrl")}</div>
+          <ol style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            <li>
+              <strong>{t("bansos.step1")}</strong>
+              <p className="account-row-meta">{t("bansos.step1Hint")}</p>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <code>{endpoint}</code>
+                <code style={{ fontSize: "13px" }}>{endpoint}</code>
                 <CopyButton value={endpoint} label={t("bansos.copy")} />
               </div>
-            </div>
-            <div>
-              <div className="account-row-meta">{t("bansos.publicApiKey")}</div>
+            </li>
+            <li>
+              <strong>{t("bansos.step2")}</strong>
+              <p className="account-row-meta">{t("bansos.step2Hint")}</p>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <code style={{ wordBreak: "break-all" }}>{key}</code>
+                <code style={{ fontSize: "13px", wordBreak: "break-all" }}>{key}</code>
                 <CopyButton value={key} label={t("bansos.copy")} />
               </div>
-            </div>
-          </div>
-          <p className="account-row-meta" style={{ marginTop: "12px" }}>
-            {t("bansos.publicCompat")}
-          </p>
+            </li>
+            <li>
+              <strong>{t("bansos.step3")}</strong>
+              <p className="account-row-meta">{t("bansos.step3Hint")}</p>
+            </li>
+          </ol>
         </CardBody>
       </Card>
 
@@ -285,6 +335,156 @@ console.log(reply.choices[0].message.content);`,
           >
             <code>{snippets[snippet]}</code>
           </pre>
+        </CardBody>
+      </Card>
+
+      {/* The models, with the exact string to send and a copy button. This is
+          the first thing a recipient needs and the first thing they get wrong,
+          so it is a list of names rather than a column inside another table. */}
+      <Card glass>
+        <CardHeader
+          title={t("portal.modelsTitle")}
+          icon={<KeyRound size={18} />}
+          subtitle={t("bansos.modelsCopyHint")}
+        />
+        <CardBody>
+          {payload.models.length === 0 ? (
+            <EmptyState
+              title={t("portal.modelsEmpty")}
+              message={t("bansos.modelsEmptyPublic")}
+              icon={<KeyRound size={20} />}
+              compact
+            />
+          ) : (
+            <>
+            <div style={{ marginBottom: "10px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+              <Input
+                value={modelFilter}
+                onChange={(e) => setModelFilter(e.target.value)}
+                placeholder={t("bansos.searchModel")}
+                aria-label={t("bansos.searchModel")}
+                style={{ maxWidth: "280px" }}
+              />
+              <span className="account-row-meta">
+                {shownModels.length} / {payload.models.length} {t("bansos.models")}
+              </span>
+            </div>
+            <DataTable
+              headers={[
+                t("bansos.publicModelName"),
+                t("bansos.contextWindow"),
+                t("bansos.maxOutput"),
+                t("bansos.features"),
+                "",
+              ]}
+            >
+              {shownModels.map((entry) => (
+                <tr key={entry.name}>
+                  <td>
+                    <code style={{ fontSize: "13px" }}>{entry.name}</code>
+                    {entry.provider ? (
+                      <div className="account-row-meta">{entry.provider}</div>
+                    ) : null}
+                  </td>
+                  <td>
+                    {entry.contextLimit === null
+                      ? t("bansos.unlimited")
+                      : formatNumber(entry.contextLimit)}
+                  </td>
+                  <td>
+                    {entry.outputLimit === null
+                      ? t("bansos.unlimited")
+                      : formatNumber(entry.outputLimit)}
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                      {entry.reasoning ? <Badge tone="purple">{t("bansos.reasoning")}</Badge> : null}
+                      {entry.toolCall ? <Badge tone="accent">{t("bansos.tools")}</Badge> : null}
+                      {entry.vision ? <Badge tone="info">{t("bansos.vision")}</Badge> : null}
+                      {!entry.reasoning && !entry.toolCall && !entry.vision ? (
+                        <span className="account-row-meta">—</span>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td>
+                    <CopyButton value={entry.name} label={t("bansos.copyName")} />
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+            </>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* The request log. Every row is a request made with a published key —
+          model, tokens, latency, and whether it succeeded. This is the part
+          that answers "is it working" without anyone having to ask. */}
+      <Card glass>
+        <CardHeader
+          title={t("bansos.publicLog")}
+          icon={<Activity size={18} />}
+          subtitle={t("bansos.publicLogHint")}
+          action={
+            <Badge tone={payload.last24h.failed > 0 ? "warn" : "ok"}>
+              {payload.last24h.requests} {t("bansos.requests")}
+            </Badge>
+          }
+        />
+        <CardBody>
+          {payload.recent.length === 0 ? (
+            <EmptyState
+              title={t("bansos.publicLogEmpty")}
+              message={t("bansos.publicLogEmptyHint")}
+              icon={<Activity size={20} />}
+              compact
+            />
+          ) : (
+            <DataTable
+              headers={[
+                t("bansos.auditWhen"),
+                t("bansos.keyLabel"),
+                t("bansos.publicModelName"),
+                t("bansos.publicStatus"),
+                t("portal.tokens"),
+                t("bansos.latency"),
+              ]}
+            >
+              {payload.recent.map((entry) => (
+                <tr key={entry.id}>
+                  <td>
+                    <span className="account-row-meta">
+                      {new Date(entry.at).toLocaleTimeString()}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="account-row-meta">{entry.keyLabel}</span>
+                  </td>
+                  <td>
+                    <code className="account-row-meta">{entry.model ?? "—"}</code>
+                    {entry.stream ? (
+                      <span className="account-row-meta"> · stream</span>
+                    ) : null}
+                  </td>
+                  <td>
+                    <Badge tone={entry.ok ? "ok" : "err"}>
+                      {entry.httpStatus ?? (entry.ok ? t("bansos.ok") : t("bansos.error"))}
+                    </Badge>
+                  </td>
+                  <td>
+                    <span className="account-row-meta">
+                      {formatNumber(entry.inputTokens)} → {formatNumber(entry.outputTokens)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="account-row-meta">
+                      {entry.latencyMs === null ? "—" : `${formatNumber(entry.latencyMs)} ms`}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          )}
         </CardBody>
       </Card>
 
