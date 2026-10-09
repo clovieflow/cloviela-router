@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { CONFIG_TABLES, droppedColumns, ownershipOf, tableName, tablesForSection } from "../../src/console/backup/contracts";
+import { BACKUP_APP, CONFIG_TABLES, droppedColumns, ownershipOf, tableName, tablesForSection } from "../../src/console/backup/contracts";
 import { DELETE_ALL_SCOPES, type DeleteAllScope } from "../../src/console/backup/store";
-import { validateRestorePayload } from "../../src/console/backup/validate";
+import { detectFormat, validateRestorePayload } from "../../src/console/backup/validate";
 
 describe("backup contract coverage", () => {
   test("includes tenant-owned studio sessions in configuration", () => {
@@ -91,4 +91,46 @@ describe("legacy dropped columns on restore", () => {
     }
   });
 
+});
+
+/**
+ * The `app` field across the product rename.
+ *
+ * Backups written before the rename carry `app: "cartethyia"`. Those files are
+ * still in operators' hands, so the importer must keep accepting them while
+ * everything the gateway writes from now on says `cloviela`. A change that
+ * updates the constant without widening the accepted set turns every existing
+ * backup into "this file belongs to a different application".
+ */
+describe("backup app identifier across the rename", () => {
+  const envelope = (app: string) => ({
+    app,
+    version: 1,
+    exportedAt: "2026-10-01T00:00:00.000Z",
+    sections: { config: { providers: [] } },
+  });
+
+  test("newly written backups carry the current product name", () => {
+    expect(BACKUP_APP).toBe("cloviela");
+  });
+
+  test("the pre-rename name is accepted as a native backup", () => {
+    expect(detectFormat(envelope("cartethyia")).kind).toBe("native");
+    expect(validateRestorePayload(envelope("cartethyia"), "tenant-1").ok).toBe(true);
+  });
+
+  test("the current name is accepted as a native backup", () => {
+    expect(detectFormat(envelope("cloviela")).kind).toBe("native");
+    expect(validateRestorePayload(envelope("cloviela"), "tenant-1").ok).toBe(true);
+  });
+
+  test("a genuinely foreign backup is still refused, and named", () => {
+    const detected = detectFormat(envelope("some-other-gateway"));
+    expect(detected.kind).toBe("unknown");
+    if (detected.kind === "unknown") expect(detected.reason).toContain("some-other-gateway");
+
+    const validated = validateRestorePayload(envelope("some-other-gateway"), "tenant-1");
+    expect(validated.ok).toBe(false);
+    if (!validated.ok) expect(validated.error).toContain("some-other-gateway");
+  });
 });

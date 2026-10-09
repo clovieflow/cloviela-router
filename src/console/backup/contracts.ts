@@ -42,7 +42,21 @@ import {
   telemetryUsageTotals,
 } from "../../persistence/schema";
 
-export const BACKUP_APP = "cartethyia";
+/**
+ * `app` value this gateway writes into every backup it exports.
+ *
+ * Renamed with the product. {@link BACKUP_APP_LEGACY} is the value backups
+ * taken before the rename carry, and it is still accepted on import: an
+ * operator restoring last month's file must not be told their own backup
+ * belongs to a different application.
+ */
+export const BACKUP_APP = "cloviela";
+
+/** The pre-rename `app` value, accepted on import but never written. */
+export const BACKUP_APP_LEGACY = "cartethyia";
+
+/** Every `app` value a native backup may carry. */
+export const BACKUP_APP_ACCEPTED: readonly string[] = [BACKUP_APP, BACKUP_APP_LEGACY];
 export const BACKUP_VERSION = 1;
 
 /** Upper bound for restore payloads; the listener enforces the same ceiling. */

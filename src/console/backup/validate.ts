@@ -16,6 +16,7 @@ import type { Table } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm";
 import {
   BACKUP_APP,
+  BACKUP_APP_ACCEPTED,
   BACKUP_SECTIONS,
   BACKUP_VERSION,
   CONFIG_TABLES,
@@ -85,8 +86,12 @@ export function detectFormat(input: unknown): DetectedFormat {
   // so unwrap before inspecting.
   const candidate = isPlainObject(input.backup) ? (input.backup as Record<string, unknown>) : input;
 
-  if (candidate.app === BACKUP_APP) return { kind: "native", payload: candidate };
-  if (typeof candidate.app === "string" && candidate.app.length > 0 && candidate.app !== BACKUP_APP) {
+  // Both the current and the pre-rename `app` value are ours. A file exported
+  // before the product was renamed is still this application's backup.
+  if (typeof candidate.app === "string" && BACKUP_APP_ACCEPTED.includes(candidate.app)) {
+    return { kind: "native", payload: candidate };
+  }
+  if (typeof candidate.app === "string" && candidate.app.length > 0) {
     // A different application's own backup format. Say which, so the operator
     // knows this is the wrong file rather than a corrupt one.
     return { kind: "unknown", reason: `backup is for "${candidate.app}", not "${BACKUP_APP}"` };
@@ -122,7 +127,7 @@ function orderedTables(section: BackupSection): readonly Table[] {
  */
 export function validateRestorePayload(payload: unknown, tenantId: string): RestoreValidation {
   if (!isPlainObject(payload)) return { ok: false, error: "backup must be a JSON object" };
-  if (payload.app !== BACKUP_APP) {
+  if (typeof payload.app !== "string" || !BACKUP_APP_ACCEPTED.includes(payload.app)) {
     // Name the foreign app when there is one: "this is for something else" is a
     // far more useful message than "the field must equal cloviela".
     const foreign = typeof payload.app === "string" && payload.app.length > 0 ? payload.app : null;
