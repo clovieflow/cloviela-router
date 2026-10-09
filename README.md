@@ -118,12 +118,14 @@ under GPLv3.
 
 ### Built on
 
-The gateway core derives from **Cartethyia** by risunCode
-(<https://github.com/risunCode/Cartethyia>, branch `dev`, commit
-`382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`), also GPL-3.0-only. Its copyright
-and license are retained as the GPL requires. Changes made here are recorded in
-[`CHANGELOG.md`](CHANGELOG.md) and summarised in the console under
-**Tentang → Kredit**.
+The gateway core is **Cartethyia** by risunCode
+(<https://github.com/risunCode/Cartethyia>), imported at branch `dev`, commit
+`382cf2308f4a09aeac0b5e2b1adf8fa7ace9319f`, also GPL-3.0-only. It is the
+first commit in this repository and says so in its message; the full upstream
+history is kept at the tag `upstream-base` for anyone who wants to diff
+against it. Its copyright and license are retained as the GPL requires.
+Changes made here are recorded in [`CHANGELOG.md`](CHANGELOG.md) and
+summarised in the console under **Tentang → Kredit**.
 
 ### Artwork
 
