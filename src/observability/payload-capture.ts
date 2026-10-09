@@ -1,3 +1,4 @@
+import { envValue } from "../env-compat";
 import type { ClovielaDatabase } from "../persistence/postgres";
 import { DrizzleTelemetryStore } from "../persistence/telemetry-store";
 import { prunePayloadFrames, writePayloadFrame } from "./payload-store";
@@ -46,7 +47,7 @@ export interface StoredPayload {
 }
 
 function payloadRetentionMs(): number {
-  const raw = Number(process.env.CLOVIELA_TELEMETRY_PAYLOAD_RETENTION_MS ?? 15 * 60_000);
+  const raw = Number(envValue("CLOVIELA_TELEMETRY_PAYLOAD_RETENTION_MS") ?? 15 * 60_000);
   if (!Number.isFinite(raw) || raw < 1_000 || raw > 7 * 24 * 60 * 60_000) return 15 * 60_000;
   return Math.floor(raw);
 }

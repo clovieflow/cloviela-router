@@ -68,7 +68,7 @@ function payloadDirectory(): string {
 }
 
 function maxFileBytes(): number {
-  const raw = Number(process.env.CLOVIELA_TELEMETRY_PAYLOAD_FILE_MAX_BYTES ?? DEFAULT_MAX_FILE_BYTES);
+  const raw = Number(envValue("CLOVIELA_TELEMETRY_PAYLOAD_FILE_MAX_BYTES") ?? DEFAULT_MAX_FILE_BYTES);
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_MAX_FILE_BYTES;
 }
 
