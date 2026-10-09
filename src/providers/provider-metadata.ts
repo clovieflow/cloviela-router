@@ -141,7 +141,10 @@ const RAW_BUNDLED_PROVIDER_METADATA = [
   },
   { id: "hermes", displayName: "Nous Research", baseUrl: "https://inference-api.nousresearch.com/v1", credentialUrl: "https://portal.nousresearch.com" },
   { id: "bai", displayName: "B.AI", baseUrl: "https://api.b.ai/v1", credentialUrl: "https://b.ai" },
-  { id: "inferhub", displayName: "InferHub", baseUrl: "https://api.inferhub.dev/v1", defaultBypassProxy: true, hasAdapterUserAgent: true },
+  // Renamed from InferHub. The id is deliberately unchanged: it is already
+  // stored on the provider row of every installation, and routing, accounts
+  // and telemetry all reference it. Only the name and endpoint moved.
+  { id: "inferhub", displayName: "OpRoute", baseUrl: "https://oproute.web.id/v1", defaultBypassProxy: true, hasAdapterUserAgent: true },
   { id: "aihubmix", displayName: "AiHubMix", baseUrl: "https://aihubmix.com/v1", credentialUrl: "https://aihubmix.com/token" },
   { id: "tokenharbor", displayName: "TokenHarbor", baseUrl: "https://tokenharbor.ai/v1", credentialUrl: "https://tokenharbor.ai" },
   { id: "agentrouter", displayName: "AgentRouter", baseUrl: "https://agentrouter.org", hasAdapterUserAgent: true, credentialUrl: "https://agentrouter.org" },

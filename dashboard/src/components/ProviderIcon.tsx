@@ -18,7 +18,8 @@ const iconAssets: Record<string, { file: string; ext: "svg" | "webp" }> = {
   grok: { file: "grok-build", ext: "webp" },
   "grok-build": { file: "grok-build", ext: "webp" },
   xai: { file: "grok-build", ext: "webp" },
-  inferhub: { file: "inferhub", ext: "svg" },
+  // Renamed from InferHub; the key is the provider id and is unchanged.
+  inferhub: { file: "oproute", ext: "svg" },
   gemini: { file: "gemini", ext: "webp" },
   alibaba: { file: "alibaba", ext: "svg" },
   alibabacp: { file: "alibaba-coding-plan", ext: "svg" },

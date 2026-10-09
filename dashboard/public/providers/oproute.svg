@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-label="OpRoute">
+  <!--
+    OpRoute mark: a centre sphere inside a three-arc ring.
+
+    Geometry is measured from the supplied raster, not eyeballed. In a 512
+    viewBox, walking outward from the centre: the sphere ends at r=76, and the
+    ring occupies r=140 to r=178 — a 38-unit stroke on a 159-unit centreline.
+    The three gaps sit at 48°, 213° and 287° (0° = up, clockwise) and are about
+    five degrees wide, which is why they read as separations rather than as
+    missing segments.
+
+    The arc endpoints are computed from those angles and then trimmed a few
+    degrees on each side so the round caps sit inside the gaps instead of
+    eating into them.
+
+    The gradient sweeps lavender to deep violet across the whole mark, matching
+    the source: the sphere is lightest at its upper left, and the arcs carry
+    the same sweep rather than each being a flat fill.
+  -->
+  <defs>
+    <linearGradient id="oproute-mark" x1="120" y1="90" x2="400" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B7A6F2" />
+      <stop offset="0.45" stop-color="#8B6BF0" />
+      <stop offset="1" stop-color="#4B27D6" />
+    </linearGradient>
+    <radialGradient id="oproute-core" cx="0.34" cy="0.28" r="0.9">
+      <stop offset="0" stop-color="#C9BBF8" />
+      <stop offset="0.5" stop-color="#9077F0" />
+      <stop offset="1" stop-color="#6C4CE6" />
+    </radialGradient>
+  </defs>
+
+  <g stroke="url(#oproute-mark)" stroke-width="38" stroke-linecap="round" fill="none">
+    <!-- From the 48° gap, clockwise over the top, to the 213° gap. Each
+         endpoint is trimmed 11° rather than 3°: a round cap reaches half the
+         stroke width past its end, which is ~7° at this radius, so a small
+         trim left the caps touching and the three arcs read as one ring. -->
+    <path d="M 392.3 174.1 A 159 159 0 0 1 201.6 405.4" />
+    <path d="M 145.5 370.4 A 159 159 0 0 1 97.4 244.9" />
+    <path d="M 115.6 181.4 A 159 159 0 0 1 351.7 129.0" />
+  </g>
+
+  <circle cx="256" cy="256" r="76" fill="url(#oproute-core)" />
+</svg>
