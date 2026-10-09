@@ -626,8 +626,46 @@ html[data-glass-depth="2"] {
   box-shadow: var(--shadow-card);
 }
 
+/* The default card is Content Glass in the dark theme.
+ *
+ * Every console page outside Ringkasan was still rendering an opaque
+ * `--surface-1`, so the Liquid Glass treatment stopped at the one screen it
+ * was designed on: `/providers` alone had 45 solid cards. Opting 45 call
+ * sites into `glass` would have been a large diff with a silent failure mode
+ * — any card added later would revert to opaque without anyone noticing.
+ *
+ * Making the default itself glass means a new card is correct by
+ * construction. Light theme keeps the opaque surface, and a browser without
+ * `backdrop-filter` falls back to it through the rule below. */
 .card-solid {
   background: var(--surface-1);
+}
+
+:root[data-theme="dark"] .card-solid {
+  /* `--card-glass-depth` is declared by the `.card-glass` rule, not globally.
+     Reading it here without declaring it made the whole `calc()` invalid, and
+     CSS drops an invalid declaration silently — the background turned glass
+     while the blur never arrived, which is exactly what the browser reported.
+     The variable is set below, and the fallback in `var()` keeps the
+     expression valid even if that assignment is ever removed. */
+  --card-glass-depth: var(--glass-depth, 1);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + (var(--card-glass-depth, 1) * 5px)))
+    saturate(var(--glass-saturate));
+  backdrop-filter: blur(calc(var(--glass-blur) + (var(--card-glass-depth, 1) * 5px)))
+    saturate(var(--glass-saturate));
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--glass-shade),
+    var(--shadow-card);
+}
+
+/* No backdrop-filter means no glass: an opaque surface, not a translucent one
+   with the photograph showing through the text. */
+@supports not (backdrop-filter: blur(1px)) {
+  :root[data-theme="dark"] .card-solid {
+    background: var(--surface-1);
+  }
 }
 
 .card-glass {
