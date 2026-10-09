@@ -2,9 +2,10 @@
 #
 # Runs on every push and pull request. The backend suite needs a real
 # PostgreSQL — several of its cases exercise migrations and restore, which a
-# mock cannot stand in for — so one is provided as a service container. Redis
-# is optional: a suite that needs it skips with an explicit reason when its URL
-# is absent, so a runner without it still gets a meaningful result.
+# mock cannot stand in for — so the job starts the runner's own PostgreSQL and
+# Redis instead of pulling images. Redis is optional: a suite that needs it
+# skips with an explicit reason when its URL is absent, so a runner without it
+# still gets a meaningful result.
 #
 # What is NOT here, and why: the end-to-end browser matrix and the performance
 # runs. Both need a live gateway with provider credentials and take long enough
@@ -45,31 +46,28 @@ jobs:
     name: backend tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    services:
-      postgres:
-        image: postgres:18.6-alpine
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: cloviela_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      # Started from the runner's own packages rather than as a service
+      # container: a service container needs a Docker Hub pull, and the
+      # anonymous pull quota is shared and easily exhausted — the job failed
+      # twice on "toomanyrequests" without running a single test.
+      - name: Start PostgreSQL and Redis
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+          # Idempotent: a runner is clean, but a re-run of the same job must
+          # not fail on "database already exists".
+          sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'cloviela_test'" \
+            | grep -q 1 || sudo -u postgres createdb cloviela_test
+          sudo systemctl start redis-server || sudo systemctl start redis
+          pg_isready -h localhost -p 5432
+          redis-cli ping
+
       - run: bun install --frozen-lockfile
       - run: bun run test:backend
 
