@@ -1511,12 +1511,26 @@ input[type="checkbox"] {
   }
 }
 
-/* Wide welcome strip, used only on the onboarding and overview journeys. */
+/* Wide welcome strip, used only on the onboarding and overview journeys.
+ *
+ * The artwork is 3.2:1 and `RikkaArt` sizes an uncapped image by its ratio, so
+ * at a 1900px content column this figure rendered 593px tall — taller than the
+ * viewport on a laptop, pushing every setup step below the fold. The strip is
+ * a header for the page, not the page.
+ *
+ * `max-height` on the frame keeps the artwork proportional to the column while
+ * bounding it; `overflow: hidden` is inherited from `RikkaArt`'s frame so the
+ * image is cropped rather than squashed. The caption stays outside the frame
+ * and is unaffected. */
 .rikka-banner {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin: 0;
+}
+
+.rikka-banner > .rikka-art {
+  max-height: clamp(150px, 14vw, 260px);
 }
 
 .rikka-banner figcaption {
