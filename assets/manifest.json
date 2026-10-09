@@ -76,6 +76,23 @@
         "reviewer": "assistant visual inspection",
         "decision": "Recognizable stable navy hair, blue eyes and cardigan/ribbon; no text/watermarks or sexualization; intended composition present. Sections contain sixteen distinct vignettes."
       }
+    },
+    {
+      "id": "banner",
+      "path": "assets/sources/banner.webp",
+      "width": 2172,
+      "height": 724,
+      "mime": "image/webp",
+      "bytes": 218830,
+      "sha256": "359b3e16e16b55136b0d7199a673d4359bb1d1918fa62c315f469c30680f1c52",
+      "generatedAt": "2026-10-09T09:45:00+07:00",
+      "prompt": null,
+      "reference": "Operator-supplied repository banner; no model generation recorded for this file.",
+      "visualQA": {
+        "status": "PASS",
+        "reviewer": "assistant visual inspection",
+        "decision": "Wide lockup with the Cloviela wordmark centred over a rose-and-lace portrait; legible at repository-header width, no watermark, suitable as a README masthead."
+      }
     }
   ],
   "assets": [
@@ -704,6 +721,21 @@
       "generatedAt": "2026-10-09T00:24:48.015418+00:00",
       "prompt": "Flat vector app mark: a Japanese torii gate with two straight vertical pillars and one horizontal crossbeam, a single horizontal line passing left to right through the middle of the gate and splitting into three short lines fanning outward on the right. Exactly three flat colours: near-black background, muted vermilion gate, pale champagne gold routing path. Centred, symmetrical, no perspective, no shadow, no border, no gradient, no texture. No text, letters, numbers or watermark.",
       "placement": "console and landing favicon, share header, About asset manifest"
+    },
+    {
+      "id": "readme-banner",
+      "path": "assets/sources/banner.webp",
+      "publicUrl": "assets/sources/banner.webp",
+      "sourceId": "banner",
+      "width": 2172,
+      "height": 724,
+      "mime": "image/webp",
+      "bytes": 218830,
+      "sha256": "359b3e16e16b55136b0d7199a673d4359bb1d1918fa62c315f469c30680f1c52",
+      "placement": "README masthead and repository social preview",
+      "crop": null,
+      "acceptanceAsset": "readme-banner",
+      "visualQA": "PASS source inspected; renders at repository header width"
     }
   ]
 }

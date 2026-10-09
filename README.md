@@ -1,3 +1,5 @@
+<img src="assets/sources/banner.webp" alt="Cloviela — rose and lace masthead with the Cloviela wordmark" width="100%">
+
 # Cloviela Router
 
 **A private-first, self-hosted multi-provider AI gateway with an original anime console — unofficial Rikka Takarada (SSSS.GRIDMAN) fan theme.**
