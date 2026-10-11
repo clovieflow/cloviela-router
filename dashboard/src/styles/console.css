@@ -1524,12 +1524,16 @@
   }
 }
 
-/* One per row on a phone. `minmax(0, 1fr)` rather than a pixel floor: the
-   value inside shrinks to fit its own card, so the grid never has to be wider
-   than the screen to keep a number readable. */
+/* `auto-fit` with a 160px floor rather than a fixed column count: the grid fits
+   as many cards per row as the width allows and drops to one column only when
+   even two would not fit. A phone gets two compact cards side by side instead of
+   a stack of full-width boxes, and a 320px screen falls back to one on its own.
+   The 160px floor is safe because `.stat-card-value` shrinks to fit its own card
+   — a floor with a fixed-size value is what used to force the page wider than
+   the screen. */
 @media (max-width: 600px) {
   .metric-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 10px;
   }
 }

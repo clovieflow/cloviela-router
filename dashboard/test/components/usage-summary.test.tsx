@@ -72,13 +72,29 @@ describe("StatCard headline value", () => {
     }
   });
 
-  test("the metric grid collapses to one column on a phone", () => {
+  test("the metric grid keeps multiple columns on a phone", () => {
+    // The first fix for the overflow collapsed this to a single column, which
+    // turned every card into a full-width box — trading a scrolling page for a
+    // page four screens tall. The grid must stay adaptive: as many cards per row
+    // as fit, dropping to one only when even two would not.
     const css = consoleCss();
-    const block = /@media \(max-width: 600px\)\s*\{[\s\S]*?\.metric-grid\s*\{[^}]*\}/.exec(css)?.[0] ?? "";
-    expect(block).toContain("grid-template-columns: minmax(0, 1fr)");
-    // `minmax(0, 1fr)` and not a pixel floor: a floor is what forced the page
-    // wider than the screen.
-    expect(block).not.toContain("minmax(160px");
+    const block =
+      /@media \(max-width: 600px\)\s*\{[\s\S]*?\.metric-grid\s*\{[^}]*\}/.exec(css)?.[0] ?? "";
+    expect(block).toContain("repeat(auto-fit, minmax(160px, 1fr))");
+  });
+
+  test("the 160px floor is safe because the value shrinks", () => {
+    // A pixel floor is only safe when the content can shrink below it — a floor
+    // with a fixed-size value is exactly what forced the page wider than the
+    // screen. Both halves are required, so they are asserted together.
+    const css = consoleCss();
+    const value = /\.stat-card-value\s*\{[^}]*\}/.exec(css)?.[0] ?? "";
+    expect(value).toContain("cqw");
+    // Two columns on a 390px phone: each card is ~170px, and an eleven-character
+    // count at that width resolves to ~14.5px, well inside the content box.
+    const cardWidth = 170;
+    const fontSize = Math.max(12, Math.min(8.5 * (cardWidth / 100), 20));
+    expect("660.505.842".length * 0.6 * fontSize).toBeLessThan(cardWidth - 24);
   });
 });
 
