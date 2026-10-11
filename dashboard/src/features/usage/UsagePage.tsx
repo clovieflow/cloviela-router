@@ -13,6 +13,7 @@ import {
   DollarSign,
   Eye,
   EyeOff,
+  Gauge,
   Image as ImageIcon,
   LogIn,
   Maximize2,
@@ -22,6 +23,8 @@ import {
   Route,
   Scaling,
   Server,
+  Timer,
+  TriangleAlert,
   Wrench,
 } from "lucide-react";
 import {
@@ -1414,7 +1417,7 @@ export default function Usage(): ReactNode {
   return (
     <InFlightProvider>
       <Stack gap="16px">
-      <div className="metric-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
+      <div className="metric-grid">
         <RequestsStatCard
           pending={summaryQuery.isPending}
           requests={summary?.requests}
@@ -1473,9 +1476,38 @@ export default function Usage(): ReactNode {
           // The figure is always an estimate, never an invoice. When completed
           // rows exist without a persisted price the estimate is a floor, and
           // the caption says so in plain words instead of naming the flag.
-          detail="Estimated not billing"
+          detail={summary?.partial ? "A floor — some rows have no price" : "Estimated not billing"}
           tone="orange"
           icon={<DollarSign size={13} />}
+        />
+        <StatCard
+          label="Errors"
+          value={summaryQuery.isPending ? "…" : formatNumber(summary?.errors)}
+          // `cancelled` is deliberately not an error: a client hanging up is
+          // expected behaviour, and counting it as a failure would make every
+          // user who closes a tab look like an outage. It is reported on its
+          // own line so the two can never be confused for each other.
+          detail={
+            summaryQuery.isPending
+              ? "Failed requests"
+              : `${formatNumber(summary?.cancelled)} cancelled · ${formatNumber(summary?.truncated)} truncated`
+          }
+          tone={summary?.errors ? "red" : "green"}
+          icon={<TriangleAlert size={13} />}
+        />
+        <StatCard
+          label="Avg latency"
+          value={summaryQuery.isPending ? "…" : formatDuration(summary?.avgDurationMs)}
+          detail="Per request, gateway to last byte"
+          icon={<Timer size={13} />}
+        />
+        <StatCard
+          label="Throughput"
+          value={summaryQuery.isPending ? "…" : formatSpeed(summary?.avgTokensPerSec)}
+          // The rate a provider actually sustained, which is what tells a slow
+          // model from a slow network — latency alone cannot separate them.
+          detail="Average output speed"
+          icon={<Gauge size={13} />}
         />
       </div>
 

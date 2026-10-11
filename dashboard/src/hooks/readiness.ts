@@ -364,6 +364,9 @@ export function useReadinessProbe() {
       };
     },
     ...DASHBOARD_QUERY_OPTIONS,
-    refetchInterval: 20_000,
+    // Matches `useSystemHealth`: the page shows both side by side, and a
+    // readiness line that lags the process figures beside it would have the
+    // two panels disagree about the same instant.
+    refetchInterval: 5_000,
   });
 }

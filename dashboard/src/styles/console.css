@@ -1524,9 +1524,13 @@
   }
 }
 
+/* One per row on a phone. `minmax(0, 1fr)` rather than a pixel floor: the
+   value inside shrinks to fit its own card, so the grid never has to be wider
+   than the screen to keep a number readable. */
 @media (max-width: 600px) {
   .metric-grid {
     grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
   }
 }
 
@@ -1539,10 +1543,33 @@
   flex-direction: column;
   gap: 3px;
   min-width: 0;
+  /* The value below is sized against this width, so a long token count shrinks
+     to fit instead of spilling out of the card. */
+  container-type: inline-size;
   transition:
     transform var(--dur-micro) var(--ease-spring),
     box-shadow var(--dur-micro) var(--ease-spring),
     border-color var(--dur-micro) ease;
+}
+
+/* The headline figure.
+ *
+ * A raw token count is thirteen characters — `1.234.567.890` — and at a fixed
+ * 20px in the mono face that is wider than the card's own minimum. It used to
+ * overflow the card and drag the whole page sideways, which is what made the
+ * Usage page scrollable on a phone once a tenant passed a billion tokens.
+ *
+ * Sized in `cqw` so the figure tracks the card rather than the viewport: wide
+ * cards keep the full 20px, a narrow one steps down until the number fits. The
+ * alternative — truncating it — would hide the digits the card exists to show.
+ */
+.stat-card-value {
+  font-family: var(--font-mono);
+  font-size: clamp(12px, 8.5cqw, 20px);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 2px 0 0 0;
+  overflow-wrap: anywhere;
 }
 /* Named container for the proxy table: the labeled action buttons in
  * `base.css` collapse to square icon buttons against this width, so a narrow
@@ -2320,6 +2347,82 @@
   margin-left: auto;
   color: #4d5654;
   font-size: 10px;
+}
+
+.console-log-pool {
+  flex: 0 0 auto;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #9db8d0;
+}
+
+.console-log-agent {
+  flex: 0 0 auto;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #8a9390;
+}
+
+/* The full request id is what you paste into a trace search, so it is worth the
+   width — but it is the last thing on the line, and the first to go when there
+   is no room. */
+.console-log-request-id {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #4d5654;
+  font-size: 10px;
+  direction: rtl;
+  text-align: left;
+}
+
+/* ── Narrow screens: wrap the row instead of hiding its tail ────────────────
+   A log line is `nowrap` with `overflow: hidden`, which on a phone meant the
+   model id was truncated (`fetra/c…`) with no way to see the rest. The row now
+   wraps and the fields keep their own width, so the same line reads as two
+   lines rather than as a line that lost its end. It stays a log — no cards, no
+   borders — because the value here is scanning a column of aligned lines. */
+@media (max-width: 720px) {
+  .console-log-row {
+    flex-wrap: wrap;
+    white-space: normal;
+    row-gap: 1px;
+    padding: 4px 12px;
+  }
+
+  .console-log-row > * {
+    white-space: nowrap;
+  }
+
+  /* The message is the one field that should wrap: it is prose, and truncating
+     it is what made an error unreadable on a phone. */
+  .console-log-msg,
+  .console-log-errmsg {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    flex: 1 1 100%;
+  }
+
+  .console-log-route {
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+
+  .console-log-account,
+  .console-log-pool,
+  .console-log-agent {
+    max-width: none;
+  }
+
+  /* The request id no longer needs to hide: the row has a second line now. */
+  .console-log-request-id {
+    flex: 0 0 auto;
+    direction: ltr;
+    font-size: 9.5px;
+  }
 }
 
 .console-log-footer {
@@ -3501,6 +3604,91 @@
 .health-fact-label {
   color: var(--text-secondary);
   min-width: 0;
+}
+
+/* When the figures beside it were last read.
+ *
+ * The page polls, so the numbers are live — but a live number and a frozen one
+ * look identical on screen. This states the age, and the dot marks a poll in
+ * flight, so a stalled refresh is visible instead of silently stale. */
+.health-freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.health-freshness-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--text-tertiary);
+  flex: 0 0 auto;
+  transition: background-color var(--dur-micro) ease;
+}
+
+.health-freshness-dot.is-live {
+  background: var(--green);
+  animation: health-freshness-pulse 1s ease-in-out infinite;
+}
+
+/* Whether the SSE feed is connected.
+ *
+ * A stream that has silently dropped looks exactly like a gateway with no
+ * traffic: both show a count that is not moving. The dot is the difference. */
+.health-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.health-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--text-tertiary);
+  flex: 0 0 auto;
+}
+
+.health-live.is-live {
+  color: var(--green);
+}
+
+.health-live.is-live .health-live-dot {
+  background: var(--green);
+  animation: health-freshness-pulse 1s ease-in-out infinite;
+}
+
+/* The dot carries the meaning; the pulse is decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .health-live.is-live .health-live-dot {
+    animation: none;
+  }
+}
+
+@keyframes health-freshness-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* A pulse is decoration; the timestamp beside it carries the same meaning. */
+@media (prefers-reduced-motion: reduce) {
+  .health-freshness-dot.is-live {
+    animation: none;
+  }
 }
 
 .health-fact-value {

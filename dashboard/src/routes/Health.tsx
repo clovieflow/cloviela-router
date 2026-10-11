@@ -33,10 +33,11 @@ import { Button } from "../components/ui/button";
 import { Stack } from "../components/ui/stack";
 import { LoadingState, ErrorState } from "../components/ui/state";
 import { useReadinessProbe } from "../hooks/readiness";
+import { useInFlight } from "../hooks/live";
 import { useSystemHealth } from "../hooks/system";
 import { PageHead } from "../components/PageHead";
 import { useT } from "../shared/locale-context";
-import { formatBytes, formatDuration, formatNumber, formatUptime } from "../shared/format";
+import { formatAgo, formatBytes, formatDuration, formatNumber, formatUptime } from "../shared/format";
 import type { MessageKey } from "../shared/i18n";
 
 /** One label/value pair inside a health group. */
@@ -82,8 +83,9 @@ const REMEDIATION_KEY: Readonly<Record<"healthy" | "degraded" | "unhealthy", Mes
 
 export default function Health(): ReactNode {
   const t = useT();
-  const healthQuery = useSystemHealth();
+  const healthQuery = useSystemHealth(5_000);
   const probeQuery = useReadinessProbe();
+  const inFlight = useInFlight();
   const health = healthQuery.data;
 
   // The single worst signal decides the headline: a healthy process with a
@@ -131,18 +133,33 @@ export default function Health(): ReactNode {
               subtitle={`${health.version} · ${health.platform}`}
               icon={<Gauge size={15} />}
               action={
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={<RefreshCw size={13} className={healthQuery.isFetching ? "animate-spin" : ""} />}
-                  onClick={() => {
-                    void healthQuery.refetch();
-                    void probeQuery.refetch();
-                  }}
-                  disabled={healthQuery.isFetching}
-                >
-                  {healthQuery.isFetching ? t("action.refreshing") : t("action.refresh")}
-                </Button>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  {/* A live figure with no timestamp is indistinguishable from a
+                      frozen one. This says when the numbers beside it were read,
+                      and the dot marks the moment a poll is in flight — so a
+                      stalled refresh is visible instead of silently stale. */}
+                  <span className="health-freshness" aria-live="polite">
+                    <span
+                      className={`health-freshness-dot${healthQuery.isFetching ? " is-live" : ""}`}
+                      aria-hidden="true"
+                    />
+                    {t("health.lastChecked", {
+                      time: formatAgo(new Date(healthQuery.dataUpdatedAt)),
+                    })}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<RefreshCw size={13} className={healthQuery.isFetching ? "animate-spin" : ""} />}
+                    onClick={() => {
+                      void healthQuery.refetch();
+                      void probeQuery.refetch();
+                    }}
+                    disabled={healthQuery.isFetching}
+                  >
+                    {healthQuery.isFetching ? t("action.refreshing") : t("action.refresh")}
+                  </Button>
+                </div>
               }
             />
             <CardBody>
@@ -247,6 +264,14 @@ export default function Health(): ReactNode {
                   value={`${formatBytes(health.memory_bytes)} · ${formatNumber(health.memory_percent)}%`}
                   tone={health.memory_percent > 90 ? "danger" : undefined}
                 />
+                {/* The contract publishes this "so the figure is checkable": a
+                    percentage with no visible denominator cannot be verified,
+                    and the ceiling is the number that decides when the process
+                    gets killed. */}
+                <Fact
+                  label={t("health.memoryLimit")}
+                  value={formatBytes(health.memory_limit_bytes)}
+                />
                 <Fact label="heap" value={formatBytes(health.heap_used_bytes)} />
               </CardBody>
             </Card>
@@ -286,6 +311,36 @@ export default function Health(): ReactNode {
                 <Fact label="p99" value={formatDuration(health.latency_p99_ms)} />
                 <Fact label="heap total" value={formatBytes(health.heap_total_bytes)} />
                 <Fact label="external" value={formatBytes(health.external_bytes)} />
+              </CardBody>
+            </Card>
+
+            {/* The one figure on this page that is a stream rather than a poll.
+                Everything above is a snapshot taken up to five seconds ago; this
+                arrives as it changes, which is what "is traffic flowing right
+                now" actually needs. The dot says whether the stream is
+                connected, so a stalled feed is visible rather than looking like
+                a quiet gateway. */}
+            <Card>
+              <CardHeader
+                title={t("health.traffic")}
+                icon={<Activity size={15} />}
+                action={
+                  <span className={`health-live${inFlight.live ? " is-live" : ""}`}>
+                    <span className="health-live-dot" aria-hidden="true" />
+                    {inFlight.live ? t("health.live") : t("health.connecting")}
+                  </span>
+                }
+              />
+              <CardBody>
+                <Fact
+                  label={t("health.inFlight")}
+                  value={inFlight.count === null ? "—" : formatNumber(inFlight.count)}
+                  tone={inFlight.count ? "ok" : undefined}
+                />
+                <Fact
+                  label={t("health.uniqueIps")}
+                  value={inFlight.uniqueIps === null ? "—" : formatNumber(inFlight.uniqueIps)}
+                />
               </CardBody>
             </Card>
           </div>

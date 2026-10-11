@@ -21,8 +21,20 @@ export function useSessionUser() {
   });
 }
 
-/** Loads current system health and refreshes it on the dashboard cadence. */
-export function useSystemHealth() {
+/**
+ * Loads the process health snapshot.
+ *
+ * `intervalMs` defaults to the console-wide cadence. The Health page passes a
+ * faster one because it answers "is the gateway healthy right now", where a
+ * quarter-minute-old figure cannot: a process that started refusing traffic two
+ * seconds ago would still read as healthy. The shell's status dot reads the
+ * same query and does not need that resolution, so it keeps the slower default.
+ *
+ * React Query shares one cache entry across both observers, so while the Health
+ * page is open its interval drives the refetch and the shell's dot benefits;
+ * when the page closes, the slower default applies again.
+ */
+export function useSystemHealth(intervalMs = 15_000) {
   return useQuery({
     queryKey: queryKeys.system.health,
     queryFn: (context) =>
@@ -30,7 +42,7 @@ export function useSystemHealth() {
         assertSystemHealth,
       ),
     ...DASHBOARD_QUERY_OPTIONS,
-    refetchInterval: 15_000,
+    refetchInterval: intervalMs,
   });
 }
 

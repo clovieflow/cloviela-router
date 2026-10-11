@@ -196,8 +196,11 @@ function eventRoute(line: ConsoleLogEntry): string | null {
  *
  * Memoized: the stream appends a line at a time, and without this every append
  * re-rendered the whole retained window (up to 500 rows) for one new line.
+ *
+ * Exported for its own suite: the row is where the structured fields become
+ * text, so it is the only place a dropped field is observable.
  */
-const LogRow = memo(function LogRow({
+export const LogRow = memo(function LogRow({
   line,
   isNew,
 }: {
@@ -243,6 +246,13 @@ function RequestFields({ line }: { readonly line: ConsoleLogEntry }): ReactNode 
           {line.accountLabel}
         </span>
       ) : null}
+      {/* The pool a request was dispatched through is the first thing to check
+          when one address in it starts failing, and it was being dropped. */}
+      {line.networkPoolId ? (
+        <span className="console-log-pool" title={`Network pool: ${line.networkPoolId}`}>
+          {line.networkPoolId}
+        </span>
+      ) : null}
       {line.clientIp ? <span className="console-log-ip">{line.clientIp}</span> : null}
       {line.durationMs !== undefined ? (
         <span className="console-log-duration">{formatDuration(line.durationMs)}</span>
@@ -259,8 +269,33 @@ function RequestFields({ line }: { readonly line: ConsoleLogEntry }): ReactNode 
         </>
       ) : null}
       {isStart ? null : <span className="console-log-id">{line.requestId?.slice(0, 8) ?? ""}</span>}
+      {/* The client that made the call, and the full request id the row can
+          only abbreviate. Both were in the data all along — the row just had
+          nowhere to put them. */}
+      {line.userAgent ? (
+        <span className="console-log-agent" title={line.userAgent}>
+          {clientName(line.userAgent)}
+        </span>
+      ) : null}
+      {line.requestId ? (
+        <span className="console-log-request-id" title={line.requestId}>
+          {line.requestId}
+        </span>
+      ) : null}
     </>
   );
+}
+
+/**
+ * A short, readable name for the calling client.
+ *
+ * The raw user agent is a long string that identifies the SDK but says nothing
+ * at a glance — `openai-node/4.77.0` is the useful part, the rest is noise. The
+ * full value stays in the `title`, so nothing is lost.
+ */
+function clientName(userAgent: string): string {
+  const match = /^([A-Za-z0-9._-]+\/[0-9][A-Za-z0-9._-]*)/.exec(userAgent.trim());
+  return match?.[1] ?? userAgent.split(/\s+/)[0] ?? userAgent;
 }
 
 

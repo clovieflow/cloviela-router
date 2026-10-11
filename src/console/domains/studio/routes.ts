@@ -5,14 +5,14 @@
 
 import { randomUUID } from "node:crypto";
 import { Elysia } from "elysia";
-import type { AccessDecision } from "../../../security/access-control";
+import { TENANT_KEY_SCOPES, type AccessDecision } from "../../../security/access-control";
 import { ConsoleDomainError, errorResponse, requireTenantScope } from "../../shared/errors";
 import type { ConsoleAccessResolver } from "../../auth/access";
 import type { AuditSink } from "../audit/contracts";
 import { isRecord } from "../../../protocol/primitives";
 import type { ValidatedFetch } from "../../../network/outbound-fetch";
-import { decryptCredentialToString } from "../../../security/crypto";
-import { DEFAULT_API_KEY_LABEL } from "../api-keys/contracts";
+import { decryptCredentialToString, encryptCredential } from "../../../security/crypto";
+import { DEFAULT_API_KEY_LABEL, generateApiKeySecret } from "../api-keys/contracts";
 import {
   boundedString,
   normalizeStudioMessages,
@@ -27,7 +27,7 @@ import {
   type StudioSessionRow,
   type StudioSessionSummary,
 } from "./contracts";
-import type { ApiKeyStore } from "../../../persistence/api-key-store";
+import type { ApiKeyRecord, ApiKeyStore } from "../../../persistence/api-key-store";
 import type { StudioSessionStore } from "./contracts";
 
 export interface StudioConfig {
@@ -236,6 +236,28 @@ export function createStudioOperations(config: StudioConfig) {
       });
     },
 
+    /**
+     * Returns a usable gateway key for Studio, minting one if the tenant has
+     * none.
+     *
+     * ── Why this creates instead of failing ─────────────────────────────────
+     * The default key is only ever created during first-boot setup, and only
+     * when `CLOVIELA_API_KEY` is set. An installation that left that variable
+     * unset — which the example env file does not require — therefore has a
+     * fully working console and no key with this label at all. Studio then
+     * refused with `default_key_missing`, telling the operator to "complete
+     * console setup", which they had already done and which cannot be re-run
+     * from the UI. The key it wanted was one this very function could create.
+     *
+     * So it creates one: a personal key with the tenant's normal scopes,
+     * labelled like the setup key so it is recognisable in the credentials
+     * list. The secret is returned to the caller and stored encrypted, exactly
+     * as a key made through the credentials page would be.
+     *
+     * The lookup still comes first: an installation that *does* have the setup
+     * key keeps using it, so this does not scatter duplicate keys across every
+     * tenant that opens Studio.
+     */
     async ensureStudioKey(
       access: AccessDecision | undefined,
     ): Promise<{ key: string; keyId: string; prefix: string }> {
@@ -244,25 +266,41 @@ export function createStudioOperations(config: StudioConfig) {
       const defaultKey = keys.find(
         (key) => key.label === DEFAULT_API_KEY_LABEL && key.revokedAt === undefined,
       );
-      if (!defaultKey) {
-        throw new ConsoleDomainError(
-          "default_key_missing",
-          409,
-          "the default gateway API key is missing; complete console setup to create it",
-        );
+      if (defaultKey?.keyEncrypted) {
+        return {
+          key: decryptCredentialToString(defaultKey.keyEncrypted),
+          keyId: defaultKey.id,
+          prefix: defaultKey.keyPrefix ?? "",
+        };
       }
-      if (!defaultKey.keyEncrypted) {
-        throw new ConsoleDomainError(
-          "default_key_unrecoverable",
-          409,
-          "the default gateway API key has no recoverable secret; re-run console setup",
-        );
-      }
-      return {
-        key: decryptCredentialToString(defaultKey.keyEncrypted),
-        keyId: defaultKey.id,
-        prefix: defaultKey.keyPrefix ?? "",
+      // The key exists but its secret was never stored — a row from before the
+      // encrypted copy was kept. Nothing can recover it, so mint a fresh one
+      // under the same label rather than stranding Studio.
+      const generated = generateApiKeySecret();
+      const record: ApiKeyRecord = {
+        id: randomUUID(),
+        tenantId: authorized.tenantId,
+        enabled: true,
+        label: DEFAULT_API_KEY_LABEL,
+        keyHash: generated.hash,
+        keyMode: "personal",
+        scopes: [...TENANT_KEY_SCOPES],
+        keyPrefix: generated.prefix,
+        keyEncrypted: encryptCredential(generated.secret),
+        modelAccessMode: "whitelist",
+        createdAt: new Date(),
+        tokensConsumed: 0,
       };
+      await config.keyStore.create(record);
+      await config.auditSink?.record({
+        access: authorized,
+        action: "api_key.created",
+        target: record.id,
+        // Named so an operator reading the audit trail can tell this apart from
+        // a key they made by hand.
+        detail: { label: DEFAULT_API_KEY_LABEL, reason: "studio_bootstrap" },
+      });
+      return { key: generated.secret, keyId: record.id, prefix: generated.prefix };
     },
   };
 }

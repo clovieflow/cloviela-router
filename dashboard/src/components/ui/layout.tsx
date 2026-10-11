@@ -65,43 +65,34 @@ export function StatCard({
     (status === "cooldown" ? "orange" : status === "disabled" ? "red" : "accent");
   const toneColor = toneColorMap[effectiveTone] || "var(--accent)";
   return (
-    <div className="stat-card">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "6px",
-          fontSize: "10px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: toneColor,
-        }}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
-          {icon}
-          <span>{label}</span>
+      <div className="stat-card">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "6px",
+            fontSize: "10px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            color: toneColor,
+          }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+            {icon}
+            <span>{label}</span>
+          </span>
+          {action ? <span style={{ flexShrink: 0 }}>{action}</span> : null}
+        </div>
+        <p className="stat-card-value" style={{ color: valueColor || "var(--text-primary)" }}>
+          {value}
+        </p>
+        <span className="stat-card-detail" style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+          {detail}
         </span>
-        {action ? <span style={{ flexShrink: 0 }}>{action}</span> : null}
       </div>
-      <p
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "20px",
-          fontWeight: 700,
-          color: valueColor || "var(--text-primary)",
-          lineHeight: 1.2,
-          margin: "2px 0 0 0",
-        }}
-      >
-        {value}
-      </p>
-      <span className="stat-card-detail" style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
-        {detail}
-      </span>
-    </div>
-  );
+    );
 }
 
 export interface DataTableColumn {
