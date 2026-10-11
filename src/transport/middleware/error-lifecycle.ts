@@ -210,6 +210,10 @@ export function finalizeRequestTelemetry(
       tokensPerSec,
     }),
   );
+  // The row exists now; get it to the database now. Waiting for the periodic
+  // tick put a finished request seconds away from the Usage page, which the
+  // operator reads as a stuck page rather than a batched write.
+  telemetryBuffer.flushSoon();
 }
 
 /** Console-log severity for a terminal request status. */

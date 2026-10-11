@@ -150,29 +150,32 @@ function metricValue(name: string): number {
 describe("adaptiveFlushIntervalMs", () => {
   test("an empty queue waits out the idle multiplier", () => {
     // Fewer wakeups under low load: this timer is the only reason an idle
-    // gateway touches the database at all.
-    expect(adaptiveFlushIntervalMs(500, 0, 500)).toBe(2_000);
+    // gateway touches the database at all. The multiplier is 2 rather than 4
+    // because at 4 a quiet gateway — the normal state between bursts — left a
+    // finished request waiting two seconds before its row was written, on top
+    // of the dashboard's own poll. That is what made a live page read as stuck.
+    expect(adaptiveFlushIntervalMs(500, 0, 500)).toBe(1_000);
   });
 
   test("a filling queue drains faster, down to the floor", () => {
     // Batching must never become a latency source: as the queue approaches
     // `maxBatch` the interval collapses from the base cadence to the floor.
-    // MEASURED: the curve is `max(50, round(base * (1 - fill)))`, so at a
+    // MEASURED: the curve is `max(25, round(base * (1 - fill)))`, so at a
     // 500 base the interval reaches the 50ms floor at a fill of 0.9 — a queue
     // of 450 events drains every 50ms, not every 250ms.
     expect(adaptiveFlushIntervalMs(500, 125, 500)).toBe(375);
     expect(adaptiveFlushIntervalMs(500, 250, 500)).toBe(250);
     expect(adaptiveFlushIntervalMs(500, 450, 500)).toBe(50);
     // Past `maxBatch` the fill ratio is clamped, so the interval stops falling.
-    expect(adaptiveFlushIntervalMs(500, 500, 500)).toBe(50);
-    expect(adaptiveFlushIntervalMs(500, 10_000, 500)).toBe(50);
+    expect(adaptiveFlushIntervalMs(500, 500, 500)).toBe(25);
+    expect(adaptiveFlushIntervalMs(500, 10_000, 500)).toBe(25);
   });
 
   test("always returns an integer at or above the floor", () => {
     for (const length of [0, 1, 7, 123, 499, 500, 10_000]) {
       const value = adaptiveFlushIntervalMs(500, length, 500);
       expect(Number.isInteger(value)).toBe(true);
-      expect(value).toBeGreaterThanOrEqual(50);
+      expect(value).toBeGreaterThanOrEqual(25);
     }
   });
 
@@ -182,7 +185,7 @@ describe("adaptiveFlushIntervalMs", () => {
     // immediately — a hot loop against the database.
     const value = adaptiveFlushIntervalMs(500, 1, 0);
     expect(Number.isNaN(value)).toBe(false);
-    expect(value).toBeGreaterThanOrEqual(50);
+    expect(value).toBeGreaterThanOrEqual(25);
   });
 });
 
@@ -261,6 +264,39 @@ describe("TelemetryBatchBuffer — flush lifecycle", () => {
       await scope.cleanup();
     }
   });
+
+  test("flushSoon() writes a finished request without waiting for the timer", async () => {
+    // The report this exists for: a request finished, the gateway was busy, and
+    // the row did not reach the database until the periodic tick — up to a
+    // second on an idle queue. On top of the dashboard's own poll that put a
+    // completed request seconds away from the screen, and the page read as
+    // stuck rather than as batched. The buffer here is started with a
+    // deliberately long interval, so the row can only appear because
+    // `flushSoon` wrote it.
+    const scope = await tenantScope("telemetry-flush-soon");
+    try {
+      const buffer = new TelemetryBatchBuffer(getDb(), { flushIntervalMs: 60_000 });
+      buffer.enqueue(makeEvent(scope.tenantId));
+      buffer.flushSoon();
+      for (let waited = 0; waited < 1_000; waited += 10) {
+        if ((await rowsFor(scope.tenantId)).length > 0) break;
+        await Bun.sleep(10);
+      }
+      expect(await rowsFor(scope.tenantId)).toHaveLength(1);
+      await buffer.stop();
+    } finally {
+      await scope.cleanup();
+    }
+  });
+
+  test("flushSoon() after stop() is a no-op rather than an error", async () => {
+    // Shutdown stops the buffer; a request finalizing during the drain window
+    // must not resurrect it.
+    const buffer = startBuffer();
+    await buffer.stop();
+    expect(() => buffer.flushSoon()).not.toThrow();
+  });
+
 
   test("stop() is idempotent and stop({ flush }) drains what is queued", async () => {
     const scope = await tenantScope("telemetry-stop");

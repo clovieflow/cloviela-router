@@ -55,7 +55,7 @@ export function useUsageSummary(period: string) {
         signal: querySignal(context),
       }).then(assertUsageSummary),
     ...DASHBOARD_QUERY_OPTIONS,
-    refetchInterval: 10_000,
+    refetchInterval: 3_000,
   });
 }
 
@@ -68,7 +68,7 @@ export function useUsageChart(period: string) {
         signal: querySignal(context),
       }).then(assertUsageChart),
     ...DASHBOARD_QUERY_OPTIONS,
-    refetchInterval: 10_000,
+    refetchInterval: 3_000,
   });
 }
 
@@ -82,7 +82,7 @@ export function useUsageBy(period: string, dimension: UsageDimension) {
         { signal: querySignal(context) },
       ).then(assertUsageBy),
     ...DASHBOARD_QUERY_OPTIONS,
-    refetchInterval: 10_000,
+    refetchInterval: 3_000,
   });
 }
 
@@ -103,7 +103,10 @@ export function useUsageRequests(
         { signal: querySignal(context) },
       ).then(assertUsageRequests),
     ...DASHBOARD_QUERY_OPTIONS,
-    refetchInterval: 5_000,
+    // Same cadence as the summary cards: one page, one rhythm. Two
+    // different intervals let the table refresh while the totals beside
+    // it still showed the previous second, which reads as a disagreement.
+    refetchInterval: 3_000,
   });
 }
 

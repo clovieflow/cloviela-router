@@ -157,9 +157,22 @@ function drainRetryDelayMs(attempt: number): number {
 }
 
 /** Floor for the adaptive active interval so a full queue still drains promptly. */
-const ADAPTIVE_FLUSH_MIN_MS = 50;
-/** Multiplier applied to the base interval while the queue is empty. */
-const ADAPTIVE_IDLE_MULTIPLIER = 4;
+const ADAPTIVE_FLUSH_MIN_MS = 25;
+/**
+ * Multiplier applied to the base interval while the queue is empty.
+ *
+ * Kept small on purpose. The dashboard is a live view, and an idle multiplier
+ * of 4 meant a quiet gateway — the normal state between bursts — waited out
+ * 2 seconds before a finished request reached the database. On top of the
+ * query's own staleness that put a completed request 10+ seconds away from the
+ * screen, which reads as "the log is stuck" rather than "the log is batched".
+ *
+ * The saving this bought was a handful of wakeups per minute on an idle
+ * process; the cost was that the page stopped looking live exactly when an
+ * operator was watching it. 2× keeps the idle tick cheap without being the
+ * dominant delay.
+ */
+const ADAPTIVE_IDLE_MULTIPLIER = 2;
 
 /**
  * Adaptive scheduled-flush interval: an empty queue is polled rarely (fewer
@@ -206,7 +219,7 @@ export class TelemetryBatchBuffer {
     opts: TelemetryBatchBufferOptions = {},
   ) {
     this.store = new DrizzleTelemetryStore(db);
-    this.flushIntervalMs = opts.flushIntervalMs ?? 500;
+    this.flushIntervalMs = opts.flushIntervalMs ?? 250;
     this.maxBatch = opts.maxBatch ?? 500;
     this.maxItems = opts.maxItems ?? 10000;
     this.maxBytes = opts.maxBytes ?? DEFAULT_BOUNDS.maxTelemetryQueueBytes;
@@ -229,6 +242,26 @@ export class TelemetryBatchBuffer {
       });
     }, delayMs);
     if (typeof this.timer.unref === "function") this.timer.unref();
+  }
+
+  /**
+   * Drains now if the buffer is idle, coalescing callers that arrive while a
+   * drain is already in flight.
+   *
+   * Called when a request finishes. The periodic timer is a backstop for
+   * whatever arrives between ticks, not the path a completed request should
+   * wait on: the dashboard polls every few seconds, so a row that lands two
+   * seconds late is a row the operator does not see until the poll after that.
+   * Coalescing is what keeps this from becoming one insert per request under
+   * load — a burst arriving during a drain is picked up by the re-entrant loop
+   * in {@link flush} rather than each caller starting its own.
+   *
+   * The outage gate is honoured, so a failing database is not probed once per
+   * request.
+   */
+  flushSoon(): void {
+    if (this.stopped) return;
+    void this.flushScheduled();
   }
 
   /** Non-blocking; drops the event (and counts it) when the buffer is full by count or bytes. */

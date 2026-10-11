@@ -33,7 +33,15 @@ export interface ConsoleLogEntry extends ConsoleLogLine {
 }
 
 const MAX_LINES = 500;
-const STREAM_RETRY_MS = 5_000;
+/**
+ * Delay before re-opening the log stream after a transport failure.
+ *
+ * The stream carries every request line, so a gap here is a gap the operator
+ * cannot recover except by reloading. Five seconds was long enough to lose a
+ * burst entirely; one second still backs off from a genuinely down server
+ * (the retry only runs while the page is open) without leaving a visible hole.
+ */
+const STREAM_RETRY_MS = 1_000;
 /** How long a freshly streamed line keeps its highlight before fading. */
 const NEW_LINE_HIGHLIGHT_MS = 1_500;
 
@@ -148,7 +156,11 @@ export function useConsoleLogStream() {
 
     const snapshotThenStream = async () => {
       try {
-        const snapshot = await consoleRequest<unknown>("/logs?limit=200");
+        // Ask for what the page can hold. The ring keeps 500 lines, and a
+          // 200-line snapshot opened every fresh visit with a third of the
+          // buffer missing — which reads as lines that were lost rather
+          // than lines that were never requested.
+          const snapshot = await consoleRequest<unknown>(`/logs?limit=${MAX_LINES}`);
         if (stopped || runId !== attempt.current) return;
         setLines(readLines(snapshot).slice(-MAX_LINES).map(tag));
         setNewLineIds(new Set());
