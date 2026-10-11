@@ -659,7 +659,20 @@ function BreakdownSnapshot({
               return (
                 <div
                   key={row.name}
-                  title={`${displayName} · ${formatNumber(row.requests)} hits · ${formatNumber(okCount)} ok · ${formatNumber(row.total)} tokens · ${formatUsd(row.costUsd)}`}
+                  title={[
+                    displayName,
+                    `${formatNumber(row.requests)} hits`,
+                    `${formatNumber(okCount)} ok`,
+                    `${formatNumber(row.total)} tokens`,
+                    formatUsd(row.costUsd),
+                    // Computed for every row and previously dropped. These
+                    // are the two figures that separate a slow model from a
+                    // slow network, and a row is where that question gets
+                    // asked — so they ride in the tooltip rather than
+                    // widening an already dense line.
+                    `${formatNumber(row.cacheHitRate)}% cache`,
+                    formatSpeed(row.avgTokensPerSec),
+                  ].join(" · ")}
                   style={{
                     position: "relative",
                     flexShrink: 0,

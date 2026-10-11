@@ -2104,6 +2104,17 @@
   min-width: 0;
 }
 
+/* A grid item defaults to `min-width: auto`, so a panel refuses to shrink below
+   the widest unbreakable thing inside it. The breakdown rows carry counts and
+   token figures in `flexShrink: 0` spans, and their combined min-content width
+   exceeds the column — the panel kept that width and the page scrolled sideways
+   in the band where two columns still apply but neither is wide enough.
+   `min-width: 0` lets the panel shrink and hands the overflow to its own
+   scroller. Same guard `.cl-op-col > *` carries on the Overview page. */
+.two-column-grid > * {
+  min-width: 0;
+}
+
 
 /* Settings keeps related controls compact: security/privacy share the first
    row at equal height, while the wider backup surface spans the full grid

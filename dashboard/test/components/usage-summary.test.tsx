@@ -124,6 +124,23 @@ describe("Usage summary completeness", () => {
     expect(card).toContain("A floor");
   });
 
+  test("a breakdown row carries its own cache rate and throughput", () => {
+    // Both are computed per row by the backend and were dropped. They are what
+    // separates a slow model from a slow network, so they belong on the row.
+    expect(usageSource).toContain("row.cacheHitRate");
+    expect(usageSource).toContain("formatSpeed(row.avgTokensPerSec)");
+  });
+
+  test("a grid panel can shrink below its own content", () => {
+    // A grid item defaults to `min-width: auto`. The breakdown rows hold
+    // `flexShrink: 0` counts and token figures whose combined min-content width
+    // exceeds the column, so the panel kept that width and the page scrolled.
+    // Same guard `.cl-op-col > *` carries on the Overview page.
+    const css = consoleCss();
+    const guard = /\.two-column-grid\s*>\s*\*\s*\{[^}]*\}/.exec(css)?.[0] ?? "";
+    expect(guard).toContain("min-width: 0");
+  });
+
   test("reuses the page's own rate formatter", () => {
     // A second tok/s formatter would drift from the first.
     expect(usageSource).toContain("formatSpeed(summary?.avgTokensPerSec)");
