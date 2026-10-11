@@ -42,6 +42,21 @@ const MAX_LINES = 500;
  * (the retry only runs while the page is open) without leaving a visible hole.
  */
 const STREAM_RETRY_MS = 1_000;
+/**
+ * How long the stream may go silent before the hook stops trusting it.
+ *
+ * The server sends a `ping` every 10s. If three in a row do not arrive, the
+ * connection is up but something in front of it — most often a reverse proxy
+ * that buffers `text/event-stream` because it is speaking HTTP/1.0 upstream —
+ * is holding the frames back. The stream looks healthy, `onerror` never fires,
+ * and the page sits frozen: exactly the "stuck" report.
+ *
+ * So silence is treated as failure, and the fallback is a plain snapshot poll,
+ * which no proxy buffers. Slower than a stream, but it always moves.
+ */
+const STREAM_SILENCE_TIMEOUT_MS = 32_000;
+/** Cadence of the polling fallback while the stream is not trusted. */
+const FALLBACK_POLL_MS = 3_000;
 /** How long a freshly streamed line keeps its highlight before fading. */
 const NEW_LINE_HIGHLIGHT_MS = 1_500;
 
@@ -86,7 +101,35 @@ export function useConsoleLogStream() {
     let stopped = false;
     let source: EventSource | undefined;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let silenceTimer: ReturnType<typeof setTimeout> | undefined;
+    let pollTimer: ReturnType<typeof setTimeout> | undefined;
+    let lastFrameAt = Date.now();
     const runId = (attempt.current += 1);
+
+    /** (Re)arms the silence watchdog; any frame from the stream counts. */
+    const noteFrame = () => {
+      lastFrameAt = Date.now();
+    };
+
+    /**
+     * Polls the snapshot endpoint instead of waiting on the stream.
+     *
+     * This is the fallback for a buffering proxy. It replaces the whole list
+     * each tick rather than appending, because the snapshot is authoritative
+     * and merging would duplicate lines the stream also delivered.
+     */
+    const pollSnapshot = async () => {
+      try {
+        const snapshot = await consoleRequest<unknown>(`/logs?limit=${MAX_LINES}`);
+        if (stopped || runId !== attempt.current) return;
+        setLines(readLines(snapshot).slice(-MAX_LINES).map(tag));
+        setStatus("live");
+      } catch {
+        // Keep the last good list; the next tick retries.
+      }
+      if (stopped || runId !== attempt.current) return;
+      pollTimer = setTimeout(() => void pollSnapshot(), FALLBACK_POLL_MS);
+    };
 
     const append = (line: ConsoleLogLine) => {
       const stored = tag(line);
@@ -111,10 +154,37 @@ export function useConsoleLogStream() {
       });
     };
 
+    /**
+     * Starts the fallback poller if the stream goes quiet.
+     *
+     * The server sends a `ping` every 10s. If frames stop arriving entirely the
+     * connection is up but something in front of it is buffering the stream —
+     * most often a reverse proxy speaking HTTP/1.0 upstream. The stream looks
+     * healthy, `onerror` never fires, and the page sits frozen. Polling the
+     * snapshot endpoint is slower but no proxy buffers it.
+     */
+    const watchForSilence = () => {
+      if (silenceTimer !== undefined) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        if (stopped || runId !== attempt.current) return;
+        if (Date.now() - lastFrameAt < STREAM_SILENCE_TIMEOUT_MS) {
+          watchForSilence();
+          return;
+        }
+        setStatus("reconnecting");
+        source?.close();
+        source = undefined;
+        if (pollTimer === undefined) void pollSnapshot();
+      }, STREAM_SILENCE_TIMEOUT_MS);
+    };
+
     const openStream = () => {
+      lastFrameAt = Date.now();
+      watchForSilence();
       source = new EventSource("/console/api/logs/stream");
       source.addEventListener("init", (event) => {
         if (stopped) return;
+        noteFrame();
         try {
           const payload = JSON.parse((event as MessageEvent).data as string) as unknown;
           if (isRecord(payload)) {
@@ -128,6 +198,7 @@ export function useConsoleLogStream() {
       });
       source.addEventListener("line", (event) => {
         if (stopped) return;
+        noteFrame();
         try {
           const payload = JSON.parse((event as MessageEvent).data as string) as unknown;
           if (isLogLine(payload)) {
@@ -139,10 +210,16 @@ export function useConsoleLogStream() {
         }
       });
       source.addEventListener("clear", () => {
+        noteFrame();
         if (!stopped) {
           setLines([]);
           setNewLineIds(new Set());
         }
+      });
+      // The server's heartbeat as a named event: proof the frames are arriving,
+      // not merely that the connection is open.
+      source.addEventListener("ping", () => {
+        noteFrame();
       });
       source.onerror = () => {
         source?.close();
@@ -189,6 +266,10 @@ export function useConsoleLogStream() {
     return () => {
       stopped = true;
       clearTimeout(retryTimer);
+      // Both fallback timers must go too: a poll left running after unmount
+      // keeps issuing requests against a tree that no longer exists.
+      clearTimeout(silenceTimer);
+      clearTimeout(pollTimer);
       source?.close();
     };
   }, []);

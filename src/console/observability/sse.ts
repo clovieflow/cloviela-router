@@ -76,7 +76,12 @@ export function createConsoleSseStream(
       heartbeat = setInterval(() => {
         if (closed) return;
         try {
+          // A named event, not only a comment frame. The comment keeps the
+          // connection alive through proxies; the named event is what the
+          // client can actually observe, which is how it detects that a proxy
+          // is buffering the stream and falls back to polling.
           controller.enqueue(encoder.encode(": ping\n\n"));
+          sender.send("ping", { t: Date.now() });
         } catch {
           close?.();
         }
