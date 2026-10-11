@@ -157,16 +157,31 @@ export function useConsoleLogStream() {
     const snapshotThenStream = async () => {
       try {
         // Ask for what the page can hold. The ring keeps 500 lines, and a
-          // 200-line snapshot opened every fresh visit with a third of the
-          // buffer missing — which reads as lines that were lost rather
-          // than lines that were never requested.
-          const snapshot = await consoleRequest<unknown>(`/logs?limit=${MAX_LINES}`);
+        // 200-line snapshot opened every fresh visit with a third of the
+        // buffer missing — which reads as lines that were lost rather
+        // than lines that were never requested.
+        const snapshot = await consoleRequest<unknown>(`/logs?limit=${MAX_LINES}`);
         if (stopped || runId !== attempt.current) return;
         setLines(readLines(snapshot).slice(-MAX_LINES).map(tag));
         setNewLineIds(new Set());
         openStream();
       } catch {
-        // Unauthenticated (shell handles the transition) or offline: stay idle.
+        // The snapshot failed — an expired session, a dropped request, a
+        // gateway that was restarting. Returning here left the hook dead:
+        // `openStream` was never called and nothing rescheduled it, so the
+        // page showed a frozen list with no indication anything was wrong.
+        // From the operator's side that is indistinguishable from a gateway
+        // that stopped serving, which is exactly how a busy installation came
+        // to look stuck for minutes at a time.
+        //
+        // Retrying is safe: a genuinely unauthenticated session bounces to
+        // login through the shell's normal 401 handling, and `stopped` ends
+        // the loop when the page unmounts.
+        if (stopped || runId !== attempt.current) return;
+        setStatus("reconnecting");
+        retryTimer = setTimeout(() => {
+          if (!stopped && runId === attempt.current) void snapshotThenStream();
+        }, STREAM_RETRY_MS);
       }
     };
 

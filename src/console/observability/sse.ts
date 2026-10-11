@@ -17,10 +17,16 @@ import { buildSseEventFrame as formatSseFrame } from "../../transport/surface/st
 export { formatSseFrame };
 
 /**
- * Heartbeat cadence. The listener idles at 60s, so a comment frame every 25s
- * keeps SSE connections alive through proxies and idle-timeout sweeps.
+ * Interval between SSE comment frames.
+ *
+ * A comment frame is what keeps an idle stream alive through intermediaries:
+ * nginx's `proxy_read_timeout` and most load balancers default to 60s, and a
+ * live page can easily go longer than that between log lines on a quiet
+ * gateway. At 25s the stream was cut by anything stricter — a 30s timeout with
+ * a little jitter was enough — and the page then sat frozen until the client
+ * noticed. 10s leaves room under every default in common use.
  */
-const SSE_HEARTBEAT_MS = 25_000;
+const SSE_HEARTBEAT_MS = 10_000;
 
 /**
  * Console SSE response stream with uniform JSON event encoding, heartbeat,

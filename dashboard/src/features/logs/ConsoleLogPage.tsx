@@ -26,6 +26,7 @@ import { useAuditTrail, useSessionUser } from "../../hooks/system";
 import { useConsoleLogStream, type ConsoleLogEntry, type ConsoleLogLevel } from "../../hooks/logs";
 import { auditActionLabel } from "../../shared/audit-labels";
 import { getErrorMessage } from "../../shared/helpers";
+import { useT } from "../../shared/locale-context";
 import { toast } from "../../shared/toast";
 import { PageArt } from "../../components/rikka/art-surfaces";
 
@@ -300,7 +301,8 @@ function clientName(userAgent: string): string {
 
 
 function LiveLogsPanel(): ReactNode {
-  const { lines, newLineIds, clear } = useConsoleLogStream();
+  const t = useT();
+  const { lines, newLineIds, clear, status } = useConsoleLogStream();
   const [level, setLevel] = useState<"all" | ConsoleLogLevel>("all");
   const [search, setSearch] = useState("");
   const [clearOpen, setClearOpen] = useState(false);
@@ -349,6 +351,20 @@ function LiveLogsPanel(): ReactNode {
         title="Console Log"
         subtitle={`${visible.length} of ${lines.length} lines`}
         icon={<ScrollText size={16} />}
+        action={
+          // Whether the live tail is actually connected. Without this a dropped
+          // stream and a quiet gateway look identical — both show a list that is
+          // not moving — and the page gave no way to tell that a reload was the
+          // fix. Reuses the health page's live indicator so the two agree.
+          <span className={`health-live${status === "live" ? " is-live" : ""}`}>
+            <span className="health-live-dot" aria-hidden="true" />
+            {status === "live"
+              ? t("health.live")
+              : status === "reconnecting"
+                ? t("health.connecting")
+                : t("logs.idle")}
+          </span>
+        }
       />
       <CardBody className="console-log-toolbar">
         <div className="console-log-filters" role="group" aria-label="Log level">
