@@ -284,7 +284,11 @@ export function createProxyRoutePreparationMiddleware(deps: {
             .noteInvalid({ ip: strikeIdentity.ip })
             .catch(() => null);
           if (outcome?.banned === true) throw modelAbuseBannedError();
-          if (outcome) {
+          // Only add the escalating warning when a ban is actually reachable.
+          // With the counter disabled the message would read "Warning
+          // 1/1000000 — 999999 more invalid requests will temporarily ban this
+          // IP", which is noise dressed as a threat.
+          if (outcome && strikeIdentity.strikes.limit <= outcome.strikes + 100) {
             const snap = state.authorization?.snapshot;
             const raw = snap?.model_list;
             const hint = Array.isArray(raw) ? (raw as readonly string[]) : raw instanceof Set ? [...raw] : undefined;

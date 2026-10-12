@@ -32,6 +32,7 @@ import {
   modelWarningMessage,
   type ModelAbuseAttempt,
 } from "../../src/security/model-abuse";
+import { CONFIG_SPEC } from "../../src/config";
 
 /** A clock the test drives, so no assertion depends on wall time. */
 function fakeClock(start = 1_700_000_000_000): { now: () => number; advance: (ms: number) => void } {
@@ -358,6 +359,23 @@ describe("ModelStrikeService — the policy layer over the store", () => {
     // The default ban lasts an hour, not a day.
     const ban = (await store.listBans())[0];
     expect(ban?.expiresAt).toBe(clock.now() + HOUR);
+  });
+
+  test("the deployment default cannot be reached, so no ban is recorded", () => {
+    // The layer bans a client address after N invalid-model requests. On a
+    // single-operator gateway that only ever punished the operator: a client
+    // refreshing its model list while a provider's models were briefly absent
+    // produced a burst of `model_not_found` responses, ten of those banned the
+    // operator's own address for an hour, and the ban then blocked the very
+    // requests that would have shown the catalogue had recovered.
+    //
+    // The shipped default is therefore above any reachable count: a deployment
+    // that configures nothing records no ban. Setting
+    // `CLOVIELA_MODEL_STRIKE_THRESHOLD` to 100 or less switches it back on,
+    // which the option tests below still cover.
+    const spec = CONFIG_SPEC.CLOVIELA_MODEL_STRIKE_THRESHOLD;
+    expect(spec.default).toBe(1_000_000);
+    expect(spec.max).toBe(1_000_000);
   });
 
   test("each option is floored at one so a zero cannot disable the mechanism", async () => {

@@ -177,7 +177,20 @@ export const CONFIG_SPEC = {
   // the client address, the quiet window after which a strike expires, and how
   // long the ban itself lasts. A valid-model request clears the counter
   // regardless of the window.
-  CLOVIELA_MODEL_STRIKE_THRESHOLD: { kind: "int", default: 10, min: 1, max: 100 },
+  // ── Why the threshold defaults to "off" ───────────────────────────────────
+  // This layer bans a client address after N requests for a model it may not
+  // use. On a shared gateway that stops a caller enumerating a private key's
+  // catalogue. On a single-operator gateway it only ever punished the operator:
+  // a client refreshing its model list while a provider's models were briefly
+  // absent produced a burst of `model_not_found` responses, ten of those in
+  // five minutes banned the operator's own address for an hour, and the ban
+  // then blocked the requests that would have shown the catalogue had
+  // recovered. There is no probing to prevent when the only caller owns the
+  // gateway.
+  //
+  // A threshold above any reachable count means no ban is ever recorded. Set
+  // `CLOVIELA_MODEL_STRIKE_THRESHOLD` to 100 or less to switch it back on.
+  CLOVIELA_MODEL_STRIKE_THRESHOLD: { kind: "int", default: 1_000_000, min: 1, max: 1_000_000 },
   CLOVIELA_MODEL_STRIKE_WINDOW_MS: { kind: "int", default: 300_000, min: 1_000, max: 86_400_000 },
   CLOVIELA_MODEL_BAN_TTL_MS: { kind: "int", default: 3_600_000, min: 1_000, max: 604_800_000 },
   CLOVIELA_ENCRYPTION_KEY: {
