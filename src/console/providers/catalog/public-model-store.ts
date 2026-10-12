@@ -8,7 +8,7 @@
  * this one is driven entirely by untrusted caller input plus one frozen
  * authorization snapshot.
  */
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import type { ClovielaDatabase } from "../../../persistence/postgres";
 import { modelAliases, modelCombos, models, providerAccounts, providers } from "../../../persistence/schema";
 import { isModelAllowed, listIncludes, type ApiKeyAuthorizationSnapshot } from "../../../security/api-key-auth";
@@ -333,15 +333,32 @@ export class PublicModelCatalogStore {
       .where(and(eq(models.enabled, true), eq(providers.enabled, true), providerScope));
 
     // Only expose models whose provider is either No-auth (requiresAccount=false,
-    // e.g. opencodefree) or has at least one active account for this tenant.
-    // This mirrors 21 beta's "No auth dan yang disetel apikey/oauth aja".
+    // e.g. opencodefree) or has at least one usable account for this tenant.
+    //
+    // ── Why `cooldown` counts as usable ─────────────────────────────────────
+    // A cooldown is temporary: a rate limit, a transient upstream error, a
+    // quota window that reopens. It is a statement about *right now*, not about
+    // whether the tenant is configured for this provider. Counting only
+    // `active` meant that one rate-limited account removed every model of that
+    // provider from `/v1/models` — and since a client refreshes its model list
+    // from that endpoint, the models vanished from the client too and came back
+    // later. That is the "models keep disappearing" report: the catalogue was
+    // flapping in time with provider rate limits.
+    //
+    // `disabled` still excludes the provider, because that is a deliberate
+    // statement that the account must not be used.
     const activeProviderIds = new Set<string>();
     if (tenantId !== null) {
-      const activeAccounts = await this.db
+      const usableAccounts = await this.db
         .select({ providerId: providerAccounts.providerId })
         .from(providerAccounts)
-        .where(and(eq(providerAccounts.tenantId, tenantId), eq(providerAccounts.status, "active")));
-      for (const row of activeAccounts) activeProviderIds.add(row.providerId);
+        .where(
+          and(
+            eq(providerAccounts.tenantId, tenantId),
+            inArray(providerAccounts.status, ["active", "cooldown"]),
+          ),
+        );
+      for (const row of usableAccounts) activeProviderIds.add(row.providerId);
     }
 
     // Alias and combo rows are loaded up front because they change what a bare
