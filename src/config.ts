@@ -193,6 +193,12 @@ export const CONFIG_SPEC = {
   CLOVIELA_MODEL_STRIKE_THRESHOLD: { kind: "int", default: 1_000_000, min: 1, max: 1_000_000 },
   CLOVIELA_MODEL_STRIKE_WINDOW_MS: { kind: "int", default: 300_000, min: 1_000, max: 86_400_000 },
   CLOVIELA_MODEL_BAN_TTL_MS: { kind: "int", default: 3_600_000, min: 1_000, max: 604_800_000 },
+  // Pins the OpenCode client version sent as `user-agent: opencode/<version>`
+  // on the `/zen` routes. Empty = follow the npm registry's latest, which is
+  // usually right but means a provider-side policy change plus a new release
+  // can start rejecting matching requests with no local change to blame. Pin a
+  // known-allowed version to retry without a code change.
+  CLOVIELA_OPENCODE_VERSION: { kind: "optional-text" },
   CLOVIELA_ENCRYPTION_KEY: {
     kind: "required",
     error:
@@ -634,6 +640,17 @@ export function resolveModelStrikeWindowMs(): number {
 /** How long (ms) a model-abuse ban lasts before it lapses on its own. */
 export function resolveModelBanTtlMs(): number {
   return readInt("CLOVIELA_MODEL_BAN_TTL_MS", CONFIG_SPEC.CLOVIELA_MODEL_BAN_TTL_MS);
+}
+
+/**
+ * Overrides the OpenCode client version; unset follows the npm latest.
+ *
+ * Read once while `providers/operations/client-versions.ts` builds its source
+ * table, which is where a value also drops that provider's registry source —
+ * see the entry for why a pin must stop discovery rather than only seed it.
+ */
+export function resolveOpenCodeVersionOverride(): string | undefined {
+  return readOptionalText("CLOVIELA_OPENCODE_VERSION", CONFIG_SPEC.CLOVIELA_OPENCODE_VERSION);
 }
 
 /** Reads the application encryption key without caching it. */

@@ -5,6 +5,7 @@
  * Provider-specific header builders remain next to their integrations, while
  * the network source and resolver state live in this table.
  */
+import { resolveOpenCodeVersionOverride } from "../../config";
 import {
   createClientVersionResolver,
   isSemverish,
@@ -154,6 +155,12 @@ const KIRO_SYSTEM_VERSION = "win32#10.0.22631";
 /** Node version the observed Kiro client reports (Electron's bundled Node). */
 const KIRO_NODE_VERSION = "24.18.0";
 
+/**
+ * The operator's OpenCode pin, read once while the table below is built.
+ * `undefined` (the default) leaves registry discovery in place.
+ */
+const openCodeVersionPin = resolveOpenCodeVersionOverride();
+
 /** Ordered upstream sources and pinned fallbacks for every client version. */
 export const VERSION_SOURCES = {
   antigravity: {
@@ -176,10 +183,20 @@ export const VERSION_SOURCES = {
       },
     ],
   },
+  // `CLOVIELA_OPENCODE_VERSION` pins the version stamped as
+  // `user-agent: opencode/<version>` on the `/zen` routes. The registry's
+  // latest can be a release the provider has not admitted yet, and once it
+  // starts rejecting that version there is no local change to blame. A pin
+  // puts a known-allowed version back in force without a code change — and
+  // empties `sources`, so the background monitor cannot probe the registry
+  // and upgrade straight back past the operator's choice.
   opencode: {
     key: "opencode",
-    fallback: "1.18.34",
-    sources: [{ url: "https://registry.npmjs.org/opencode-ai/latest" }],
+    fallback: openCodeVersionPin ?? "1.18.34",
+    sources:
+      openCodeVersionPin === undefined
+        ? [{ url: "https://registry.npmjs.org/opencode-ai/latest" }]
+        : [],
   },
   commandcode: {
     key: "commandcode",
