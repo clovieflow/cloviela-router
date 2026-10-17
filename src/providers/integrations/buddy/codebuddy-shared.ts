@@ -38,6 +38,12 @@ export async function codebuddyHeaders(
     "x-requested-with": "XMLHttpRequest",
     "x-codebuddy-request": "1",
     "x-conversation-id": resolveInboundSessionId(context, request) ?? crypto.randomUUID(),
+    // Channel verification added upstream 2026-10-15: requests without this
+    // family are rejected with HTTP 400 code 11128 ("conversation id missing"),
+    // so the request and message ids ship alongside the conversation id — the
+    // conversation id stays stable per conversation, these two rotate.
+    "x-conversation-request-id": crypto.randomUUID(),
+    "x-conversation-message-id": crypto.randomUUID(),
     "x-request-id": crypto.randomUUID().replaceAll("-", ""),
   };
 }
