@@ -116,7 +116,7 @@ export function buddyAccountUid(accessToken: string): string | undefined {
  * A buddy OAuth access token is a Keycloak JWT that inlines the account
  * identity (`name`, `preferred_username`, `email`, `given_name`/`family_name`).
  * Resolve a human display label from it so the account shows "Borneo usar
- * <borneousar@gmail.com>" instead of the generic `${providerId} account`.
+ * <you@example.com>" instead of the generic `${providerId} account`.
  * Falls back to `undefined` when the token carries no usable identity, letting
  * the console keep the operator-supplied label.
  */
