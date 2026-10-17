@@ -664,7 +664,6 @@ function CustomProvidersSection({
 
 // ── Provider Card ─────────────────────────────────────────────────────────────
 
-const FOUNDING_IDS = new Set(["inferhub"]);
 /** Free tiers with a small daily allowance rather than a standing free tier. */
 const FREE_LIMITED_IDS = new Set([
   "grok",
@@ -795,7 +794,6 @@ const ProviderCard = memo(function ProviderCard({
   provider: ProviderResponse;
   serviceKind?: DashboardServiceKind;
 }): ReactNode {
-  const isFounding = FOUNDING_IDS.has(provider.providerId.toLowerCase());
   const displayName = provider.label || provider.displayName;
   const modelsQuery = useProviderModels(provider.providerId);
   const modelCount = modelsQuery.data?.filter(
@@ -880,27 +878,7 @@ const ProviderCard = memo(function ProviderCard({
               flexShrink: 0,
             }}
           >
-            {/* The sponsor marker rides with the id rather than floating over
-                the card: every corner is already occupied by something the
-                operator needs to read. */}
             <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-              {isFounding ? (
-                <span
-                  title="Friend sponsor"
-                  style={{
-                    background: "var(--accent-soft)",
-                    color: "var(--accent)",
-                    fontSize: "9px",
-                    fontWeight: 800,
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                    padding: "1px 5px",
-                    borderRadius: "4px",
-                  }}
-                >
-                  Friend
-                </span>
-              ) : null}
               <span
                 style={{
                   fontFamily: "var(--font-mono)",
@@ -953,11 +931,6 @@ function compareConfiguredProviders(a: ProviderResponse, b: ProviderResponse): n
 
 const SECTIONS = [
   {
-    title: "Founding Friend & Sponsors",
-    subtitle: "Super Cheap inference pool",
-    filter: (p: ProviderResponse) => FOUNDING_IDS.has(p.providerId.toLowerCase()),
-  },
-  {
     title: "Free Limited Providers",
     filter: (p: ProviderResponse) => FREE_LIMITED_IDS.has(p.providerId.toLowerCase()),
   },
@@ -976,7 +949,6 @@ const SECTIONS = [
     filter: (p: ProviderResponse) =>
       p.isBuiltIn &&
       WELL_KNOWN_API_KEY_IDS.has(p.providerId.toLowerCase()) &&
-      !FOUNDING_IDS.has(p.providerId.toLowerCase()) &&
       !FREE_LIMITED_IDS.has(p.providerId.toLowerCase()) &&
       p.oauthFlows === undefined,
   },
@@ -986,7 +958,6 @@ const SECTIONS = [
     filter: (p: ProviderResponse) =>
       p.isBuiltIn &&
       !WELL_KNOWN_API_KEY_IDS.has(p.providerId.toLowerCase()) &&
-      !FOUNDING_IDS.has(p.providerId.toLowerCase()) &&
       !FREE_LIMITED_IDS.has(p.providerId.toLowerCase()) &&
       p.oauthFlows === undefined,
   },

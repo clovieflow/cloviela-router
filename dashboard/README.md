@@ -63,7 +63,7 @@ tenant data.
   bundled provider registry. Keep the exact bundled count and ids synchronized;
   BYOK providers are runtime data, not bundled registry entries.
 - `src/components/ProviderIcon.tsx`'s `iconAssets` map and `features/providers/ProvidersPage.tsx`'s
-  `FREE_LIMITED_IDS` / `FREE_AVAILABLE_IDS` / `FOUNDING_IDS` sets are the same
+  `FREE_LIMITED_IDS` / `FREE_AVAILABLE_IDS` sets are the same
   kind of hand-copied provider-id list. The icon map may carry extra keys for
   ids a user can type into a compatible-provider form; every bundled id must
   have one.
